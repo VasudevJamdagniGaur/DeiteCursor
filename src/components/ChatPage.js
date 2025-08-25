@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { Brain, Send, ArrowLeft, Heart, Star, User } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
+import chatService from '../services/chatService';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -9,13 +10,14 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm Deite, your emotional wellness companion. How are you feeling today?",
+      text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
       sender: 'ai',
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, error
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -39,6 +41,19 @@ export default function ChatPage() {
       }));
       setMessages(messagesWithDates);
     }
+
+    // Test connection to the chat service
+    const testConnection = async () => {
+      try {
+        const isConnected = await chatService.testConnection();
+        setConnectionStatus(isConnected ? 'connected' : 'error');
+      } catch (error) {
+        console.error('Connection test failed:', error);
+        setConnectionStatus('error');
+      }
+    };
+
+    testConnection();
   }, []);
 
   const saveMessagesToStorage = (newMessages) => {
@@ -65,30 +80,14 @@ export default function ChatPage() {
   };
 
   const sendMessageToAI = async (userMessage, conversationHistory) => {
-    // This is a mock AI response. In a real app, you'd call your AI API
-    // For demonstration, we'll simulate different responses based on keywords
-    
-    const lowerMessage = userMessage.toLowerCase();
-    let response = '';
-
-    if (lowerMessage.includes('sad') || lowerMessage.includes('depressed') || lowerMessage.includes('down')) {
-      response = "I hear that you're feeling sad. It's completely normal to have difficult emotions. What's been weighing on your mind lately? Sometimes talking about it can help lighten the load.";
-    } else if (lowerMessage.includes('anxious') || lowerMessage.includes('worried') || lowerMessage.includes('stress')) {
-      response = "Anxiety can feel overwhelming. Let's take a moment to breathe together. What specific situation is causing you to feel anxious? We can explore some coping strategies that might help.";
-    } else if (lowerMessage.includes('happy') || lowerMessage.includes('good') || lowerMessage.includes('great')) {
-      response = "It's wonderful to hear you're feeling positive! What's been contributing to these good feelings? Celebrating the positive moments is important for our wellbeing.";
-    } else if (lowerMessage.includes('angry') || lowerMessage.includes('frustrated') || lowerMessage.includes('mad')) {
-      response = "Anger is a valid emotion that often signals something important needs attention. What triggered these feelings? Let's explore what's underneath this anger together.";
-    } else if (lowerMessage.includes('lonely') || lowerMessage.includes('alone') || lowerMessage.includes('isolated')) {
-      response = "Feeling lonely can be really difficult. You're not alone in feeling this way. What connections in your life feel most meaningful to you? How might we nurture those relationships?";
-    } else {
-      response = "Thank you for sharing that with me. I'm here to listen and support you. Can you tell me more about how you're feeling right now? Your emotions and experiences matter.";
+    try {
+      const response = await chatService.sendMessage(userMessage, conversationHistory);
+      return response;
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      // This fallback should rarely be hit since chatService handles its own errors
+      return "I'm having a moment of technical difficulty, but I'm still here for you. Let's try that again in a bit.";
     }
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-    
-    return response;
   };
 
   const handleSendMessage = async (e) => {
@@ -263,8 +262,26 @@ export default function ChatPage() {
             <Brain className="w-5 h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div>
-            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
-            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your emotional companion</p>
+            <div className="flex items-center space-x-2">
+              <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
+              <div 
+                className={`w-2 h-2 rounded-full ${
+                  connectionStatus === 'connected' ? 'bg-green-500' : 
+                  connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
+                  'bg-red-500'
+                }`}
+                title={
+                  connectionStatus === 'connected' ? 'Connected and ready' :
+                  connectionStatus === 'connecting' ? 'Connecting...' :
+                  'Connection issue - messages may take longer'
+                }
+              />
+            </div>
+            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {connectionStatus === 'connected' ? 'Your emotional companion' :
+               connectionStatus === 'connecting' ? 'Getting ready to chat...' :
+               'Having connection issues'}
+            </p>
           </div>
         </div>
 
