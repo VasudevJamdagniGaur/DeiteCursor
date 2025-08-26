@@ -46,7 +46,7 @@ Do:
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-      const response = await fetch(`${this.baseURL}/v1/chat/completions`, {
+      const response = await fetch(`${this.baseURL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,10 +54,7 @@ Do:
         body: JSON.stringify({
           model: 'llama3:70b',
           messages: messages,
-          temperature: 0.7,
-          max_tokens: 500,
-          stream: false,
-          stop: null
+          stream: false
         }),
         signal: controller.signal
       });
@@ -73,8 +70,9 @@ Do:
       const data = await response.json();
       console.log('API Response:', data);
       
-      if (data.choices && data.choices.length > 0) {
-        return data.choices[0].message.content.trim();
+      // Ollama native API returns the response in data.message.content
+      if (data.message && data.message.content) {
+        return data.message.content.trim();
       } else {
         console.error('Invalid response structure:', data);
         throw new Error('No response from AI model');
@@ -105,7 +103,7 @@ Do:
   // Method to test the connection
   async testConnection() {
     try {
-      const response = await fetch(`${this.baseURL}/v1/models`, {
+      const response = await fetch(`${this.baseURL}/api/tags`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
