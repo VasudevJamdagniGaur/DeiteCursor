@@ -233,9 +233,15 @@ export default function ChatPage() {
       </div>
 
       {/* Header */}
-      <div className={`relative z-10 flex items-center justify-between p-6 border-b ${
+      <div className={`sticky top-0 z-20 flex items-center justify-between p-6 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
-      }`}>
+      }`}
+        style={{
+          backgroundColor: isDarkMode 
+            ? "rgba(11, 14, 20, 0.9)" 
+            : "rgba(250, 250, 248, 0.9)",
+        }}
+      >
         <button
           onClick={handleBack}
           className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity ${
