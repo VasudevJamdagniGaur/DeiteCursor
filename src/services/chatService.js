@@ -19,7 +19,7 @@ Do:
 - Mirror the user's tone (if they're excited, match it; if they're vulnerable, soften)`;
   }
 
-  async sendMessage(userMessage, conversationHistory = []) {
+  async sendMessage(userMessage, conversationHistory = [], onStreamChunk = null) {
     try {
       // Limit conversation history to last 10 messages to manage token usage
       const recentHistory = conversationHistory.slice(-10);
@@ -54,7 +54,7 @@ Do:
         body: JSON.stringify({
           model: 'llama3:70b',
           messages: messages,
-          stream: false
+          stream: !!onStreamChunk // Enable streaming if callback is provided
         }),
         signal: controller.signal
       });
@@ -67,15 +67,60 @@ Do:
         throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('API Response:', data);
-      
-      // Ollama native API returns the response in data.message.content
-      if (data.message && data.message.content) {
-        return data.message.content.trim();
+      // Handle streaming response
+      if (onStreamChunk && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.trim() === '') continue;
+              
+              try {
+                const data = JSON.parse(line);
+                
+                if (data.message && data.message.content) {
+                  const content = data.message.content;
+                  fullResponse += content;
+                  onStreamChunk(content);
+                }
+                
+                // Check if the response is done
+                if (data.done) {
+                  return fullResponse.trim();
+                }
+              } catch (parseError) {
+                // Skip invalid JSON lines
+                continue;
+              }
+            }
+          }
+          
+          return fullResponse.trim();
+        } finally {
+          reader.releaseLock();
+        }
       } else {
-        console.error('Invalid response structure:', data);
-        throw new Error('No response from AI model');
+        // Handle non-streaming response (fallback)
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        // Ollama native API returns the response in data.message.content
+        if (data.message && data.message.content) {
+          return data.message.content.trim();
+        } else {
+          console.error('Invalid response structure:', data);
+          throw new Error('No response from AI model');
+        }
       }
     } catch (error) {
       console.error('Error calling chat API:', error);
