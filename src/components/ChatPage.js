@@ -111,7 +111,7 @@ export default function ChatPage() {
       const aiResponse = await sendMessageToAI(inputMessage, messages);
       
       const aiMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + Math.random(),
         text: aiResponse,
         sender: 'ai',
         timestamp: new Date()
@@ -127,7 +127,7 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + Math.random(),
         text: "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
         sender: 'ai',
         timestamp: new Date()
