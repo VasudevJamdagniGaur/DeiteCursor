@@ -33,13 +33,19 @@ export default function ChatPage() {
     // Load conversation history from localStorage
     const storedMessages = localStorage.getItem('chatMessages');
     if (storedMessages) {
-      const parsedMessages = JSON.parse(storedMessages);
-      // Convert timestamp strings back to Date objects
-      const messagesWithDates = parsedMessages.map(msg => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
-      }));
-      setMessages(messagesWithDates);
+      try {
+        const parsedMessages = JSON.parse(storedMessages);
+        // Convert timestamp strings back to Date objects
+        const messagesWithDates = parsedMessages.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        setMessages(messagesWithDates);
+      } catch (error) {
+        console.error('Error parsing stored messages:', error);
+        // Clear corrupted data
+        localStorage.removeItem('chatMessages');
+      }
     }
 
     // Test connection to the chat service
