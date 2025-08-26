@@ -56,7 +56,8 @@ Do:
           messages: messages,
           temperature: 0.7,
           max_tokens: 500,
-          stream: false
+          stream: false,
+          stop: null
         }),
         signal: controller.signal
       });
@@ -64,14 +65,18 @@ Do:
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error Response:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('API Response:', data);
       
       if (data.choices && data.choices.length > 0) {
         return data.choices[0].message.content.trim();
       } else {
+        console.error('Invalid response structure:', data);
         throw new Error('No response from AI model');
       }
     } catch (error) {
