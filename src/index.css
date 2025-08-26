@@ -76,6 +76,26 @@ input:focus {
   ring-color: rgba(125, 211, 192, 0.5);
 }
 
+/* Prevent autofill from overriding dark theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px rgba(11, 14, 20, 0.6) inset !important;
+  -webkit-text-fill-color: white !important;
+  background-color: rgba(11, 14, 20, 0.6) !important;
+  border: 1px solid rgba(155, 181, 255, 0.15) !important;
+}
+
+/* For Mozilla Firefox */
+input:-moz-autofill,
+input:-moz-autofill:hover,
+input:-moz-autofill:focus {
+  background-color: rgba(11, 14, 20, 0.6) !important;
+  color: white !important;
+  border: 1px solid rgba(155, 181, 255, 0.15) !important;
+}
+
 /* Button hover effects */
 button {
   transition: all 0.3s ease;
