@@ -18,6 +18,7 @@ export default function ChatPage() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, error
+  const [streamingMessage, setStreamingMessage] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -27,7 +28,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, streamingMessage]);
 
   useEffect(() => {
     // Load conversation history from localStorage
@@ -85,9 +86,9 @@ export default function ChatPage() {
     return reflection;
   };
 
-  const sendMessageToAI = async (userMessage, conversationHistory) => {
+  const sendMessageToAI = async (userMessage, conversationHistory, onStreamChunk) => {
     try {
-      const response = await chatService.sendMessage(userMessage, conversationHistory);
+      const response = await chatService.sendMessage(userMessage, conversationHistory, onStreamChunk);
       return response;
     } catch (error) {
       console.error('Error getting AI response:', error);
@@ -113,18 +114,46 @@ export default function ChatPage() {
     setInputMessage('');
     setIsLoading(true);
 
+    // Create a streaming message placeholder
+    const streamingMessageId = Date.now() + Math.random();
+    const initialStreamingMessage = {
+      id: streamingMessageId,
+      text: '',
+      sender: 'ai',
+      timestamp: new Date(),
+      isStreaming: true
+    };
+
+    setStreamingMessage(initialStreamingMessage);
+
     try {
-      const aiResponse = await sendMessageToAI(inputMessage, messages);
+      let accumulatedText = '';
       
+      const aiResponse = await sendMessageToAI(
+        inputMessage, 
+        messages, 
+        (chunk) => {
+          // Handle each streaming chunk
+          accumulatedText += chunk;
+          setStreamingMessage(prev => prev ? {
+            ...prev,
+            text: accumulatedText
+          } : null);
+        }
+      );
+      
+      // Final message when streaming is complete
       const aiMessage = {
-        id: Date.now() + Math.random(),
-        text: aiResponse,
+        id: streamingMessageId,
+        text: aiResponse || accumulatedText,
         sender: 'ai',
-        timestamp: new Date()
+        timestamp: new Date(),
+        isStreaming: false
       };
 
       const finalMessages = [...newMessages, aiMessage];
       setMessages(finalMessages);
+      setStreamingMessage(null); // Clear streaming state
       saveMessagesToStorage(finalMessages);
       
       // Generate reflection after the conversation
@@ -140,6 +169,7 @@ export default function ChatPage() {
       };
       const finalMessages = [...newMessages, errorMessage];
       setMessages(finalMessages);
+      setStreamingMessage(null); // Clear streaming state
       saveMessagesToStorage(finalMessages);
     } finally {
       setIsLoading(false);
@@ -341,7 +371,27 @@ export default function ChatPage() {
           </div>
         ))}
         
-        {isLoading && (
+        {/* Streaming message */}
+        {streamingMessage && (
+          <div className="flex justify-start">
+            <div
+              className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-lg relative overflow-hidden mr-4"
+              style={{
+                backgroundColor: "rgba(28, 31, 46, 0.4)",
+                boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.1), 0 8px 32px rgba(155, 181, 255, 0.05)",
+                border: "1px solid rgba(155, 181, 255, 0.2)",
+              }}
+            >
+              <p className="text-white text-sm leading-relaxed">
+                {streamingMessage.text}
+                <span className="inline-block w-2 h-4 bg-white ml-1 animate-pulse"></span>
+              </p>
+              <p className="text-xs text-gray-400 mt-1">{formatTime(streamingMessage.timestamp)}</p>
+            </div>
+          </div>
+        )}
+        
+        {isLoading && !streamingMessage && (
           <div className="flex justify-start">
             <div
               className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-lg relative overflow-hidden mr-4"
