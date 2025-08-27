@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { Brain, Heart, Star, Mail, Lock } from "lucide-react";
+import { Brain, Heart, Star, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { signInUser } from '../services/authService';
 
 export default function LoginPage() {
@@ -11,6 +11,7 @@ export default function LoginPage() {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,6 +75,10 @@ export default function LoginPage() {
 
   const handleSignupRedirect = () => {
     navigate('/signup');
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -212,18 +217,29 @@ export default function LoginPage() {
                 style={{ color: "#D4AF37" }}
               />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Password"
-                className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 text-white placeholder-gray-400 backdrop-blur-md"
+                className="w-full pl-12 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 text-white placeholder-gray-400 backdrop-blur-md"
                 style={{
                   backgroundColor: "rgba(11, 14, 20, 0.6)",
                   border: `1px solid ${errors.password ? '#ff6b6b' : 'rgba(155, 181, 255, 0.15)'}`,
                   boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.08)",
                 }}
               />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 focus:outline-none hover:opacity-80 transition-opacity"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" style={{ color: "#9BB5FF" }} />
+                ) : (
+                  <Eye className="w-5 h-5" style={{ color: "#9BB5FF" }} />
+                )}
+              </button>
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
 
