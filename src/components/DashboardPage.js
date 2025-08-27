@@ -40,7 +40,8 @@ export default function DashboardPage() {
   };
 
   const handleChatClick = () => {
-    navigate('/chat');
+    // Pass the selected date as state to the chat page
+    navigate('/chat', { state: { selectedDate: selectedDate.toDateString() } });
   };
 
   const handleHistoryClick = () => {
