@@ -1,20 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Brain, Send, ArrowLeft, Heart, Star, User } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDarkMode } = useTheme();
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
-      sender: 'ai',
-      timestamp: new Date()
-    }
-  ]);
+  
+  // Get the selected date from navigation state, or default to today
+  const selectedDate = location.state?.selectedDate || new Date().toDateString();
+  const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, error
@@ -31,8 +28,8 @@ export default function ChatPage() {
   }, [messages, streamingMessage]);
 
   useEffect(() => {
-    // Load conversation history from localStorage
-    const storedMessages = localStorage.getItem('chatMessages');
+    // Load conversation history from localStorage based on selected date
+    const storedMessages = localStorage.getItem(`chatMessages_${selectedDate}`);
     if (storedMessages) {
       try {
         const parsedMessages = JSON.parse(storedMessages);
@@ -45,8 +42,17 @@ export default function ChatPage() {
       } catch (error) {
         console.error('Error parsing stored messages:', error);
         // Clear corrupted data
-        localStorage.removeItem('chatMessages');
+        localStorage.removeItem(`chatMessages_${selectedDate}`);
       }
+    } else {
+      // If no messages for this date, start with the welcome message
+      const welcomeMessage = {
+        id: 1,
+        text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages([welcomeMessage]);
     }
 
     // Test connection to the chat service
@@ -61,10 +67,10 @@ export default function ChatPage() {
     };
 
     testConnection();
-  }, []);
+  }, [selectedDate]); // Reload when selectedDate changes
 
   const saveMessagesToStorage = (newMessages) => {
-    localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+    localStorage.setItem(`chatMessages_${selectedDate}`, JSON.stringify(newMessages));
   };
 
   const generateReflection = (conversationMessages) => {
@@ -80,8 +86,8 @@ export default function ChatPage() {
     // In a real app, you'd use AI for this
     const reflection = `Today I had a meaningful conversation about my feelings and thoughts. ${userMessages.slice(0, 200)}${userMessages.length > 200 ? '...' : ''}`;
     
-    const today = new Date().toDateString();
-    localStorage.setItem(`reflection_${today}`, reflection);
+    // Store reflection for the selected date, not just today
+    localStorage.setItem(`reflection_${selectedDate}`, reflection);
     
     return reflection;
   };
@@ -323,6 +329,13 @@ export default function ChatPage() {
               {connectionStatus === 'connected' ? 'Your emotional companion' :
                connectionStatus === 'connecting' ? 'Getting ready to chat...' :
                'Having connection issues'}
+            </p>
+            <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+              Chat for: {new Date(selectedDate).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              })}
             </p>
           </div>
         </div>
