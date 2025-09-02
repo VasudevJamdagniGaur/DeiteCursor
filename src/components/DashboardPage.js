@@ -80,8 +80,8 @@ export default function DashboardPage() {
     navigate('/chat', { state: { selectedDate: selectedDate.toDateString() } });
   };
 
-  const handleHistoryClick = () => {
-    navigate('/history');
+  const handleWellbeingClick = () => {
+    navigate('/wellbeing');
   };
 
   const handleProfileClick = () => {
@@ -258,7 +258,7 @@ export default function DashboardPage() {
       <div className="relative z-10 max-w-sm mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div
-            onClick={handleHistoryClick}
+            onClick={handleWellbeingClick}
             className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity ${
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
