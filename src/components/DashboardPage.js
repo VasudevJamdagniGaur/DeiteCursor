@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Brain, MessageCircle, Calendar, Heart, Sparkles, User, Sun, Moon } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import CalendarPopup from './CalendarPopup';
+import reflectionService from '../services/reflectionService';
+import { getCurrentUser } from '../services/authService';
+import { getDateId } from '../utils/dateUtils';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -10,11 +13,44 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [reflection, setReflection] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isLoadingReflection, setIsLoadingReflection] = useState(false);
 
   useEffect(() => {
-    // Load reflection for the current date from localStorage
-    const storedReflection = localStorage.getItem(`reflection_${selectedDate.toDateString()}`);
-    setReflection(storedReflection || '');
+    // Load reflection for the current date from Firestore
+    const loadReflection = async () => {
+      const user = getCurrentUser();
+      if (!user) {
+        // If no user is logged in, try localStorage as fallback
+        const dateId = getDateId(selectedDate);
+        const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+        setReflection(storedReflection || '');
+        return;
+      }
+
+      setIsLoadingReflection(true);
+      try {
+        const dateId = getDateId(selectedDate);
+        const result = await reflectionService.getReflection(user.uid, dateId);
+        if (result.success) {
+          setReflection(result.reflection || '');
+        } else {
+          console.error('Error loading reflection:', result.error);
+          // Fallback to localStorage
+          const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+          setReflection(storedReflection || '');
+        }
+      } catch (error) {
+        console.error('Error loading reflection:', error);
+        // Fallback to localStorage
+        const dateId = getDateId(selectedDate);
+        const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+        setReflection(storedReflection || '');
+      } finally {
+        setIsLoadingReflection(false);
+      }
+    };
+
+    loadReflection();
   }, [selectedDate]);
 
   const formatDate = (date) => {
@@ -372,7 +408,16 @@ export default function DashboardPage() {
               backgroundColor: "#F9F9F7",
             }}
           >
-            {reflection ? (
+            {isLoadingReflection ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="flex space-x-1 mb-3">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+                <p className={`text-sm text-center italic ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading reflection...</p>
+              </div>
+            ) : reflection ? (
               <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{reflection}</p>
             ) : (
               <div className="flex flex-col items-center justify-center h-full">
