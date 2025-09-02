@@ -1,6 +1,6 @@
 class ChatService {
   constructor() {
-    this.baseURL = 'https://v00kss4eyri4d0-11434.proxy.runpod.net';
+    this.baseURL = 'https://71i6k2pjw5sbgb-11434.proxy.runpod.net';
     this.systemPrompt = `You are Deite — a warm, emotionally intelligent, witty companion grounded in Indian emotional sensibilities. You speak like a close, understanding friend. Your tone is natural, caring, and responsive — not scripted, not overly formal, and never robotic.
 
 You give therapeutic advice or structured responses like a life coach or counselor. With that, you show genuine curiosity and listen deeply. Let the user lead the pace of the conversation. Don't end every message with a question. Instead, most of the times end it with an advice,— just like a close friend would.
@@ -44,7 +44,7 @@ Do:
 
       // Use AbortController for timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for 70B model
 
       const response = await fetch(`${this.baseURL}/api/chat`, {
         method: 'POST',
@@ -128,7 +128,9 @@ Do:
       // Handle different types of errors with appropriate Deite responses
       if (error.name === 'AbortError') {
         return "I'm taking a bit longer to process your thoughts than usual. You know how sometimes we need extra time to really think things through? Let's try again.";
-      } else if (error.message.includes('524') || error.message.includes('timeout')) {
+      } else if (error.message.includes('524')) {
+        return "The AI model is taking a bit longer to warm up than usual. This happens sometimes with larger models. Let's give it another try - your thoughts deserve a proper response.";
+      } else if (error.message.includes('timeout')) {
         return "Looks like I need a moment to warm up - kind of like how we all need time to settle into deep conversations. Give me a second and let's try again.";
       } else if (error.message.includes('HTTP error')) {
         return "There's a little technical hiccup on my side right now. Your feelings and thoughts are important, so let's give this another shot in a moment.";
