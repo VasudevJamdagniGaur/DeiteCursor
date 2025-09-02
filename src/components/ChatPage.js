@@ -3,6 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Brain, Send, ArrowLeft, Heart, Star, User } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
+import reflectionService from '../services/reflectionService';
+import firestoreService from '../services/firestoreService';
+import { getCurrentUser } from '../services/authService';
+import { getDateId } from '../utils/dateUtils';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -10,7 +14,8 @@ export default function ChatPage() {
   const { isDarkMode } = useTheme();
   
   // Get the selected date from navigation state, or default to today
-  const selectedDate = location.state?.selectedDate || new Date().toDateString();
+  const selectedDateString = location.state?.selectedDate || new Date().toDateString();
+  const selectedDateId = getDateId(new Date(selectedDateString));
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,32 +33,86 @@ export default function ChatPage() {
   }, [messages, streamingMessage]);
 
   useEffect(() => {
-    // Load conversation history from localStorage based on selected date
-    const storedMessages = localStorage.getItem(`chatMessages_${selectedDate}`);
-    if (storedMessages) {
-      try {
-        const parsedMessages = JSON.parse(storedMessages);
-        // Convert timestamp strings back to Date objects
-        const messagesWithDates = parsedMessages.map(msg => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
-        setMessages(messagesWithDates);
-      } catch (error) {
-        console.error('Error parsing stored messages:', error);
-        // Clear corrupted data
-        localStorage.removeItem(`chatMessages_${selectedDate}`);
+    // Load conversation history from Firestore based on selected date
+    const loadMessages = async () => {
+      const user = getCurrentUser();
+      if (!user) {
+        // If no user is logged in, try localStorage as fallback
+        const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
+        if (storedMessages) {
+          try {
+            const parsedMessages = JSON.parse(storedMessages);
+            const messagesWithDates = parsedMessages.map(msg => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }));
+            setMessages(messagesWithDates);
+          } catch (error) {
+            console.error('Error parsing stored messages:', error);
+            localStorage.removeItem(`chatMessages_${selectedDateId}`);
+            setWelcomeMessage();
+          }
+        } else {
+          setWelcomeMessage();
+        }
+        return;
       }
-    } else {
-      // If no messages for this date, start with the welcome message
+
+      try {
+        // Ensure user document exists
+        await firestoreService.ensureUser(user.uid, {
+          displayName: user.displayName,
+          email: user.email
+        });
+
+        // Load messages from Firestore
+        const result = await firestoreService.getMessages(user.uid, selectedDateId);
+        if (result.success && result.messages.length > 0) {
+          // Convert Firestore messages to our format
+          const formattedMessages = result.messages.map(msg => ({
+            id: msg.id,
+            text: msg.text,
+            sender: msg.role === 'user' ? 'user' : 'ai',
+            timestamp: msg.timestamp
+          }));
+          setMessages(formattedMessages);
+        } else {
+          // No messages for this date, start with welcome message
+          setWelcomeMessage();
+        }
+      } catch (error) {
+        console.error('Error loading messages from Firestore:', error);
+        // Fallback to localStorage
+        const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
+        if (storedMessages) {
+          try {
+            const parsedMessages = JSON.parse(storedMessages);
+            const messagesWithDates = parsedMessages.map(msg => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }));
+            setMessages(messagesWithDates);
+          } catch (parseError) {
+            console.error('Error parsing stored messages:', parseError);
+            setWelcomeMessage();
+          }
+        } else {
+          setWelcomeMessage();
+        }
+      }
+    };
+
+    const setWelcomeMessage = () => {
       const welcomeMessage = {
-        id: 1,
+        id: 'welcome',
         text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
         sender: 'ai',
         timestamp: new Date()
       };
       setMessages([welcomeMessage]);
-    }
+    };
+
+    loadMessages();
 
     // Test connection to the chat service
     const testConnection = async () => {
@@ -67,29 +126,36 @@ export default function ChatPage() {
     };
 
     testConnection();
-  }, [selectedDate]); // Reload when selectedDate changes
+  }, [selectedDateId]); // Reload when selectedDateId changes
 
   const saveMessagesToStorage = (newMessages) => {
-    localStorage.setItem(`chatMessages_${selectedDate}`, JSON.stringify(newMessages));
+    localStorage.setItem(`chatMessages_${selectedDateId}`, JSON.stringify(newMessages));
   };
 
-  const generateReflection = (conversationMessages) => {
-    // Extract user messages from the conversation
-    const userMessages = conversationMessages
-      .filter(msg => msg.sender === 'user')
-      .map(msg => msg.text)
-      .join(' ');
-
-    if (!userMessages.trim()) return '';
-
-    // Generate a simple reflection based on user messages
-    // In a real app, you'd use AI for this
-    const reflection = `Today I had a meaningful conversation about my feelings and thoughts. ${userMessages.slice(0, 200)}${userMessages.length > 200 ? '...' : ''}`;
-    
-    // Store reflection for the selected date, not just today
-    localStorage.setItem(`reflection_${selectedDate}`, reflection);
-    
-    return reflection;
+  const generateAndSaveReflection = async (conversationMessages) => {
+    try {
+      // Generate the new reflection using the improved service
+      const reflection = reflectionService.generateReflection(conversationMessages);
+      
+      // Get current user
+      const user = getCurrentUser();
+      
+      if (user) {
+        // Save to Firestore
+        await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
+      } else {
+        // Fallback to localStorage if no user logged in
+        localStorage.setItem(`reflection_${selectedDateId}`, reflection);
+      }
+      
+      return reflection;
+    } catch (error) {
+      console.error('Error generating and saving reflection:', error);
+      // Fallback to localStorage
+      const reflection = reflectionService.generateReflection(conversationMessages);
+      localStorage.setItem(`reflection_${selectedDateId}`, reflection);
+      return reflection;
+    }
   };
 
   const sendMessageToAI = async (userMessage, conversationHistory, onStreamChunk) => {
@@ -108,9 +174,10 @@ export default function ChatPage() {
     
     if (!inputMessage.trim() || isLoading) return;
 
+    const userMessageText = inputMessage.trim();
     const userMessage = {
       id: Date.now(),
-      text: inputMessage.trim(),
+      text: userMessageText,
       sender: 'user',
       timestamp: new Date()
     };
@@ -119,6 +186,24 @@ export default function ChatPage() {
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
+
+    // Save user message to Firestore
+    const user = getCurrentUser();
+    if (user) {
+      try {
+        await firestoreService.addMessage(user.uid, selectedDateId, {
+          role: 'user',
+          text: userMessageText,
+          model: 'user-input'
+        });
+      } catch (error) {
+        console.error('Error saving user message to Firestore:', error);
+        // Continue with localStorage fallback
+        saveMessagesToStorage(newMessages);
+      }
+    } else {
+      saveMessagesToStorage(newMessages);
+    }
 
     // Create a streaming message placeholder
     const streamingMessageId = Date.now() + Math.random();
@@ -136,7 +221,7 @@ export default function ChatPage() {
       let accumulatedText = '';
       
       const aiResponse = await sendMessageToAI(
-        inputMessage, 
+        userMessageText, 
         messages, 
         (chunk) => {
           // Handle each streaming chunk
@@ -160,10 +245,26 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, aiMessage];
       setMessages(finalMessages);
       setStreamingMessage(null); // Clear streaming state
-      saveMessagesToStorage(finalMessages);
       
-      // Generate reflection after the conversation
-      generateReflection(finalMessages);
+      // Save AI message to Firestore
+      if (user) {
+        try {
+          await firestoreService.addMessage(user.uid, selectedDateId, {
+            role: 'assistant',
+            text: aiResponse || accumulatedText,
+            model: 'llama3:70b'
+          });
+        } catch (error) {
+          console.error('Error saving AI message to Firestore:', error);
+          // Continue with localStorage fallback
+          saveMessagesToStorage(finalMessages);
+        }
+      } else {
+        saveMessagesToStorage(finalMessages);
+      }
+      
+      // Generate and save reflection after the conversation
+      generateAndSaveReflection(finalMessages);
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -176,7 +277,25 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, errorMessage];
       setMessages(finalMessages);
       setStreamingMessage(null); // Clear streaming state
-      saveMessagesToStorage(finalMessages);
+      
+      // Save error message to Firestore
+      if (user) {
+        try {
+          await firestoreService.addMessage(user.uid, selectedDateId, {
+            role: 'assistant',
+            text: errorMessage.text,
+            model: 'error'
+          });
+        } catch (firestoreError) {
+          console.error('Error saving error message to Firestore:', firestoreError);
+          saveMessagesToStorage(finalMessages);
+        }
+      } else {
+        saveMessagesToStorage(finalMessages);
+      }
+      
+      // Generate reflection even in error case (user message was still sent)
+      generateAndSaveReflection(finalMessages);
     } finally {
       setIsLoading(false);
     }
@@ -331,7 +450,7 @@ export default function ChatPage() {
                'Having connection issues'}
             </p>
             <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              Chat for: {new Date(selectedDate).toLocaleDateString('en-US', { 
+              Chat for: {new Date(selectedDateString).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 year: 'numeric' 
