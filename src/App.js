@@ -8,7 +8,7 @@ import SignupPage from './components/SignupPage';
 import LoginPage from './components/LoginPage';
 import DashboardPage from './components/DashboardPage';
 import ChatPage from './components/ChatPage';
-import EmotionalHistory from './components/EmotionalHistory';
+import EmotionalWellbeing from './components/EmotionalWellbeing';
 import ProfilePage from './components/ProfilePage';
 
 function App() {
@@ -24,7 +24,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/chat" element={<ChatPage />} />
-            <Route path="/history" element={<EmotionalHistory />} />
+            <Route path="/wellbeing" element={<EmotionalWellbeing />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </div>
