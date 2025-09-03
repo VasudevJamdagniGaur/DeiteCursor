@@ -20,7 +20,7 @@ Do:
   }
 
   async sendMessage(userMessage, conversationHistory = [], onStreamChunk = null, retryCount = 0) {
-    const maxRetries = 2;
+    const maxRetries = 3;
     
     try {
       // Limit conversation history to last 10 messages to manage token usage
@@ -52,15 +52,19 @@ Do:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Connection': 'keep-alive',
+          'Keep-Alive': 'timeout=300, max=1000'
         },
         body: JSON.stringify({
           model: 'llama3:70b',
           messages: messages,
-          stream: true, // Always use streaming for better timeout handling
+          stream: true,
           options: {
             temperature: 0.7,
             top_p: 0.9,
-            top_k: 40
+            top_k: 40,
+            num_ctx: 2048, // Limit context to reduce memory usage
+            num_predict: 512 // Limit response length
           }
         }),
         signal: controller.signal
@@ -143,18 +147,21 @@ Do:
         error.message.includes('Gateway Time-out') ||
         error.message.includes('timeout') ||
         error.message.includes('The operation has timed out') ||
+        error.message.includes('connection was closed') ||
         error.name === 'AbortError'
       )) {
         console.log(`🔄 Retrying request (attempt ${retryCount + 1}/${maxRetries})...`);
         
-        // Longer delays for large model (30s, 60s)
-        const delay = (retryCount + 1) * 30000;
+        // Shorter delays for faster retries
+        const delay = (retryCount + 1) * 15000; // 15s, 30s, 45s
         console.log(`⏳ Waiting ${delay/1000}s before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         
-        // Always try warming up the model before retry
-        console.log('🔥 Warming up model before retry...');
-        await this.warmupModel();
+        // Try warming up the model before retry (only on first retry)
+        if (retryCount === 0) {
+          console.log('🔥 Warming up model before retry...');
+          await this.warmupModel();
+        }
         
         return this.sendMessage(userMessage, conversationHistory, onStreamChunk, retryCount + 1);
       }
@@ -181,75 +188,54 @@ Do:
     }
   }
 
-  // Method to warm up the model with progressive timeout
+  // Simplified warmup method
   async warmupModel() {
-    console.log('🔥 Starting model warmup process...');
+    console.log('🔥 Warming up model...');
     
-    // Try multiple warmup attempts with increasing timeouts
-    const attempts = [
-      { timeout: 30000, message: 'Hi' },
-      { timeout: 120000, message: 'Hello' },
-      { timeout: 300000, message: 'Test' }
-    ];
-    
-    for (let i = 0; i < attempts.length; i++) {
-      const attempt = attempts[i];
-      console.log(`🔄 Warmup attempt ${i + 1}/${attempts.length} (${attempt.timeout/1000}s timeout)...`);
-      
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), attempt.timeout);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
 
-        const response = await fetch(`${this.baseURL}/api/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'llama3:70b',
-            messages: [{ role: 'user', content: attempt.message }],
-            stream: true // Use streaming for better timeout handling
-          }),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          // Try to read at least some of the streaming response
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let hasContent = false;
-          
-          try {
-            const { done, value } = await reader.read();
-            if (!done && value) {
-              const chunk = decoder.decode(value);
-              hasContent = chunk.length > 0;
-            }
-          } catch (e) {
-            // Ignore streaming errors during warmup
-          } finally {
-            reader.releaseLock();
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Connection': 'keep-alive'
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: [{ role: 'user', content: 'Hi' }],
+          stream: true,
+          options: {
+            num_ctx: 512,
+            num_predict: 10
           }
-          
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        // Just check if we can read the response
+        const reader = response.body.getReader();
+        try {
+          await reader.read();
+          reader.releaseLock();
           console.log('✅ Model warmed up successfully!');
           return true;
-        }
-      } catch (error) {
-        console.log(`⚠️ Warmup attempt ${i + 1} failed:`, error.message);
-        
-        // Wait before next attempt (except for the last one)
-        if (i < attempts.length - 1) {
-          const delay = (i + 1) * 2000; // 2s, 4s delays
-          console.log(`⏳ Waiting ${delay/1000}s before next attempt...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+        } catch (e) {
+          console.log('⚠️ Warmup response read failed, but connection worked');
+          return true; // Connection worked, that's good enough
         }
       }
+      
+      console.log('❌ Warmup failed with status:', response.status);
+      return false;
+    } catch (error) {
+      console.log('❌ Warmup failed:', error.message);
+      return false;
     }
-    
-    console.log('❌ All warmup attempts failed');
-    return false;
   }
 
   // Method to check if model is warm (quick test)
@@ -308,6 +294,19 @@ Do:
       return response.ok;
     } catch (error) {
       console.error('Connection test failed:', error);
+      return false;
+    }
+  }
+
+  // Simple test method to verify chat API works
+  async testChatAPI() {
+    console.log('🧪 Testing chat API...');
+    try {
+      const result = await this.sendMessage('test', [], null);
+      console.log('✅ Chat API test successful:', result.substring(0, 50) + '...');
+      return true;
+    } catch (error) {
+      console.log('❌ Chat API test failed:', error.message);
       return false;
     }
   }

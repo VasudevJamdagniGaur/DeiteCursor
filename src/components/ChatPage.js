@@ -121,15 +121,13 @@ export default function ChatPage() {
         if (isConnected) {
           setConnectionStatus('connected');
           
-          // Check if model is already warm, if not, warm it up
-          const isWarm = await chatService.isModelWarm();
-          if (!isWarm) {
-            console.log('🔥 Model is cold, starting warmup process...');
-            chatService.warmupModel().catch(error => {
-              console.log('Background model warmup failed:', error);
-            });
+          // Test the chat API directly
+          console.log('🧪 Testing chat API functionality...');
+          const chatWorks = await chatService.testChatAPI();
+          if (chatWorks) {
+            console.log('✅ Chat API is working properly!');
           } else {
-            console.log('✅ Model is already warm and ready!');
+            console.log('⚠️ Chat API test failed, but connection is available');
           }
         } else {
           setConnectionStatus('error');
