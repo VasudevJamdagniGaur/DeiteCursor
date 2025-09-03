@@ -134,8 +134,8 @@ export default function ChatPage() {
 
   const generateAndSaveReflection = async (conversationMessages) => {
     try {
-      // Generate the new reflection using the improved service
-      const reflection = reflectionService.generateReflection(conversationMessages);
+      // Generate the new reflection using the AI-powered service
+      const reflection = await reflectionService.generateReflection(conversationMessages);
       
       // Get current user
       const user = getCurrentUser();
@@ -151,10 +151,17 @@ export default function ChatPage() {
       return reflection;
     } catch (error) {
       console.error('Error generating and saving reflection:', error);
-      // Fallback to localStorage
-      const reflection = reflectionService.generateReflection(conversationMessages);
-      localStorage.setItem(`reflection_${selectedDateId}`, reflection);
-      return reflection;
+      // Fallback to localStorage with basic reflection
+      try {
+        const reflection = await reflectionService.generateReflection(conversationMessages);
+        localStorage.setItem(`reflection_${selectedDateId}`, reflection);
+        return reflection;
+      } catch (fallbackError) {
+        console.error('Fallback reflection generation failed:', fallbackError);
+        const basicReflection = "Had a conversation with Deite today about various topics.";
+        localStorage.setItem(`reflection_${selectedDateId}`, basicReflection);
+        return basicReflection;
+      }
     }
   };
 
