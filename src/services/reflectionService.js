@@ -44,62 +44,86 @@ class ReflectionService {
   async generateAISummary(userMessages, aiMessages) {
     const baseURL = 'https://ckjpcdil47joyh-11434.proxy.runpod.net';
     
+    console.log('🤖 Starting AI summary generation...');
+    console.log('📝 User messages:', userMessages.length);
+    console.log('🤖 AI messages:', aiMessages.length);
+    
     // Create a conversation context for the AI
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
+    console.log('📋 Conversation context:', conversationContext.substring(0, 200) + '...');
     
-    const prompt = `You are tasked with creating a diary-style summary of a conversation between a user and Deite (an AI emotional companion). 
+    const prompt = `Create a diary-style summary of this conversation between a user and Deite (an AI companion).
 
-Write a personal diary entry from the user's perspective about their conversation with Deite today. The summary should:
+Write a personal diary entry from the user's perspective. Format:
+- Start with "Today I talked with Deite about..."
+- Include main topics and emotions
+- End with how the conversation felt
+- Keep it 2-3 sentences, natural and personal
 
-1. Start with "Today I talked with Deite about..."
-2. Sound like something the person would write in their personal diary
-3. Mention the main topics discussed
-4. Include how the person was feeling
-5. Describe what they shared or asked about
-6. End with how the conversation made them feel
-7. Keep it natural and personal, not clinical or robotic
-8. Be 2-4 sentences long
-
-Here's the conversation:
+Conversation:
 ${conversationContext}
 
-Write a diary entry summary:`;
+Diary entry:`;
+
+    console.log('🌐 Making API call to:', `${baseURL}/api/chat`);
 
     try {
+      const requestBody = {
+        model: 'llama3:70b',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        stream: false
+      };
+
+      console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+
+      // Add timeout to the request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(`${baseURL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'llama3:70b',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that creates personal diary-style summaries of conversations. Write in first person as if the user is writing in their diary.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          stream: false
-        })
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('📄 API Response:', data);
       
       if (data.message && data.message.content) {
-        return data.message.content.trim();
+        const summary = data.message.content.trim();
+        console.log('✅ Generated AI summary:', summary);
+        return summary;
       } else {
+        console.error('❌ Invalid response format:', data);
         throw new Error('Invalid response format from API');
       }
     } catch (error) {
-      console.error('Error calling AI API for summary:', error);
+      if (error.name === 'AbortError') {
+        console.error('⏰ API request timed out after 30 seconds');
+      } else if (error.message.includes('Failed to fetch')) {
+        console.error('🌐 Network error - could not reach API server');
+      } else {
+        console.error('💥 Error calling AI API for summary:', error);
+      }
       throw error; // Re-throw to trigger fallback
     }
   }
