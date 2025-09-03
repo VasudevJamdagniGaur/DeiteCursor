@@ -133,32 +133,42 @@ export default function ChatPage() {
   };
 
   const generateAndSaveReflection = async (conversationMessages) => {
+    console.log('🔄 Starting reflection generation...');
+    console.log('💬 Total messages for reflection:', conversationMessages.length);
+    
     try {
       // Generate the new reflection using the AI-powered service
+      console.log('🤖 Calling AI reflection service...');
       const reflection = await reflectionService.generateReflection(conversationMessages);
+      console.log('✅ Generated reflection:', reflection);
       
       // Get current user
       const user = getCurrentUser();
       
       if (user) {
+        console.log('💾 Saving reflection to Firestore for user:', user.uid);
         // Save to Firestore
         await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
       } else {
+        console.log('💾 Saving reflection to localStorage (no user logged in)');
         // Fallback to localStorage if no user logged in
         localStorage.setItem(`reflection_${selectedDateId}`, reflection);
       }
       
       return reflection;
     } catch (error) {
-      console.error('Error generating and saving reflection:', error);
+      console.error('❌ Error generating and saving reflection:', error);
       // Fallback to localStorage with basic reflection
       try {
+        console.log('🔄 Attempting fallback reflection generation...');
         const reflection = await reflectionService.generateReflection(conversationMessages);
+        console.log('✅ Fallback reflection generated:', reflection);
         localStorage.setItem(`reflection_${selectedDateId}`, reflection);
         return reflection;
       } catch (fallbackError) {
-        console.error('Fallback reflection generation failed:', fallbackError);
+        console.error('❌ Fallback reflection generation failed:', fallbackError);
         const basicReflection = "Had a conversation with Deite today about various topics.";
+        console.log('📝 Using basic reflection:', basicReflection);
         localStorage.setItem(`reflection_${selectedDateId}`, basicReflection);
         return basicReflection;
       }
