@@ -114,24 +114,12 @@ export default function ChatPage() {
 
     loadMessages();
 
-    // Test connection to the chat service and warm up model
+    // Test connection to the chat service
     const testConnection = async () => {
       try {
         const isConnected = await chatService.testConnection();
-        if (isConnected) {
-          setConnectionStatus('connected');
-          
-          // Test the chat API directly
-          console.log('🧪 Testing chat API functionality...');
-          const chatWorks = await chatService.testChatAPI();
-          if (chatWorks) {
-            console.log('✅ Chat API is working properly!');
-          } else {
-            console.log('⚠️ Chat API test failed, but connection is available');
-          }
-        } else {
-          setConnectionStatus('error');
-        }
+        setConnectionStatus(isConnected ? 'connected' : 'error');
+        console.log('🔗 Connection status:', isConnected ? 'Connected' : 'Error');
       } catch (error) {
         console.error('Connection test failed:', error);
         setConnectionStatus('error');
@@ -190,24 +178,12 @@ export default function ChatPage() {
 
   const sendMessageToAI = async (userMessage, conversationHistory, onStreamChunk) => {
     try {
+      console.log('💬 Sending message to AI...');
       const response = await chatService.sendMessage(userMessage, conversationHistory, onStreamChunk);
-      
-      // If we get a warmup-related response, try warming up the model
-      if (response && response.includes('warm up')) {
-        console.log('🔥 Attempting to warm up model due to timeout...');
-        const warmupSuccess = await chatService.warmupModel();
-        
-        if (warmupSuccess) {
-          // Try the original request again after warmup
-          console.log('🔄 Retrying original request after warmup...');
-          return await chatService.sendMessage(userMessage, conversationHistory, onStreamChunk);
-        }
-      }
-      
+      console.log('✅ AI response received');
       return response;
     } catch (error) {
-      console.error('Error getting AI response:', error);
-      // This fallback should rarely be hit since chatService handles its own errors
+      console.error('❌ Error getting AI response:', error);
       return "I'm having a moment of technical difficulty, but I'm still here for you. Let's try that again in a bit.";
     }
   };
