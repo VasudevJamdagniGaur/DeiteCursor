@@ -42,7 +42,7 @@ class ReflectionService {
   }
 
   async generateAISummary(userMessages, aiMessages) {
-    const baseURL = 'https://ckjpcdil47joyh-11434.proxy.runpod.net';
+    const baseURL = 'https://9s21cuv9xr14qz-11434.proxy.runpod.net/';
     
     console.log('🤖 Starting AI summary generation...');
     console.log('📝 User messages:', userMessages.length);
