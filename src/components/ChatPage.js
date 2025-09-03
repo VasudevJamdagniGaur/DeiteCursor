@@ -114,11 +114,26 @@ export default function ChatPage() {
 
     loadMessages();
 
-    // Test connection to the chat service
+    // Test connection to the chat service and warm up model
     const testConnection = async () => {
       try {
         const isConnected = await chatService.testConnection();
-        setConnectionStatus(isConnected ? 'connected' : 'error');
+        if (isConnected) {
+          setConnectionStatus('connected');
+          
+          // Check if model is already warm, if not, warm it up
+          const isWarm = await chatService.isModelWarm();
+          if (!isWarm) {
+            console.log('🔥 Model is cold, starting warmup process...');
+            chatService.warmupModel().catch(error => {
+              console.log('Background model warmup failed:', error);
+            });
+          } else {
+            console.log('✅ Model is already warm and ready!');
+          }
+        } else {
+          setConnectionStatus('error');
+        }
       } catch (error) {
         console.error('Connection test failed:', error);
         setConnectionStatus('error');
@@ -178,6 +193,19 @@ export default function ChatPage() {
   const sendMessageToAI = async (userMessage, conversationHistory, onStreamChunk) => {
     try {
       const response = await chatService.sendMessage(userMessage, conversationHistory, onStreamChunk);
+      
+      // If we get a warmup-related response, try warming up the model
+      if (response && response.includes('warm up')) {
+        console.log('🔥 Attempting to warm up model due to timeout...');
+        const warmupSuccess = await chatService.warmupModel();
+        
+        if (warmupSuccess) {
+          // Try the original request again after warmup
+          console.log('🔄 Retrying original request after warmup...');
+          return await chatService.sendMessage(userMessage, conversationHistory, onStreamChunk);
+        }
+      }
+      
       return response;
     } catch (error) {
       console.error('Error getting AI response:', error);
