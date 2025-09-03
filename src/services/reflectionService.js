@@ -15,19 +15,109 @@ class ReflectionService {
     );
   }
 
-  generateReflection(messages) {
-    // Filter out system messages and get user messages
+  async generateReflection(messages) {
+    // Filter out system messages and get meaningful messages
     const userMessages = messages
       .filter(msg => msg.sender === 'user')
       .map(msg => msg.text.trim())
       .filter(text => !this.isSimpleGreeting(text) && text.length > 3);
 
+    const aiMessages = messages
+      .filter(msg => msg.sender === 'ai')
+      .map(msg => msg.text.trim());
+
     if (userMessages.length === 0) {
       return "Had a brief chat with Deite today but didn't share much.";
     }
 
-    // Create a diary-like summary
-    return this.createDiarySummary(userMessages);
+    try {
+      // Use AI to generate a diary-style summary
+      const aiSummary = await this.generateAISummary(userMessages, aiMessages);
+      return aiSummary;
+    } catch (error) {
+      console.error('Error generating AI summary:', error);
+      // Fallback to manual summary if AI fails
+      return this.createDiarySummary(userMessages);
+    }
+  }
+
+  async generateAISummary(userMessages, aiMessages) {
+    const baseURL = 'https://ckjpcdil47joyh-11434.proxy.runpod.net';
+    
+    // Create a conversation context for the AI
+    const conversationContext = this.buildConversationContext(userMessages, aiMessages);
+    
+    const prompt = `You are tasked with creating a diary-style summary of a conversation between a user and Deite (an AI emotional companion). 
+
+Write a personal diary entry from the user's perspective about their conversation with Deite today. The summary should:
+
+1. Start with "Today I talked with Deite about..."
+2. Sound like something the person would write in their personal diary
+3. Mention the main topics discussed
+4. Include how the person was feeling
+5. Describe what they shared or asked about
+6. End with how the conversation made them feel
+7. Keep it natural and personal, not clinical or robotic
+8. Be 2-4 sentences long
+
+Here's the conversation:
+${conversationContext}
+
+Write a diary entry summary:`;
+
+    try {
+      const response = await fetch(`${baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that creates personal diary-style summaries of conversations. Write in first person as if the user is writing in their diary.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.message && data.message.content) {
+        return data.message.content.trim();
+      } else {
+        throw new Error('Invalid response format from API');
+      }
+    } catch (error) {
+      console.error('Error calling AI API for summary:', error);
+      throw error; // Re-throw to trigger fallback
+    }
+  }
+
+  buildConversationContext(userMessages, aiMessages) {
+    let context = '';
+    
+    // Build a conversation flow showing what the user said
+    userMessages.forEach((userMsg, index) => {
+      context += `User: ${userMsg}\n`;
+      if (aiMessages[index]) {
+        // Include a brief part of AI response to show context
+        const aiResponse = aiMessages[index].substring(0, 100);
+        context += `Deite: ${aiResponse}${aiMessages[index].length > 100 ? '...' : ''}\n\n`;
+      }
+    });
+    
+    return context.trim();
   }
 
   createDiarySummary(userMessages) {
