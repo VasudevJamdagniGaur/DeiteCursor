@@ -58,6 +58,66 @@ class ChatService {
       throw error;
     }
   }
+
+  async generateDayExplanation(emotionalData, dayType, period) {
+    console.log(`🤖 Generating ${dayType} day explanation for ${period} day period...`);
+    
+    try {
+      const { happiness, energy, stress, anxiety, timestamp } = emotionalData;
+      const date = new Date(timestamp).toLocaleDateString();
+      
+      let prompt;
+      if (dayType === 'best') {
+        prompt = `On ${date}, this person had their best mood day in the last ${period} days with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what likely made this such a positive day based on these emotional levels. Be warm and encouraging.`;
+      } else {
+        prompt = `On ${date}, this person had their most challenging day in the last ${period} days with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what might have made this day difficult based on these emotional levels. Be empathetic and supportive.`;
+      }
+
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are an empathetic emotional wellness assistant. Provide brief, insightful explanations about emotional patterns. Keep responses to 1-2 sentences maximum and focus on the emotional data provided.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ];
+
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: messages,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.message && data.message.content) {
+        return data.message.content.trim();
+      }
+
+      throw new Error('Invalid response format');
+
+    } catch (error) {
+      console.error(`❌ Error generating ${dayType} day explanation:`, error);
+      // Return fallback descriptions
+      if (dayType === 'best') {
+        return "Your high energy and happiness levels created an optimal emotional state for a fulfilling day.";
+      } else {
+        return "Elevated stress and anxiety levels made this a more challenging day to navigate.";
+      }
+    }
+  }
 }
 
 export default new ChatService();
