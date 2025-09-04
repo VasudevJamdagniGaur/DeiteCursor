@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import emotionalAnalysisService from '../services/emotionalAnalysisService';
+import patternAnalysisService from '../services/patternAnalysisService';
 import { getCurrentUser } from '../services/authService';
 import { 
   Brain, 
@@ -52,6 +53,10 @@ export default function EmotionalWellbeing() {
   const [triggers, setTriggers] = useState({});
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7 or 15 days
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
+  const [patternPeriod, setPatternPeriod] = useState(7); // 7 or 30 days for pattern analysis
+  const [patternLoading, setPatternLoading] = useState(false);
+  const [patternAnalysis, setPatternAnalysis] = useState(null);
+  const [hasEnoughData, setHasEnoughData] = useState(true);
 
   useEffect(() => {
     loadRealEmotionalData();
@@ -64,7 +69,12 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     loadRealEmotionalData();
     loadBalanceData();
+    loadPatternAnalysis();
   }, []);
+
+  useEffect(() => {
+    loadPatternAnalysis();
+  }, [patternPeriod]);
 
   const loadRealEmotionalData = () => {
     console.log(`📊 Loading emotional data for ${selectedPeriod} days...`);
@@ -271,6 +281,43 @@ export default function EmotionalWellbeing() {
     });
 
     console.log('✅ Empty state set successfully');
+  };
+
+  const loadPatternAnalysis = async () => {
+    console.log(`🔍 Loading pattern analysis for ${patternPeriod} days...`);
+    setPatternLoading(true);
+    
+    try {
+      const user = getCurrentUser();
+      const userId = user?.uid || 'anonymous';
+      
+      const analysis = await patternAnalysisService.getPatternAnalysis(userId, patternPeriod, true);
+      console.log('📊 Pattern analysis result:', analysis);
+      
+      setPatternAnalysis(analysis);
+      setHasEnoughData(analysis.hasEnoughData);
+      
+      if (analysis.success && analysis.hasEnoughData) {
+        setTriggers(analysis.triggers);
+      } else {
+        // Set empty state or "not enough data" message
+        setTriggers({
+          stress: [],
+          joy: [],
+          distraction: []
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error loading pattern analysis:', error);
+      setTriggers({
+        stress: [],
+        joy: [],
+        distraction: []
+      });
+      setHasEnoughData(false);
+    } finally {
+      setPatternLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -689,64 +736,203 @@ export default function EmotionalWellbeing() {
               isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
             }`}
           >
-            <div className="flex items-center space-x-3 mb-6">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(177, 156, 217, 0.2) 0%, rgba(125, 211, 192, 0.2) 100%)",
-                  border: "1px solid rgba(177, 156, 217, 0.3)",
-                }}
-              >
-                <Lightbulb className="w-5 h-5" style={{ color: "#B19CD9" }} />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(177, 156, 217, 0.2) 0%, rgba(125, 211, 192, 0.2) 100%)",
+                    border: "1px solid rgba(177, 156, 217, 0.3)",
+                  }}
+                >
+                  <Lightbulb className="w-5 h-5" style={{ color: "#B19CD9" }} />
+                </div>
+                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Triggers & Patterns
+                </h3>
               </div>
-              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                Triggers & Patterns
-              </h3>
+
+              {/* Period Toggle for Pattern Analysis */}
+              <div className={`flex rounded-lg p-1 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <button
+                  onClick={() => setPatternPeriod(7)}
+                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                    patternPeriod === 7
+                      ? isDarkMode 
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'bg-purple-500 text-white shadow-md'
+                      : isDarkMode 
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setPatternPeriod(30)}
+                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                    patternPeriod === 30
+                      ? isDarkMode 
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'bg-purple-500 text-white shadow-md'
+                      : isDarkMode 
+                        ? 'text-gray-300 hover:text-white'
+                        : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Month
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Stress Triggers</span>
-                </h4>
-                <div className="space-y-2">
-                  {triggers.stress?.map((trigger, index) => (
-                    <div key={index} className={`p-2 rounded-lg ${isDarkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>
-                      <span className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{trigger}</span>
-                    </div>
-                  ))}
+            {/* Loading State */}
+            {patternLoading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent"></div>
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Analyzing your {patternPeriod === 7 ? 'weekly' : 'monthly'} patterns...
+                  </span>
                 </div>
               </div>
+            )}
 
-              <div>
-                <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                  <Heart className="w-4 h-4" />
-                  <span>Joy Boosters</span>
-                </h4>
-                <div className="space-y-2">
-                  {triggers.joy?.map((trigger, index) => (
-                    <div key={index} className={`p-2 rounded-lg ${isDarkMode ? 'bg-green-500/10' : 'bg-green-50'}`}>
-                      <span className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>{trigger}</span>
+            {/* Pattern Analysis Results */}
+            {!patternLoading && (
+              <>
+                {/* Data Status Banner */}
+                {!hasEnoughData && patternAnalysis && (
+                  <div className={`mb-6 p-4 rounded-lg border ${isDarkMode ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'}`}>
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                        {patternAnalysis.message || `Not enough data for ${patternPeriod === 7 ? 'weekly' : 'monthly'} analysis`}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    {patternAnalysis.totalMessages !== undefined && (
+                      <p className={`text-xs mt-2 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                        Current: {patternAnalysis.totalMessages} messages across {patternAnalysis.totalDays} days. Need at least 3 days of conversations.
+                      </p>
+                    )}
+                  </div>
+                )}
 
-              <div>
-                <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                  <Zap className="w-4 h-4" />
-                  <span>Distractions</span>
-                </h4>
-                <div className="space-y-2">
-                  {triggers.distraction?.map((trigger, index) => (
-                    <div key={index} className={`p-2 rounded-lg ${isDarkMode ? 'bg-yellow-500/10' : 'bg-yellow-50'}`}>
-                      <span className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>{trigger}</span>
+                {/* Analysis Summary */}
+                {hasEnoughData && patternAnalysis && patternAnalysis.success && (
+                  <div className={`mb-6 p-4 rounded-lg ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Brain className="w-5 h-5 text-green-500" />
+                        <span className={`text-sm font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
+                          {patternPeriod === 7 ? 'Weekly' : 'Monthly'} Analysis Complete
+                        </span>
+                      </div>
+                      <span className={`text-xs ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        {patternAnalysis.totalMessages} messages • {patternAnalysis.totalDays} active days
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Stress Triggers</span>
+                    </h4>
+                    <div className="space-y-2">
+                      {triggers.stress && triggers.stress.length > 0 ? (
+                        triggers.stress.map((trigger, index) => (
+                          <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}>
+                            <span className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{trigger}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/30' : 'bg-gray-100'}`}>
+                          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No specific stress triggers found in conversations
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                      <Heart className="w-4 h-4" />
+                      <span>Joy Boosters</span>
+                    </h4>
+                    <div className="space-y-2">
+                      {triggers.joy && triggers.joy.length > 0 ? (
+                        triggers.joy.map((trigger, index) => (
+                          <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                            <span className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>{trigger}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/30' : 'bg-gray-100'}`}>
+                          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No specific joy sources found in conversations
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                      <Zap className="w-4 h-4" />
+                      <span>Distractions</span>
+                    </h4>
+                    <div className="space-y-2">
+                      {triggers.distraction && triggers.distraction.length > 0 ? (
+                        triggers.distraction.map((trigger, index) => (
+                          <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-yellow-50 border border-yellow-200'}`}>
+                            <span className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>{trigger}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/30' : 'bg-gray-100'}`}>
+                          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No specific distractions found in conversations
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+
+                {/* Insights Section */}
+                {hasEnoughData && patternAnalysis && patternAnalysis.insights && (
+                  <div className={`mt-6 p-4 rounded-lg ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                    <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                      <Target className="w-4 h-4" />
+                      <span>Key Insights</span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Primary Stress Source</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                          {patternAnalysis.insights.primaryStressSource}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Main Joy Source</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                          {patternAnalysis.insights.mainJoySource}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Behavioral Pattern</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                          {patternAnalysis.insights.behavioralPattern}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* 5. Guidance */}
@@ -770,30 +956,61 @@ export default function EmotionalWellbeing() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                <div className="flex items-center space-x-2 mb-3">
-                  <Sun className="w-5 h-5 text-blue-500" />
-                  <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                    Continue Chatting
-                  </h4>
-                </div>
-                <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
-                  Keep engaging with Deite to build more comprehensive emotional insights and patterns.
-                </p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* AI Recommendations */}
+              {hasEnoughData && patternAnalysis && patternAnalysis.recommendations && patternAnalysis.recommendations.length > 0 ? (
+                patternAnalysis.recommendations.slice(0, 3).map((recommendation, index) => (
+                  <div key={index} className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Award className="w-5 h-5 text-green-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                        AI Recommendation
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                      {recommendation}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Sun className="w-5 h-5 text-blue-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                        Continue Chatting
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                      Keep engaging with Deite to build more comprehensive emotional insights and patterns.
+                    </p>
+                  </div>
 
-              <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
-                <div className="flex items-center space-x-2 mb-3">
-                  <Star className="w-5 h-5 text-purple-500" />
-                  <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
-                    Reflect Daily
-                  </h4>
-                </div>
-                <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                  Regular conversations help create more accurate emotional tracking and better insights.
-                </p>
-              </div>
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Star className="w-5 h-5 text-purple-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                        Reflect Daily
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                      Regular conversations help create more accurate emotional tracking and better insights.
+                    </p>
+                  </div>
+
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50 border border-teal-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Brain className="w-5 h-5 text-teal-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
+                        Build Patterns
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`}>
+                      Share more details about your experiences to unlock personalized insights.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
