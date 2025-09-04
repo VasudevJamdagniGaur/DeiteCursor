@@ -200,12 +200,6 @@ export default function EmotionalWellbeing() {
           description: "Higher stress and anxiety levels",
           date: new Date(worstDay.timestamp).toLocaleDateString(),
           score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
-        },
-        shift: {
-          title: `${selectedPeriod}-Day Average`,
-          description: `Happiness: ${Math.round(avgHappiness)}%, Energy: ${Math.round(avgEnergy)}%`,
-          change: `Tracked ${validData.length} days`,
-          trend: avgHappiness > 60 ? "up" : "neutral"
         }
       });
 
@@ -682,7 +676,7 @@ export default function EmotionalWellbeing() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-100 border border-green-200'}`}>
                 <div className="flex items-center space-x-2 mb-2">
                   <Smile className="w-5 h-5 text-green-500" />
@@ -710,21 +704,6 @@ export default function EmotionalWellbeing() {
                 </p>
                 <p className={`text-xs mt-1 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`}>
                   {highlights.toughestDay?.date}
-                </p>
-              </div>
-
-              <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-100 border border-blue-200'}`}>
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingUp className="w-5 h-5 text-blue-500" />
-                  <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                    {highlights.shift?.title}
-                  </h4>
-                </div>
-                <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
-                  {highlights.shift?.description}
-                </p>
-                <p className={`text-xs mt-1 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`}>
-                  {highlights.shift?.change}
                 </p>
               </div>
             </div>
