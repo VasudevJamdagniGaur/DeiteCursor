@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import emotionalAnalysisService from '../services/emotionalAnalysisService';
 import patternAnalysisService from '../services/patternAnalysisService';
 import { getCurrentUser } from '../services/authService';
+import chatService from '../services/chatService';
 import { 
   Brain, 
   ArrowLeft, 
@@ -76,7 +77,7 @@ export default function EmotionalWellbeing() {
     loadPatternAnalysis();
   }, [patternPeriod]);
 
-  const loadRealEmotionalData = () => {
+  const loadRealEmotionalData = async () => {
     console.log(`📊 Loading emotional data for ${selectedPeriod} days...`);
     
     const user = getCurrentUser();
@@ -92,7 +93,7 @@ export default function EmotionalWellbeing() {
       return;
     }
 
-    processRealEmotionalData(emotionalDataRaw);
+    await processRealEmotionalData(emotionalDataRaw);
   };
 
   const loadBalanceData = () => {
@@ -143,7 +144,7 @@ export default function EmotionalWellbeing() {
     }
   };
 
-  const processRealEmotionalData = (data) => {
+  const processRealEmotionalData = async (data) => {
     console.log(`🔄 Processing real emotional data: ${data.length} entries for ${selectedPeriod} days`);
     
     // Create date range for the selected period
@@ -188,20 +189,46 @@ export default function EmotionalWellbeing() {
         (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
       );
 
-      setHighlights({
-        peak: {
-          title: "Best Mood Day",
-          description: "Highest happiness and energy levels",
-          date: new Date(bestDay.timestamp).toLocaleDateString(),
-          score: Math.round((bestDay.happiness + bestDay.energy) / 2)
-        },
-        toughestDay: {
-          title: "Challenging Day",
-          description: "Higher stress and anxiety levels",
-          date: new Date(worstDay.timestamp).toLocaleDateString(),
-          score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
-        }
-      });
+      try {
+        // Generate AI explanations for best and challenging days
+        console.log('🤖 Generating AI explanations for highlights...');
+        const [bestDayExplanation, worstDayExplanation] = await Promise.all([
+          chatService.generateDayExplanation(bestDay, 'best', selectedPeriod),
+          chatService.generateDayExplanation(worstDay, 'challenging', selectedPeriod)
+        ]);
+
+        setHighlights({
+          peak: {
+            title: "Best Mood Day",
+            description: bestDayExplanation,
+            date: new Date(bestDay.timestamp).toLocaleDateString(),
+            score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+          },
+          toughestDay: {
+            title: "Challenging Day",
+            description: worstDayExplanation,
+            date: new Date(worstDay.timestamp).toLocaleDateString(),
+            score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error generating AI explanations, using fallbacks:', error);
+        // Fallback to original descriptions if AI generation fails
+        setHighlights({
+          peak: {
+            title: "Best Mood Day",
+            description: "Highest happiness and energy levels",
+            date: new Date(bestDay.timestamp).toLocaleDateString(),
+            score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+          },
+          toughestDay: {
+            title: "Challenging Day",
+            description: "Higher stress and anxiety levels",
+            date: new Date(worstDay.timestamp).toLocaleDateString(),
+            score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+          }
+        });
+      }
 
       setTriggers({
         stress: avgStress > 50 ? ["High stress conversations", "Complex decisions"] : ["Minor uncertainties", "Daily pressures"],
