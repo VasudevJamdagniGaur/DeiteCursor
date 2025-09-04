@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain, Send, ArrowLeft, Heart, Star, User } from "lucide-react";
+import { Brain, Send, ArrowLeft, User } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
 import reflectionService from '../services/reflectionService';
-import firestoreService from '../services/firestoreService';
+import emotionalAnalysisService from '../services/emotionalAnalysisService';
 import { getCurrentUser } from '../services/authService';
 import { getDateId } from '../utils/dateUtils';
 
@@ -13,14 +13,12 @@ export default function ChatPage() {
   const location = useLocation();
   const { isDarkMode } = useTheme();
   
-  // Get the selected date from navigation state, or default to today
   const selectedDateString = location.state?.selectedDate || new Date().toDateString();
   const selectedDateId = getDateId(new Date(selectedDateString));
+  
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, error
-  const [streamingMessage, setStreamingMessage] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -30,75 +28,26 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamingMessage]);
+  }, [messages]);
 
   useEffect(() => {
-    // Load conversation history from Firestore based on selected date
-    const loadMessages = async () => {
-      const user = getCurrentUser();
-      if (!user) {
-        // If no user is logged in, try localStorage as fallback
-        const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
-        if (storedMessages) {
-          try {
-            const parsedMessages = JSON.parse(storedMessages);
-            const messagesWithDates = parsedMessages.map(msg => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp)
-            }));
-            setMessages(messagesWithDates);
-          } catch (error) {
-            console.error('Error parsing stored messages:', error);
-            localStorage.removeItem(`chatMessages_${selectedDateId}`);
-            setWelcomeMessage();
-          }
-        } else {
-          setWelcomeMessage();
-        }
-        return;
-      }
-
-      try {
-        // Ensure user document exists
-        await firestoreService.ensureUser(user.uid, {
-          displayName: user.displayName,
-          email: user.email
-        });
-
-        // Load messages from Firestore
-        const result = await firestoreService.getMessages(user.uid, selectedDateId);
-        if (result.success && result.messages.length > 0) {
-          // Convert Firestore messages to our format
-          const formattedMessages = result.messages.map(msg => ({
-            id: msg.id,
-            text: msg.text,
-            sender: msg.role === 'user' ? 'user' : 'ai',
-            timestamp: msg.timestamp
+    // Load existing messages or set welcome message
+    const loadMessages = () => {
+      const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
+      if (storedMessages) {
+        try {
+          const parsedMessages = JSON.parse(storedMessages);
+          const messagesWithDates = parsedMessages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
           }));
-          setMessages(formattedMessages);
-        } else {
-          // No messages for this date, start with welcome message
+          setMessages(messagesWithDates);
+        } catch (error) {
+          console.error('Error parsing stored messages:', error);
           setWelcomeMessage();
         }
-      } catch (error) {
-        console.error('Error loading messages from Firestore:', error);
-        // Fallback to localStorage
-        const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
-        if (storedMessages) {
-          try {
-            const parsedMessages = JSON.parse(storedMessages);
-            const messagesWithDates = parsedMessages.map(msg => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp)
-            }));
-            setMessages(messagesWithDates);
-          } catch (parseError) {
-            console.error('Error parsing stored messages:', parseError);
-            setWelcomeMessage();
-          }
-        } else {
-          setWelcomeMessage();
-        }
+      } else {
+        setWelcomeMessage();
       }
     };
 
@@ -113,79 +62,10 @@ export default function ChatPage() {
     };
 
     loadMessages();
+  }, [selectedDateId]);
 
-    // Test connection to the chat service
-    const testConnection = async () => {
-      try {
-        const isConnected = await chatService.testConnection();
-        setConnectionStatus(isConnected ? 'connected' : 'error');
-        console.log('🔗 Connection status:', isConnected ? 'Connected' : 'Error');
-      } catch (error) {
-        console.error('Connection test failed:', error);
-        setConnectionStatus('error');
-      }
-    };
-
-    testConnection();
-  }, [selectedDateId]); // Reload when selectedDateId changes
-
-  const saveMessagesToStorage = (newMessages) => {
+  const saveMessages = (newMessages) => {
     localStorage.setItem(`chatMessages_${selectedDateId}`, JSON.stringify(newMessages));
-  };
-
-  const generateAndSaveReflection = async (conversationMessages) => {
-    console.log('🔄 Starting reflection generation...');
-    console.log('💬 Total messages for reflection:', conversationMessages.length);
-    
-    try {
-      // Generate the new reflection using the AI-powered service
-      console.log('🤖 Calling AI reflection service...');
-      const reflection = await reflectionService.generateReflection(conversationMessages);
-      console.log('✅ Generated reflection:', reflection);
-      
-      // Get current user
-      const user = getCurrentUser();
-      
-      if (user) {
-        console.log('💾 Saving reflection to Firestore for user:', user.uid);
-        // Save to Firestore
-        await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
-      } else {
-        console.log('💾 Saving reflection to localStorage (no user logged in)');
-        // Fallback to localStorage if no user logged in
-        localStorage.setItem(`reflection_${selectedDateId}`, reflection);
-      }
-      
-      return reflection;
-    } catch (error) {
-      console.error('❌ Error generating and saving reflection:', error);
-      // Fallback to localStorage with basic reflection
-      try {
-        console.log('🔄 Attempting fallback reflection generation...');
-        const reflection = await reflectionService.generateReflection(conversationMessages);
-        console.log('✅ Fallback reflection generated:', reflection);
-        localStorage.setItem(`reflection_${selectedDateId}`, reflection);
-        return reflection;
-      } catch (fallbackError) {
-        console.error('❌ Fallback reflection generation failed:', fallbackError);
-        const basicReflection = "Had a conversation with Deite today about various topics.";
-        console.log('📝 Using basic reflection:', basicReflection);
-        localStorage.setItem(`reflection_${selectedDateId}`, basicReflection);
-        return basicReflection;
-      }
-    }
-  };
-
-  const sendMessageToAI = async (userMessage, conversationHistory, onStreamChunk) => {
-    try {
-      console.log('💬 Sending message to AI...');
-      const response = await chatService.sendMessage(userMessage, conversationHistory, onStreamChunk);
-      console.log('✅ AI response received');
-      return response;
-    } catch (error) {
-      console.error('❌ Error getting AI response:', error);
-      return "I'm having a moment of technical difficulty, but I'm still here for you. Let's try that again in a bit.";
-    }
   };
 
   const handleSendMessage = async (e) => {
@@ -201,120 +81,78 @@ export default function ChatPage() {
       timestamp: new Date()
     };
 
+    // Add user message immediately
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
 
-    // Save user message to Firestore
-    const user = getCurrentUser();
-    if (user) {
-      try {
-        await firestoreService.addMessage(user.uid, selectedDateId, {
-          role: 'user',
-          text: userMessageText,
-          model: 'user-input'
-        });
-      } catch (error) {
-        console.error('Error saving user message to Firestore:', error);
-        // Continue with localStorage fallback
-        saveMessagesToStorage(newMessages);
-      }
-    } else {
-      saveMessagesToStorage(newMessages);
-    }
-
-    // Create a streaming message placeholder
-    const streamingMessageId = Date.now() + Math.random();
-    const initialStreamingMessage = {
-      id: streamingMessageId,
-      text: '',
-      sender: 'ai',
-      timestamp: new Date(),
-      isStreaming: true
-    };
-
-    setStreamingMessage(initialStreamingMessage);
-
     try {
-      let accumulatedText = '';
+      console.log('🚀 Sending message to AI...');
       
-      const aiResponse = await sendMessageToAI(
-        userMessageText, 
-        messages, 
-        (chunk) => {
-          // Handle each streaming chunk
-          accumulatedText += chunk;
-          setStreamingMessage(prev => prev ? {
-            ...prev,
-            text: accumulatedText
-          } : null);
-        }
-      );
+      // Call the chat service
+      const aiResponse = await chatService.sendMessage(userMessageText, messages);
       
-      // Final message when streaming is complete
+      console.log('✅ Received AI response:', aiResponse);
+
+      // Add AI response
       const aiMessage = {
-        id: streamingMessageId,
-        text: aiResponse || accumulatedText,
+        id: Date.now() + 1,
+        text: aiResponse,
         sender: 'ai',
-        timestamp: new Date(),
-        isStreaming: false
+        timestamp: new Date()
       };
 
       const finalMessages = [...newMessages, aiMessage];
       setMessages(finalMessages);
-      setStreamingMessage(null); // Clear streaming state
-      
-      // Save AI message to Firestore
-      if (user) {
-        try {
-          await firestoreService.addMessage(user.uid, selectedDateId, {
-            role: 'assistant',
-            text: aiResponse || accumulatedText,
-            model: 'llama3:70b'
-          });
-        } catch (error) {
-          console.error('Error saving AI message to Firestore:', error);
-          // Continue with localStorage fallback
-          saveMessagesToStorage(finalMessages);
-        }
-      } else {
-        saveMessagesToStorage(finalMessages);
-      }
-      
+      saveMessages(finalMessages);
+
       // Generate and save reflection after the conversation
-      generateAndSaveReflection(finalMessages);
-      
+      try {
+        console.log('📝 Generating reflection...');
+        const reflection = await reflectionService.generateReflection(finalMessages);
+        console.log('✅ Reflection generated:', reflection);
+        
+        const user = getCurrentUser();
+        if (user) {
+          await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
+          console.log('💾 Reflection saved to Firestore');
+        } else {
+          localStorage.setItem(`reflection_${selectedDateId}`, reflection);
+          console.log('💾 Reflection saved to localStorage');
+        }
+      } catch (reflectionError) {
+        console.error('❌ Error generating reflection:', reflectionError);
+      }
+
+      // Generate and save emotional analysis after the conversation
+      try {
+        console.log('🧠 Generating emotional analysis...');
+        const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(finalMessages);
+        console.log('✅ Emotional analysis generated:', emotionalScores);
+        
+        const user = getCurrentUser();
+        const userId = user?.uid || 'anonymous';
+        await emotionalAnalysisService.saveEmotionalData(userId, selectedDateId, emotionalScores);
+        console.log('💾 Emotional data saved');
+      } catch (emotionalError) {
+        console.error('❌ Error generating emotional analysis:', emotionalError);
+      }
+
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
+      
+      // Add error message
       const errorMessage = {
-        id: Date.now() + Math.random(),
+        id: Date.now() + 1,
         text: "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
         sender: 'ai',
         timestamp: new Date()
       };
+      
       const finalMessages = [...newMessages, errorMessage];
       setMessages(finalMessages);
-      setStreamingMessage(null); // Clear streaming state
-      
-      // Save error message to Firestore
-      if (user) {
-        try {
-          await firestoreService.addMessage(user.uid, selectedDateId, {
-            role: 'assistant',
-            text: errorMessage.text,
-            model: 'error'
-          });
-        } catch (firestoreError) {
-          console.error('Error saving error message to Firestore:', firestoreError);
-          saveMessagesToStorage(finalMessages);
-        }
-      } else {
-        saveMessagesToStorage(finalMessages);
-      }
-      
-      // Generate reflection even in error case (user message was still sent)
-      generateAndSaveReflection(finalMessages);
+      saveMessages(finalMessages);
     } finally {
       setIsLoading(false);
     }
@@ -341,71 +179,6 @@ export default function ChatPage() {
           : "#FAFAF8",
       }}
     >
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden">
-        {isDarkMode ? (
-          <>
-            <div className="absolute top-20 left-16 opacity-8">
-              <svg width="80" height="40" viewBox="0 0 80 40" fill="none" stroke="#7DD3C0" strokeWidth="0.4">
-                <path d="M10 24c0-8 5-13 13-13s13 5 13 13c0 4-2.5 8-6.5 10.5H16.5c-4-2.5-6.5-6.5-6.5-10.5z" />
-                <path d="M35 20c0-6 4-10 10-10s10 4 10 10c0 3-1.5 6-4 7.5H39c-2.5-1.5-4-4.5-4-7.5z" />
-                <path d="M55 16c0-4 3-7 7-7s7 3 7 7c0 2-0.5 4-2.5 5H57.5c-2-1-2.5-3-2.5-5z" />
-              </svg>
-            </div>
-
-            <div className="absolute bottom-40 right-20 opacity-7">
-              <svg width="100" height="35" viewBox="0 0 100 35" fill="none" stroke="#D4AF37" strokeWidth="0.3">
-                <path d="M12 21c0-7 4-11 11-11s11 4 11 21c0 3.5-2 7-5.5 8.75H17.5c-3.5-1.75-5.5-5.25-5.5-8.75z" />
-                <path d="M35 17c0-5.5 3.5-9 9-9s9 3.5 9 17c0 2.75-1.25 5.5-4 6.75H39c-2.75-1.25-4-4-4-6.75z" />
-                <path d="M60 14c0-4 2.5-6.5 6.5-6.5s6.5 2.5 6.5 14c0 2-0.75 4-3 5H63c-2.25-1-3-3-3-5z" />
-              </svg>
-            </div>
-
-            <Heart
-              className="absolute top-1/4 left-1/8 w-4 h-4 animate-bounce opacity-12"
-              style={{ color: "#7DD3C0", animationDelay: "0.5s", animationDuration: "4s" }}
-            />
-            <Star
-              className="absolute bottom-1/3 right-1/6 w-3 h-3 animate-pulse opacity-15"
-              style={{ color: "#9BB5FF", animationDelay: "1.2s", animationDuration: "3s" }}
-            />
-            <Heart
-              className="absolute top-2/3 right-3/4 w-3 h-3 animate-bounce opacity-14"
-              style={{ color: "#D4AF37", animationDelay: "2.1s", animationDuration: "3.5s" }}
-            />
-          </>
-        ) : (
-          <>
-            {/* Light mode decorations */}
-            <div className="absolute top-16 left-12 opacity-20">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#87A96B" strokeWidth="1">
-                <path d="M12 2c-4 0-8 4-8 8 0 2 1 4 3 5l5-5V2z" />
-                <path d="M12 2c4 0 8 4 8 8 0 2-1 4-3 5l-5-5V2z" />
-              </svg>
-            </div>
-
-            <div className="absolute top-32 right-16 opacity-15">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6B3BA" strokeWidth="1">
-                <ellipse cx="12" cy="8" rx="6" ry="4" />
-                <path d="M12 12v8" />
-              </svg>
-            </div>
-
-            <div className="absolute bottom-32 left-8 opacity-18">
-              <svg width="32" height="12" viewBox="0 0 32 12" fill="none" stroke="#B19CD9" strokeWidth="1">
-                <path d="M2 6c4-2 8 2 12-2s8 2 14 2" />
-              </svg>
-            </div>
-
-            <div className="absolute bottom-48 right-12 opacity-20">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#87A96B" strokeWidth="1">
-                <ellipse cx="12" cy="12" rx="8" ry="6" />
-              </svg>
-            </div>
-          </>
-        )}
-      </div>
-
       {/* Header */}
       <div className={`sticky top-0 z-20 flex items-center justify-between p-6 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
@@ -450,23 +223,10 @@ export default function ChatPage() {
           <div>
             <div className="flex items-center space-x-2">
               <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
-              <div 
-                className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-green-500' : 
-                  connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
-                  'bg-red-500'
-                }`}
-                title={
-                  connectionStatus === 'connected' ? 'Connected and ready' :
-                  connectionStatus === 'connecting' ? 'Connecting...' :
-                  'Connection issue - messages may take longer'
-                }
-              />
+              <div className="w-2 h-2 rounded-full bg-green-500" title="Connected and ready" />
             </div>
             <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {connectionStatus === 'connected' ? 'Your emotional companion' :
-               connectionStatus === 'connecting' ? 'Getting ready to chat...' :
-               'Having connection issues'}
+              Your emotional companion
             </p>
             <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
               Chat for: {new Date(selectedDateString).toLocaleDateString('en-US', { 
@@ -522,27 +282,7 @@ export default function ChatPage() {
           </div>
         ))}
         
-        {/* Streaming message */}
-        {streamingMessage && (
-          <div className="flex justify-start">
-            <div
-              className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-lg relative overflow-hidden mr-4"
-              style={{
-                backgroundColor: "rgba(28, 31, 46, 0.4)",
-                boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.1), 0 8px 32px rgba(155, 181, 255, 0.05)",
-                border: "1px solid rgba(155, 181, 255, 0.2)",
-              }}
-            >
-              <p className="text-white text-sm leading-relaxed">
-                {streamingMessage.text}
-                <span className="inline-block w-2 h-4 bg-white ml-1 animate-pulse"></span>
-              </p>
-              <p className="text-xs text-gray-400 mt-1">{formatTime(streamingMessage.timestamp)}</p>
-            </div>
-          </div>
-        )}
-        
-        {isLoading && !streamingMessage && (
+        {isLoading && (
           <div className="flex justify-start">
             <div
               className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-lg relative overflow-hidden mr-4"
@@ -604,5 +344,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-
