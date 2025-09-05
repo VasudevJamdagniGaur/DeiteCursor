@@ -27,7 +27,8 @@ import {
   Users,
   BookOpen,
   Moon,
-  Sun
+  Sun,
+  RefreshCw
 } from "lucide-react";
 import { 
   LineChart, 
@@ -60,6 +61,7 @@ export default function EmotionalWellbeing() {
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadRealEmotionalData();
@@ -477,6 +479,120 @@ export default function EmotionalWellbeing() {
       );
     }
     return null;
+  };
+
+  const handleAIUpdate = async () => {
+    console.log('🤖 Starting AI comprehensive update...');
+    setIsUpdating(true);
+
+    try {
+      const user = getCurrentUser();
+      const userId = user?.uid || 'anonymous';
+
+      // Get emotional data for analysis (using current selected period)
+      let emotionalDataRaw;
+      if (selectedPeriod === 7) {
+        emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 7);
+      } else if (selectedPeriod === 15) {
+        emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 15);
+      } else {
+        emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 30);
+      }
+
+      if (emotionalDataRaw.length === 0) {
+        console.log('📝 No emotional data found for AI analysis');
+        alert('No emotional data available for analysis. Please chat with Deite first to generate emotional data.');
+        return;
+      }
+
+      console.log(`📊 Analyzing ${emotionalDataRaw.length} days of emotional data...`);
+
+      // Generate comprehensive AI analysis
+      const periodText = selectedPeriod === 7 ? 'last week' : 
+                        selectedPeriod === 15 ? 'last 2 weeks' : 'last month';
+      
+      const aiAnalysis = await chatService.generateComprehensiveAnalysis(emotionalDataRaw, periodText);
+      console.log('🎯 AI Analysis received:', aiAnalysis);
+
+      // Update highlights with AI-generated descriptions
+      const validData = emotionalDataRaw.filter(item => item.happiness !== undefined);
+      if (validData.length > 0) {
+        const bestDay = validData.reduce((best, current) => 
+          (current.happiness + current.energy) > (best.happiness + best.energy) ? current : best
+        );
+        const worstDay = validData.reduce((worst, current) => 
+          (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
+        );
+
+        const updatedHighlights = {
+          peak: {
+            title: "Best Mood Day",
+            description: aiAnalysis.highlights.bestDayReason,
+            date: new Date(bestDay.timestamp).toLocaleDateString(),
+            score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+          },
+          toughestDay: {
+            title: "Challenging Day",
+            description: aiAnalysis.highlights.challengingDayReason,
+            date: new Date(worstDay.timestamp).toLocaleDateString(),
+            score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+          }
+        };
+
+        setHighlights(updatedHighlights);
+
+        // Cache the updated highlights
+        try {
+          await firestoreService.saveHighlightsCache(userId, highlightsPeriod, updatedHighlights);
+        } catch (cacheError) {
+          console.error('❌ Error caching updated highlights:', cacheError);
+        }
+      }
+
+      // Update triggers with AI analysis
+      setTriggers({
+        stress: aiAnalysis.triggers.stressFactors || ["Work pressure", "Time constraints"],
+        joy: aiAnalysis.triggers.joyFactors || ["Meaningful conversations", "Personal achievements"],
+        distraction: aiAnalysis.triggers.energyDrains || ["Overthinking", "Worry cycles"]
+      });
+
+      // Update emotional balance based on AI analysis
+      const avgHappiness = validData.reduce((sum, day) => sum + day.happiness, 0) / validData.length;
+      const avgEnergy = validData.reduce((sum, day) => sum + day.energy, 0) / validData.length;
+      const avgAnxiety = validData.reduce((sum, day) => sum + day.anxiety, 0) / validData.length;
+      const avgStress = validData.reduce((sum, day) => sum + day.stress, 0) / validData.length;
+
+      const positiveScore = Math.round((avgHappiness + avgEnergy) / 2);
+      const negativeScore = Math.round((avgAnxiety + avgStress) / 2);
+      const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
+
+      setMoodBalance([
+        { name: 'Positive', value: positiveScore, color: '#7DD3C0' },
+        { name: 'Neutral', value: neutralScore, color: '#D4AF37' },
+        { name: 'Negative', value: negativeScore, color: '#9BB5FF' }
+      ]);
+
+      // Update pattern analysis with AI insights
+      setPatternAnalysis({
+        overallTrend: aiAnalysis.patterns.overallTrend,
+        keyInsight: aiAnalysis.patterns.keyInsight,
+        recommendation: aiAnalysis.patterns.recommendation,
+        emotionalBalance: aiAnalysis.emotionalBalance,
+        personalizedGuidance: aiAnalysis.personalizedGuidance
+      });
+
+      // Refresh mood chart data
+      processRealEmotionalData(emotionalDataRaw);
+
+      console.log('✅ AI comprehensive update completed successfully');
+      alert('🤖 AI analysis complete! All sections have been updated with fresh insights.');
+
+    } catch (error) {
+      console.error('❌ Error during AI update:', error);
+      alert('Failed to complete AI analysis. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const renderMoodSurvey = () => (
@@ -1218,7 +1334,20 @@ export default function EmotionalWellbeing() {
           </div>
         </div>
 
-        <div className="w-10 h-10" /> {/* Spacer for centering */}
+        <button
+          onClick={handleAIUpdate}
+          disabled={isUpdating}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+            isUpdating 
+              ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+          }`}
+        >
+          <RefreshCw className={`w-4 h-4 ${isUpdating ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium">
+            {isUpdating ? 'Updating...' : 'AI Update'}
+          </span>
+        </button>
       </div>
 
       {/* Content */}
