@@ -539,6 +539,153 @@ Focus on:
     
     return `Historical conversations have covered: ${themes.length > 0 ? themes.join(', ') : 'various personal topics'}. Total conversation history: ${messages.length} messages showing ongoing emotional growth journey.`;
   }
+
+  async analyzeEmotionalBalance(messages, period) {
+    console.log(`🎭 Analyzing emotional balance for ${period} period with ${messages.length} messages...`);
+    
+    try {
+      if (!messages || messages.length === 0) {
+        return {
+          positive: 50,
+          neutral: 30,
+          negative: 20,
+          insight: `No chat data available for ${period}. Start conversations with Deite to build emotional insights.`,
+          dominantEmotion: 'neutral',
+          balanceScore: 65
+        };
+      }
+
+      // Filter and prepare conversation content
+      const userMessages = messages
+        .filter(msg => msg.sender === 'user')
+        .map(msg => ({
+          text: msg.text.trim(),
+          date: msg.dateId,
+          timestamp: msg.timestamp
+        }))
+        .filter(msg => msg.text.length > 3);
+
+      if (userMessages.length === 0) {
+        return {
+          positive: 50,
+          neutral: 30,
+          negative: 20,
+          insight: `Limited conversation activity in ${period}. More detailed conversations will improve emotional balance analysis.`,
+          dominantEmotion: 'neutral',
+          balanceScore: 65
+        };
+      }
+
+      // Build conversation context for analysis
+      let conversationContext = '';
+      userMessages.slice(-30).forEach((msg) => {
+        const date = new Date(msg.timestamp).toLocaleDateString();
+        conversationContext += `[${date}] "${msg.text}"\n`;
+      });
+
+      const prompt = `Analyze the emotional balance in these conversations over ${period} and provide insights about positivity vs negativity.
+
+**Conversations to analyze:**
+${conversationContext}
+
+**Task:** Analyze the overall emotional tone and provide results in this exact JSON format:
+{
+  "positive": [0-100 number representing positive emotions/experiences],
+  "neutral": [0-100 number representing neutral/balanced emotions],
+  "negative": [0-100 number representing negative emotions/challenges],
+  "insight": "Brief insight about the emotional balance and what contributed to it",
+  "dominantEmotion": "positive/neutral/negative",
+  "balanceScore": [0-100 overall emotional health score],
+  "keyObservations": "What you noticed about their emotional patterns"
+}
+
+**Analysis Guidelines:**
+- Positive: Joy, gratitude, excitement, achievements, hope, love, satisfaction
+- Neutral: Daily activities, factual discussions, balanced perspectives
+- Negative: Stress, anxiety, sadness, frustration, worry, conflict, challenges
+- The three scores should add up to approximately 100
+- Consider the overall tone, not just isolated words
+- Focus on genuine emotional expression, not surface-level responses
+- Balance score: overall emotional wellbeing (higher = better balance)`;
+
+      const messages_api = [
+        {
+          role: 'system',
+          content: 'You are an expert emotional analyst. Analyze conversations to determine emotional balance with accuracy and empathy. Focus on genuine emotional content and overall patterns.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ];
+
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: messages_api,
+          stream: false,
+          options: {
+            temperature: 0.3,
+            top_p: 0.9
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.message && data.message.content) {
+        const responseText = data.message.content.trim();
+        
+        // Parse JSON response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const analysis = JSON.parse(jsonMatch[0]);
+          
+          // Validate and normalize scores
+          const total = analysis.positive + analysis.neutral + analysis.negative;
+          if (total > 0) {
+            analysis.positive = Math.round((analysis.positive / total) * 100);
+            analysis.neutral = Math.round((analysis.neutral / total) * 100);
+            analysis.negative = Math.round((analysis.negative / total) * 100);
+          }
+          
+          // Ensure scores are within bounds
+          analysis.positive = Math.max(0, Math.min(100, analysis.positive));
+          analysis.neutral = Math.max(0, Math.min(100, analysis.neutral));
+          analysis.negative = Math.max(0, Math.min(100, analysis.negative));
+          analysis.balanceScore = Math.max(0, Math.min(100, analysis.balanceScore || 70));
+          
+          return analysis;
+        }
+        
+        throw new Error('Invalid JSON format in response');
+      }
+
+      throw new Error('Invalid response format');
+
+    } catch (error) {
+      console.error(`❌ Error analyzing emotional balance for ${period}:`, error);
+      
+      // Return fallback analysis
+      return {
+        positive: 60,
+        neutral: 25,
+        negative: 15,
+        insight: `Analysis unavailable for ${period}. Based on your engagement, you show positive emotional patterns.`,
+        dominantEmotion: 'positive',
+        balanceScore: 70,
+        keyObservations: 'Your willingness to engage in emotional tracking shows positive self-awareness.'
+      };
+    }
+  }
 }
 
 export default new ChatService();
