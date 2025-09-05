@@ -312,6 +312,87 @@ class FirestoreService {
       return { success: false, error: error.message, needsUpdate: true };
     }
   }
+
+  /**
+   * Get all chat messages across all dates for a user
+   */
+  async getAllChatMessages(uid, limitDays = null) {
+    try {
+      // First get all chat days
+      const chatsRef = collection(this.db, `users/${uid}/chats`);
+      let q;
+      
+      if (limitDays) {
+        // Calculate date limit
+        const limitDate = new Date();
+        limitDate.setDate(limitDate.getDate() - limitDays);
+        const limitDateId = limitDate.toISOString().split('T')[0];
+        
+        q = query(chatsRef, 
+          where('date', '>=', limitDateId),
+          orderBy('date', 'desc')
+        );
+      } else {
+        q = query(chatsRef, orderBy('date', 'desc'));
+      }
+      
+      const chatDaysSnapshot = await getDocs(q);
+      
+      const allMessages = [];
+      const messagePromises = [];
+      
+      // Get messages for each chat day
+      chatDaysSnapshot.forEach(chatDayDoc => {
+        const dateId = chatDayDoc.id;
+        const messagesRef = collection(this.db, `users/${uid}/chats/${dateId}/messages`);
+        const messagesQuery = query(messagesRef, orderBy('ts', 'asc'));
+        
+        messagePromises.push(
+          getDocs(messagesQuery).then(messagesSnapshot => {
+            const dayMessages = [];
+            messagesSnapshot.forEach(messageDoc => {
+              const data = messageDoc.data();
+              dayMessages.push({
+                id: messageDoc.id,
+                dateId: dateId,
+                ...data,
+                timestamp: data.ts?.toDate() || new Date()
+              });
+            });
+            return dayMessages;
+          })
+        );
+      });
+      
+      // Wait for all message queries to complete
+      const messageArrays = await Promise.all(messagePromises);
+      
+      // Flatten and sort all messages by timestamp
+      messageArrays.forEach(dayMessages => {
+        allMessages.push(...dayMessages);
+      });
+      
+      // Sort by timestamp (oldest first for context building)
+      allMessages.sort((a, b) => a.timestamp - b.timestamp);
+      
+      return { success: true, messages: allMessages };
+    } catch (error) {
+      console.error('Error getting all chat messages:', error);
+      return { success: false, error: error.message, messages: [] };
+    }
+  }
+
+  /**
+   * Get recent chat messages (last N days)
+   */
+  async getRecentChatMessages(uid, days = 30) {
+    try {
+      return await this.getAllChatMessages(uid, days);
+    } catch (error) {
+      console.error('Error getting recent chat messages:', error);
+      return { success: false, error: error.message, messages: [] };
+    }
+  }
 }
 
 export default new FirestoreService();
