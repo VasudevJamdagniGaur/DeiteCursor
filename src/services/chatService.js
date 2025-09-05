@@ -59,8 +59,8 @@ class ChatService {
     }
   }
 
-  async generateDayExplanation(emotionalData, dayType, period) {
-    console.log(`🤖 Generating ${dayType} day explanation for ${period} day period...`);
+  async generateDayDescription(emotionalData, dayType, period) {
+    console.log(`🤖 Generating ${dayType} day description for ${period}...`);
     
     try {
       const { happiness, energy, stress, anxiety, timestamp } = emotionalData;
@@ -68,9 +68,9 @@ class ChatService {
       
       let prompt;
       if (dayType === 'best') {
-        prompt = `On ${date}, this person had their best mood day in the last ${period} days with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what likely made this such a positive day based on these emotional levels. Be warm and encouraging.`;
+        prompt = `On ${date}, this person had their best mood day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what likely made this such a positive day based on these emotional levels. Be warm and encouraging.`;
       } else {
-        prompt = `On ${date}, this person had their most challenging day in the last ${period} days with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what might have made this day difficult based on these emotional levels. Be empathetic and supportive.`;
+        prompt = `On ${date}, this person had their most challenging day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what might have made this day difficult based on these emotional levels. Be empathetic and supportive.`;
       }
 
       const messages = [
@@ -109,7 +109,7 @@ class ChatService {
       throw new Error('Invalid response format');
 
     } catch (error) {
-      console.error(`❌ Error generating ${dayType} day explanation:`, error);
+      console.error(`❌ Error generating ${dayType} day description:`, error);
       // Return fallback descriptions
       if (dayType === 'best') {
         return "Your high energy and happiness levels created an optimal emotional state for a fulfilling day.";
