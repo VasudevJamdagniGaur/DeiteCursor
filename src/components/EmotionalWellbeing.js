@@ -62,7 +62,6 @@ export default function EmotionalWellbeing() {
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [balanceInsights, setBalanceInsights] = useState(null);
 
   useEffect(() => {
     loadRealEmotionalData();
@@ -106,70 +105,23 @@ export default function EmotionalWellbeing() {
     processRealEmotionalData(emotionalDataRaw);
   };
 
-  const loadBalanceData = async () => {
-    console.log(`⚖️ Loading AI-powered balance data for ${balancePeriod} days...`);
+  const loadBalanceData = () => {
+    console.log(`⚖️ Loading balance data for ${balancePeriod} days...`);
     
     const user = getCurrentUser();
     const userId = user?.uid || 'anonymous';
     
-    try {
-      // Get chat messages for the balance period
-      let chatMessagesResult;
-      if (balancePeriod === 1) {
-        // Get today's messages
-        const today = new Date().toISOString().split('T')[0];
-        chatMessagesResult = await firestoreService.getMessages(userId, today);
-      } else {
-        // Get messages for the specified period
-        chatMessagesResult = await firestoreService.getRecentChatMessages(userId, balancePeriod);
-      }
-      
-      const chatMessages = chatMessagesResult.messages || [];
-      console.log(`💬 Chat messages for balance analysis: ${chatMessages.length}`);
+    // Get emotional data for the balance period
+    const balanceDataRaw = emotionalAnalysisService.getEmotionalData(userId, balancePeriod);
+    console.log('📊 Balance data:', balanceDataRaw);
 
-      if (chatMessages.length === 0) {
-        console.log('📝 No chat data found, setting default balance');
-        setMoodBalance([
-          { name: 'Positive', value: 50, color: '#7DD3C0' },
-          { name: 'Neutral', value: 30, color: '#D4AF37' },
-          { name: 'Negative', value: 20, color: '#9BB5FF' }
-        ]);
-        return;
-      }
-
-      // Use AI to analyze emotional balance from conversations
-      const periodText = balancePeriod === 1 ? 'today' : 
-                        balancePeriod === 7 ? 'the last week' : 'the last 30 days';
-      
-      const aiBalance = await chatService.analyzeEmotionalBalance(chatMessages, periodText);
-      console.log('🎭 AI Balance Analysis:', aiBalance);
-
-      // Update mood balance with AI analysis
-      setMoodBalance([
-        { name: 'Positive', value: aiBalance.positive, color: '#7DD3C0' },
-        { name: 'Neutral', value: aiBalance.neutral, color: '#D4AF37' },
-        { name: 'Negative', value: aiBalance.negative, color: '#9BB5FF' }
-      ]);
-
-      // Store AI insights for display
-      setBalanceInsights({
-        insight: aiBalance.insight,
-        dominantEmotion: aiBalance.dominantEmotion,
-        balanceScore: aiBalance.balanceScore,
-        keyObservations: aiBalance.keyObservations,
-        period: periodText
-      });
-
-    } catch (error) {
-      console.error('❌ Error loading AI balance data:', error);
-      
-      // Fallback to default balance
-      setMoodBalance([
-        { name: 'Positive', value: 60, color: '#7DD3C0' },
-        { name: 'Neutral', value: 25, color: '#D4AF37' },
-        { name: 'Negative', value: 15, color: '#9BB5FF' }
-      ]);
+    if (balanceDataRaw.length === 0) {
+      console.log('📝 No balance data found, setting empty balance');
+      setMoodBalance([]);
+      return;
     }
+
+    processBalanceData(balanceDataRaw);
   };
 
   const loadHighlightsData = async () => {
@@ -237,35 +189,14 @@ export default function EmotionalWellbeing() {
     let highlightsData;
 
     try {
-      // Get chat messages for the best and challenging days to analyze actual conversations
-      console.log('🤖 Analyzing chat conversations for highlights...');
+      // Generate AI descriptions for best and challenging days
+      console.log('🤖 Generating AI descriptions for highlights...');
+      const periodText = highlightsPeriod === 'week' ? 'last week' : 
+                        highlightsPeriod === 'month' ? 'last month' : 'their lifetime';
       
-      // Convert timestamps to date IDs for Firebase
-      const bestDayDateId = new Date(bestDay.timestamp).toISOString().split('T')[0];
-      const worstDayDateId = new Date(worstDay.timestamp).toISOString().split('T')[0];
-      
-      console.log(`📅 Best day: ${bestDayDateId}, Challenging day: ${worstDayDateId}`);
-      
-      // Get chat messages for both days
-      const [bestDayMessages, worstDayMessages] = await Promise.all([
-        firestoreService.getMessages(userId, bestDayDateId),
-        firestoreService.getMessages(userId, worstDayDateId)
-      ]);
-      
-      console.log(`💬 Best day messages: ${bestDayMessages.messages?.length || 0}, Challenging day messages: ${worstDayMessages.messages?.length || 0}`);
-      
-      // Analyze chat context for both days
       const [bestDayDescription, worstDayDescription] = await Promise.all([
-        chatService.analyzeChatContextForDay(
-          bestDayMessages.messages || [], 
-          'best', 
-          new Date(bestDay.timestamp).toLocaleDateString()
-        ),
-        chatService.analyzeChatContextForDay(
-          worstDayMessages.messages || [], 
-          'challenging', 
-          new Date(worstDay.timestamp).toLocaleDateString()
-        )
+        chatService.generateDayDescription(bestDay, 'best', periodText),
+        chatService.generateDayDescription(worstDay, 'challenging', periodText)
       ]);
 
       highlightsData = {
@@ -326,6 +257,34 @@ export default function EmotionalWellbeing() {
     console.log('✅ Highlights data processed successfully');
   };
 
+  const processBalanceData = (data) => {
+    console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod} days`);
+    
+    // Calculate averages for the selected period
+    const validData = data.filter(item => item.happiness !== undefined);
+    
+    if (validData.length > 0) {
+      const avgHappiness = validData.reduce((sum, day) => sum + day.happiness, 0) / validData.length;
+      const avgEnergy = validData.reduce((sum, day) => sum + day.energy, 0) / validData.length;
+      const avgAnxiety = validData.reduce((sum, day) => sum + day.anxiety, 0) / validData.length;
+      const avgStress = validData.reduce((sum, day) => sum + day.stress, 0) / validData.length;
+
+      // Calculate balance based on averages
+      const positiveScore = Math.round((avgHappiness + avgEnergy) / 2);
+      const negativeScore = Math.round((avgAnxiety + avgStress) / 2);
+      const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
+
+      setMoodBalance([
+        { name: 'Positive', value: positiveScore, color: '#7DD3C0' },
+        { name: 'Neutral', value: neutralScore, color: '#D4AF37' },
+        { name: 'Negative', value: negativeScore, color: '#9BB5FF' }
+      ]);
+
+      console.log('✅ Balance data processed successfully');
+    } else {
+      setMoodBalance([]);
+    }
+  };
 
   const processRealEmotionalData = (data) => {
     console.log(`🔄 Processing real emotional data: ${data.length} entries for ${selectedPeriod} days`);
@@ -555,7 +514,7 @@ export default function EmotionalWellbeing() {
       const aiAnalysis = await chatService.generateComprehensiveAnalysis(emotionalDataRaw, periodText);
       console.log('🎯 AI Analysis received:', aiAnalysis);
 
-      // Update highlights with chat-based AI analysis
+      // Update highlights with AI-generated descriptions
       const validData = emotionalDataRaw.filter(item => item.happiness !== undefined);
       if (validData.length > 0) {
         const bestDay = validData.reduce((best, current) => 
@@ -565,39 +524,16 @@ export default function EmotionalWellbeing() {
           (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
         );
 
-        // Get chat messages for the best and challenging days
-        const bestDayDateId = new Date(bestDay.timestamp).toISOString().split('T')[0];
-        const worstDayDateId = new Date(worstDay.timestamp).toISOString().split('T')[0];
-        
-        const [bestDayMessages, worstDayMessages] = await Promise.all([
-          firestoreService.getMessages(userId, bestDayDateId),
-          firestoreService.getMessages(userId, worstDayDateId)
-        ]);
-        
-        // Analyze chat context for both days
-        const [bestDayDescription, worstDayDescription] = await Promise.all([
-          chatService.analyzeChatContextForDay(
-            bestDayMessages.messages || [], 
-            'best', 
-            new Date(bestDay.timestamp).toLocaleDateString()
-          ),
-          chatService.analyzeChatContextForDay(
-            worstDayMessages.messages || [], 
-            'challenging', 
-            new Date(worstDay.timestamp).toLocaleDateString()
-          )
-        ]);
-
         const updatedHighlights = {
           peak: {
             title: "Best Mood Day",
-            description: bestDayDescription,
+            description: aiAnalysis.highlights.bestDayReason,
             date: new Date(bestDay.timestamp).toLocaleDateString(),
             score: Math.round((bestDay.happiness + bestDay.energy) / 2)
           },
           toughestDay: {
             title: "Challenging Day",
-            description: worstDayDescription,
+            description: aiAnalysis.highlights.challengingDayReason,
             date: new Date(worstDay.timestamp).toLocaleDateString(),
             score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
           }
@@ -636,39 +572,13 @@ export default function EmotionalWellbeing() {
         { name: 'Negative', value: negativeScore, color: '#9BB5FF' }
       ]);
 
-      // Generate comprehensive personalized guidance
-      console.log('🎯 Generating comprehensive personalized guidance...');
-      
-      // Get lifetime and recent chat messages
-      const [lifetimeMessagesResult, recentMessagesResult] = await Promise.all([
-        firestoreService.getAllChatMessages(userId), // All messages
-        firestoreService.getRecentChatMessages(userId, 30) // Last 30 days
-      ]);
-      
-      const lifetimeMessages = lifetimeMessagesResult.messages || [];
-      const recentMessages = recentMessagesResult.messages || [];
-      
-      console.log(`📚 Lifetime messages: ${lifetimeMessages.length}, Recent messages: ${recentMessages.length}`);
-      
-      // Generate personalized guidance using comprehensive analysis
-      const personalizedGuidance = await chatService.generatePersonalizedGuidance(
-        lifetimeMessages,
-        recentMessages,
-        validData, // emotional data
-        {
-          stress: aiAnalysis.triggers.stressFactors || ["Work pressure", "Time constraints"],
-          joy: aiAnalysis.triggers.joyFactors || ["Meaningful conversations", "Personal achievements"],
-          distraction: aiAnalysis.triggers.energyDrains || ["Overthinking", "Worry cycles"]
-        }
-      );
-
-      // Update pattern analysis with AI insights and comprehensive guidance
+      // Update pattern analysis with AI insights
       setPatternAnalysis({
         overallTrend: aiAnalysis.patterns.overallTrend,
         keyInsight: aiAnalysis.patterns.keyInsight,
         recommendation: aiAnalysis.patterns.recommendation,
         emotionalBalance: aiAnalysis.emotionalBalance,
-        personalizedGuidance: personalizedGuidance
+        personalizedGuidance: aiAnalysis.personalizedGuidance
       });
 
       // Refresh mood chart data
@@ -976,60 +886,6 @@ export default function EmotionalWellbeing() {
                   ))}
                 </div>
               </div>
-
-              {/* AI Insights */}
-              {balanceInsights && (
-                <div className="mt-6 space-y-4">
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-indigo-500/10 border border-indigo-500/20' : 'bg-indigo-50 border border-indigo-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Brain className="w-5 h-5 text-indigo-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-indigo-400' : 'text-indigo-700'}`}>
-                        AI Analysis for {balanceInsights.period}
-                      </h4>
-                    </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
-                      {balanceInsights.insight}
-                    </p>
-                  </div>
-
-                  {balanceInsights.keyObservations && (
-                    <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
-                      <div className="flex items-center space-x-2 mb-3">
-                        <Lightbulb className="w-5 h-5 text-purple-500" />
-                        <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
-                          Key Observations
-                        </h4>
-                      </div>
-                      <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                        {balanceInsights.keyObservations}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className={`flex items-center space-x-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      <Target className="w-4 h-4" />
-                      <span className="text-sm">Dominant Emotion:</span>
-                      <span className={`text-sm font-medium capitalize ${
-                        balanceInsights.dominantEmotion === 'positive' ? 'text-green-500' :
-                        balanceInsights.dominantEmotion === 'negative' ? 'text-red-500' : 'text-yellow-500'
-                      }`}>
-                        {balanceInsights.dominantEmotion}
-                      </span>
-                    </div>
-                    <div className={`flex items-center space-x-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      <Award className="w-4 h-4" />
-                      <span className="text-sm">Balance Score:</span>
-                      <span className={`text-sm font-medium ${
-                        balanceInsights.balanceScore >= 80 ? 'text-green-500' :
-                        balanceInsights.balanceScore >= 60 ? 'text-yellow-500' : 'text-red-500'
-                      }`}>
-                        {balanceInsights.balanceScore}/100
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -1041,19 +897,19 @@ export default function EmotionalWellbeing() {
           >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(230, 179, 186, 0.2) 0%, rgba(177, 156, 217, 0.2) 100%)",
-                    border: "1px solid rgba(230, 179, 186, 0.3)",
-                  }}
-                >
-                  <Award className="w-5 h-5" style={{ color: "#E6B3BA" }} />
-                </div>
-                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Highlights
-                </h3>
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, rgba(230, 179, 186, 0.2) 0%, rgba(177, 156, 217, 0.2) 100%)",
+                  border: "1px solid rgba(230, 179, 186, 0.3)",
+                }}
+              >
+                <Award className="w-5 h-5" style={{ color: "#E6B3BA" }} />
               </div>
+              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                Highlights
+              </h3>
+            </div>
 
               {/* Highlights Period Toggle */}
               <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -1349,130 +1205,62 @@ export default function EmotionalWellbeing() {
               </h3>
             </div>
 
-            {/* Comprehensive Personalized Guidance */}
-            {patternAnalysis && patternAnalysis.personalizedGuidance ? (
-              <div className="space-y-4">
-                {/* Focus Area */}
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Target className="w-5 h-5 text-blue-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                      Focus Area
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
-                    {patternAnalysis.personalizedGuidance.focus}
-                  </p>
-                </div>
-
-                {/* Strength Recognition */}
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Award className="w-5 h-5 text-green-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
-                      Your Strength
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
-                    {patternAnalysis.personalizedGuidance.strength}
-                  </p>
-                </div>
-
-                {/* Action Step */}
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Zap className="w-5 h-5 text-purple-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
-                      Action Step
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                    {patternAnalysis.personalizedGuidance.actionStep}
-                  </p>
-                </div>
-
-                {/* Recent Observation */}
-                {patternAnalysis.personalizedGuidance.recentObservation && (
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-orange-50 border border-orange-200'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* AI Recommendations */}
+              {hasEnoughData && patternAnalysis && patternAnalysis.recommendations && patternAnalysis.recommendations.length > 0 ? (
+                patternAnalysis.recommendations.slice(0, 3).map((recommendation, index) => (
+                  <div key={index} className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
                     <div className="flex items-center space-x-2 mb-3">
-                      <Sun className="w-5 h-5 text-orange-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-orange-400' : 'text-orange-700'}`}>
-                        Recent Observation
+                      <Award className="w-5 h-5 text-green-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                        AI Recommendation
                       </h4>
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-orange-300' : 'text-orange-600'}`}>
-                      {patternAnalysis.personalizedGuidance.recentObservation}
+                    <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                      {recommendation}
                     </p>
                   </div>
-                )}
+                ))
+              ) : (
+                <>
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Sun className="w-5 h-5 text-blue-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                        Continue Chatting
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                      Keep engaging with Deite to build more comprehensive emotional insights and patterns.
+                    </p>
+                  </div>
 
-                {/* Lifetime Growth */}
-                {patternAnalysis.personalizedGuidance.lifetimeGrowth && (
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Star className="w-5 h-5 text-purple-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                        Reflect Daily
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                      Regular conversations help create more accurate emotional tracking and better insights.
+                    </p>
+                  </div>
+
                   <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50 border border-teal-200'}`}>
                     <div className="flex items-center space-x-2 mb-3">
-                      <TrendingUp className="w-5 h-5 text-teal-500" />
+                      <Brain className="w-5 h-5 text-teal-500" />
                       <h4 className={`font-medium ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
-                        Your Growth Journey
+                        Build Patterns
                       </h4>
                     </div>
                     <p className={`text-sm ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`}>
-                      {patternAnalysis.personalizedGuidance.lifetimeGrowth}
+                      Share more details about your experiences to unlock personalized insights.
                     </p>
                   </div>
-                )}
-
-                {/* Deep Insight */}
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-indigo-500/10 border border-indigo-500/20' : 'bg-indigo-50 border border-indigo-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Lightbulb className="w-5 h-5 text-indigo-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-indigo-400' : 'text-indigo-700'}`}>
-                      Deep Insight
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
-                    {patternAnalysis.personalizedGuidance.insight}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Sun className="w-5 h-5 text-blue-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                      Continue Chatting
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
-                    Keep engaging with Deite to build comprehensive emotional insights. Click "AI Update" to generate personalized guidance.
-                  </p>
-                </div>
-
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Star className="w-5 h-5 text-purple-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
-                      Reflect Daily
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                    Regular conversations help create more accurate emotional tracking and better insights.
-                  </p>
-                </div>
-
-                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50 border border-teal-200'}`}>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Brain className="w-5 h-5 text-teal-500" />
-                    <h4 className={`font-medium ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
-                      Build Patterns
-                    </h4>
-                  </div>
-                  <p className={`text-sm ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`}>
-                    Share more details about your experiences to unlock personalized insights.
-                  </p>
-                </div>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Data Summary */}
