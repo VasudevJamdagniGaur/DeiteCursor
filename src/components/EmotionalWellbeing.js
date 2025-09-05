@@ -5,6 +5,7 @@ import emotionalAnalysisService from '../services/emotionalAnalysisService';
 import patternAnalysisService from '../services/patternAnalysisService';
 import { getCurrentUser } from '../services/authService';
 import chatService from '../services/chatService';
+import firestoreService from '../services/firestoreService';
 import { 
   Brain, 
   ArrowLeft, 
@@ -55,6 +56,7 @@ export default function EmotionalWellbeing() {
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7 or 15 days
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
   const [patternPeriod, setPatternPeriod] = useState(7); // 7 or 30 days for pattern analysis
+  const [highlightsPeriod, setHighlightsPeriod] = useState('week'); // 'week', 'month', or 'lifetime'
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
@@ -71,13 +73,18 @@ export default function EmotionalWellbeing() {
     loadRealEmotionalData();
     loadBalanceData();
     loadPatternAnalysis();
+    loadHighlightsData();
   }, []);
 
   useEffect(() => {
     loadPatternAnalysis();
   }, [patternPeriod]);
 
-  const loadRealEmotionalData = async () => {
+  useEffect(() => {
+    loadHighlightsData();
+  }, [highlightsPeriod]);
+
+  const loadRealEmotionalData = () => {
     console.log(`📊 Loading emotional data for ${selectedPeriod} days...`);
     
     const user = getCurrentUser();
@@ -93,7 +100,7 @@ export default function EmotionalWellbeing() {
       return;
     }
 
-    await processRealEmotionalData(emotionalDataRaw);
+    processRealEmotionalData(emotionalDataRaw);
   };
 
   const loadBalanceData = () => {
@@ -113,6 +120,139 @@ export default function EmotionalWellbeing() {
     }
 
     processBalanceData(balanceDataRaw);
+  };
+
+  const loadHighlightsData = async () => {
+    console.log(`🏆 Loading highlights data for ${highlightsPeriod}...`);
+    
+    const user = getCurrentUser();
+    const userId = user?.uid || 'anonymous';
+    
+    // First, check if we have valid cached highlights
+    try {
+      console.log('🔍 Checking highlights cache...');
+      const cacheResult = await firestoreService.getHighlightsCache(userId, highlightsPeriod);
+      
+      if (cacheResult.success && cacheResult.cache && cacheResult.cache.isValid) {
+        console.log('✅ Using cached highlights from today');
+        setHighlights(cacheResult.cache.highlights);
+        return;
+      }
+      
+      console.log('🔄 Cache invalid or missing, generating new highlights...');
+    } catch (error) {
+      console.error('❌ Error checking cache, proceeding with generation:', error);
+    }
+    
+    // Get fresh emotional data
+    let emotionalDataRaw;
+    if (highlightsPeriod === 'week') {
+      emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 7);
+    } else if (highlightsPeriod === 'month') {
+      emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 30);
+    } else { // lifetime
+      emotionalDataRaw = emotionalAnalysisService.getAllEmotionalData(userId);
+    }
+    
+    console.log('📈 Raw highlights data:', emotionalDataRaw);
+
+    if (emotionalDataRaw.length === 0) {
+      console.log('📝 No emotional data found for highlights');
+      setHighlights({});
+      return;
+    }
+
+    await processHighlightsData(emotionalDataRaw, userId);
+  };
+
+  const processHighlightsData = async (data, userId) => {
+    console.log(`🔄 Processing highlights data: ${data.length} entries for ${highlightsPeriod}`);
+    
+    // Filter valid data for highlights
+    const validData = data.filter(item => item.happiness !== undefined);
+    if (validData.length === 0) {
+      setHighlights({});
+      return;
+    }
+
+    // Generate highlights based on real data
+    const bestDay = validData.reduce((best, current) => 
+      (current.happiness + current.energy) > (best.happiness + best.energy) ? current : best
+    );
+
+    const worstDay = validData.reduce((worst, current) => 
+      (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
+    );
+
+    let highlightsData;
+
+    try {
+      // Generate AI descriptions for best and challenging days
+      console.log('🤖 Generating AI descriptions for highlights...');
+      const periodText = highlightsPeriod === 'week' ? 'last week' : 
+                        highlightsPeriod === 'month' ? 'last month' : 'their lifetime';
+      
+      const [bestDayDescription, worstDayDescription] = await Promise.all([
+        chatService.generateDayDescription(bestDay, 'best', periodText),
+        chatService.generateDayDescription(worstDay, 'challenging', periodText)
+      ]);
+
+      highlightsData = {
+        peak: {
+          title: "Best Mood Day",
+          description: bestDayDescription,
+          date: new Date(bestDay.timestamp).toLocaleDateString(),
+          score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+        },
+        toughestDay: {
+          title: "Challenging Day",
+          description: worstDayDescription,
+          date: new Date(worstDay.timestamp).toLocaleDateString(),
+          score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+        }
+      };
+
+      setHighlights(highlightsData);
+      
+      // Save to cache for future use
+      try {
+        console.log('💾 Saving highlights to cache...');
+        await firestoreService.saveHighlightsCache(userId, highlightsPeriod, highlightsData);
+        console.log('✅ Highlights cached successfully');
+      } catch (cacheError) {
+        console.error('❌ Error caching highlights (non-critical):', cacheError);
+      }
+
+    } catch (error) {
+      console.error('❌ Error generating AI descriptions for highlights, using fallbacks:', error);
+      
+      // Fallback to original descriptions if AI generation fails
+      highlightsData = {
+        peak: {
+          title: "Best Mood Day",
+          description: "Highest happiness and energy levels",
+          date: new Date(bestDay.timestamp).toLocaleDateString(),
+          score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+        },
+        toughestDay: {
+          title: "Challenging Day",
+          description: "Higher stress and anxiety levels",
+          date: new Date(worstDay.timestamp).toLocaleDateString(),
+          score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+        }
+      };
+
+      setHighlights(highlightsData);
+      
+      // Still save fallback to cache
+      try {
+        await firestoreService.saveHighlightsCache(userId, highlightsPeriod, highlightsData);
+      } catch (cacheError) {
+        console.error('❌ Error caching fallback highlights:', cacheError);
+      }
+    }
+
+    console.log('✅ Highlights data processed successfully');
   };
 
   const processBalanceData = (data) => {
@@ -144,7 +284,7 @@ export default function EmotionalWellbeing() {
     }
   };
 
-  const processRealEmotionalData = async (data) => {
+  const processRealEmotionalData = (data) => {
     console.log(`🔄 Processing real emotional data: ${data.length} entries for ${selectedPeriod} days`);
     
     // Create date range for the selected period
@@ -180,55 +320,6 @@ export default function EmotionalWellbeing() {
       const avgAnxiety = validData.reduce((sum, day) => sum + day.anxiety, 0) / validData.length;
       const avgStress = validData.reduce((sum, day) => sum + day.stress, 0) / validData.length;
 
-      // Generate highlights based on real data
-      const bestDay = validData.reduce((best, current) => 
-        (current.happiness + current.energy) > (best.happiness + best.energy) ? current : best
-      );
-
-      const worstDay = validData.reduce((worst, current) => 
-        (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
-      );
-
-      try {
-        // Generate AI explanations for best and challenging days
-        console.log('🤖 Generating AI explanations for highlights...');
-        const [bestDayExplanation, worstDayExplanation] = await Promise.all([
-          chatService.generateDayExplanation(bestDay, 'best', selectedPeriod),
-          chatService.generateDayExplanation(worstDay, 'challenging', selectedPeriod)
-        ]);
-
-        setHighlights({
-          peak: {
-            title: "Best Mood Day",
-            description: bestDayExplanation,
-            date: new Date(bestDay.timestamp).toLocaleDateString(),
-            score: Math.round((bestDay.happiness + bestDay.energy) / 2)
-          },
-          toughestDay: {
-            title: "Challenging Day",
-            description: worstDayExplanation,
-            date: new Date(worstDay.timestamp).toLocaleDateString(),
-            score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
-          }
-        });
-      } catch (error) {
-        console.error('❌ Error generating AI explanations, using fallbacks:', error);
-        // Fallback to original descriptions if AI generation fails
-        setHighlights({
-          peak: {
-            title: "Best Mood Day",
-            description: "Highest happiness and energy levels",
-            date: new Date(bestDay.timestamp).toLocaleDateString(),
-            score: Math.round((bestDay.happiness + bestDay.energy) / 2)
-          },
-          toughestDay: {
-            title: "Challenging Day",
-            description: "Higher stress and anxiety levels",
-            date: new Date(worstDay.timestamp).toLocaleDateString(),
-            score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
-          }
-        });
-      }
 
       setTriggers({
         stress: avgStress > 50 ? ["High stress conversations", "Complex decisions"] : ["Minor uncertainties", "Daily pressures"],
@@ -688,19 +779,55 @@ export default function EmotionalWellbeing() {
               isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
             }`}
           >
-            <div className="flex items-center space-x-3 mb-6">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(230, 179, 186, 0.2) 0%, rgba(177, 156, 217, 0.2) 100%)",
-                  border: "1px solid rgba(230, 179, 186, 0.3)",
-                }}
-              >
-                <Award className="w-5 h-5" style={{ color: "#E6B3BA" }} />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(230, 179, 186, 0.2) 0%, rgba(177, 156, 217, 0.2) 100%)",
+                    border: "1px solid rgba(230, 179, 186, 0.3)",
+                  }}
+                >
+                  <Award className="w-5 h-5" style={{ color: "#E6B3BA" }} />
+                </div>
+                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Highlights
+                </h3>
               </div>
-              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                Highlights
-              </h3>
+
+              {/* Highlights Period Toggle */}
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setHighlightsPeriod('week')}
+                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                    highlightsPeriod === 'week'
+                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+                  }`}
+                >
+                  Last Week
+                </button>
+                <button
+                  onClick={() => setHighlightsPeriod('month')}
+                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                    highlightsPeriod === 'month'
+                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+                  }`}
+                >
+                  Last Month
+                </button>
+                <button
+                  onClick={() => setHighlightsPeriod('lifetime')}
+                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                    highlightsPeriod === 'lifetime'
+                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
+                  }`}
+                >
+                  Lifetime
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
