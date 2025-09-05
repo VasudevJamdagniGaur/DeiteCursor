@@ -62,6 +62,7 @@ export default function EmotionalWellbeing() {
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [balanceInsights, setBalanceInsights] = useState(null);
 
   useEffect(() => {
     loadRealEmotionalData();
@@ -105,23 +106,70 @@ export default function EmotionalWellbeing() {
     processRealEmotionalData(emotionalDataRaw);
   };
 
-  const loadBalanceData = () => {
-    console.log(`⚖️ Loading balance data for ${balancePeriod} days...`);
+  const loadBalanceData = async () => {
+    console.log(`⚖️ Loading AI-powered balance data for ${balancePeriod} days...`);
     
     const user = getCurrentUser();
     const userId = user?.uid || 'anonymous';
     
-    // Get emotional data for the balance period
-    const balanceDataRaw = emotionalAnalysisService.getEmotionalData(userId, balancePeriod);
-    console.log('📊 Balance data:', balanceDataRaw);
+    try {
+      // Get chat messages for the balance period
+      let chatMessagesResult;
+      if (balancePeriod === 1) {
+        // Get today's messages
+        const today = new Date().toISOString().split('T')[0];
+        chatMessagesResult = await firestoreService.getMessages(userId, today);
+      } else {
+        // Get messages for the specified period
+        chatMessagesResult = await firestoreService.getRecentChatMessages(userId, balancePeriod);
+      }
+      
+      const chatMessages = chatMessagesResult.messages || [];
+      console.log(`💬 Chat messages for balance analysis: ${chatMessages.length}`);
 
-    if (balanceDataRaw.length === 0) {
-      console.log('📝 No balance data found, setting empty balance');
-      setMoodBalance([]);
-      return;
+      if (chatMessages.length === 0) {
+        console.log('📝 No chat data found, setting default balance');
+        setMoodBalance([
+          { name: 'Positive', value: 50, color: '#7DD3C0' },
+          { name: 'Neutral', value: 30, color: '#D4AF37' },
+          { name: 'Negative', value: 20, color: '#9BB5FF' }
+        ]);
+        return;
+      }
+
+      // Use AI to analyze emotional balance from conversations
+      const periodText = balancePeriod === 1 ? 'today' : 
+                        balancePeriod === 7 ? 'the last week' : 'the last 30 days';
+      
+      const aiBalance = await chatService.analyzeEmotionalBalance(chatMessages, periodText);
+      console.log('🎭 AI Balance Analysis:', aiBalance);
+
+      // Update mood balance with AI analysis
+      setMoodBalance([
+        { name: 'Positive', value: aiBalance.positive, color: '#7DD3C0' },
+        { name: 'Neutral', value: aiBalance.neutral, color: '#D4AF37' },
+        { name: 'Negative', value: aiBalance.negative, color: '#9BB5FF' }
+      ]);
+
+      // Store AI insights for display
+      setBalanceInsights({
+        insight: aiBalance.insight,
+        dominantEmotion: aiBalance.dominantEmotion,
+        balanceScore: aiBalance.balanceScore,
+        keyObservations: aiBalance.keyObservations,
+        period: periodText
+      });
+
+    } catch (error) {
+      console.error('❌ Error loading AI balance data:', error);
+      
+      // Fallback to default balance
+      setMoodBalance([
+        { name: 'Positive', value: 60, color: '#7DD3C0' },
+        { name: 'Neutral', value: 25, color: '#D4AF37' },
+        { name: 'Negative', value: 15, color: '#9BB5FF' }
+      ]);
     }
-
-    processBalanceData(balanceDataRaw);
   };
 
   const loadHighlightsData = async () => {
@@ -278,34 +326,6 @@ export default function EmotionalWellbeing() {
     console.log('✅ Highlights data processed successfully');
   };
 
-  const processBalanceData = (data) => {
-    console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod} days`);
-    
-    // Calculate averages for the selected period
-    const validData = data.filter(item => item.happiness !== undefined);
-    
-    if (validData.length > 0) {
-      const avgHappiness = validData.reduce((sum, day) => sum + day.happiness, 0) / validData.length;
-      const avgEnergy = validData.reduce((sum, day) => sum + day.energy, 0) / validData.length;
-      const avgAnxiety = validData.reduce((sum, day) => sum + day.anxiety, 0) / validData.length;
-      const avgStress = validData.reduce((sum, day) => sum + day.stress, 0) / validData.length;
-
-      // Calculate balance based on averages
-      const positiveScore = Math.round((avgHappiness + avgEnergy) / 2);
-      const negativeScore = Math.round((avgAnxiety + avgStress) / 2);
-      const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
-
-      setMoodBalance([
-        { name: 'Positive', value: positiveScore, color: '#7DD3C0' },
-        { name: 'Neutral', value: neutralScore, color: '#D4AF37' },
-        { name: 'Negative', value: negativeScore, color: '#9BB5FF' }
-      ]);
-
-      console.log('✅ Balance data processed successfully');
-    } else {
-      setMoodBalance([]);
-    }
-  };
 
   const processRealEmotionalData = (data) => {
     console.log(`🔄 Processing real emotional data: ${data.length} entries for ${selectedPeriod} days`);
@@ -956,6 +976,60 @@ export default function EmotionalWellbeing() {
                   ))}
                 </div>
               </div>
+
+              {/* AI Insights */}
+              {balanceInsights && (
+                <div className="mt-6 space-y-4">
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-indigo-500/10 border border-indigo-500/20' : 'bg-indigo-50 border border-indigo-200'}`}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Brain className="w-5 h-5 text-indigo-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-indigo-400' : 'text-indigo-700'}`}>
+                        AI Analysis for {balanceInsights.period}
+                      </h4>
+                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                      {balanceInsights.insight}
+                    </p>
+                  </div>
+
+                  {balanceInsights.keyObservations && (
+                    <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Lightbulb className="w-5 h-5 text-purple-500" />
+                        <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                          Key Observations
+                        </h4>
+                      </div>
+                      <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                        {balanceInsights.keyObservations}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className={`flex items-center space-x-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <Target className="w-4 h-4" />
+                      <span className="text-sm">Dominant Emotion:</span>
+                      <span className={`text-sm font-medium capitalize ${
+                        balanceInsights.dominantEmotion === 'positive' ? 'text-green-500' :
+                        balanceInsights.dominantEmotion === 'negative' ? 'text-red-500' : 'text-yellow-500'
+                      }`}>
+                        {balanceInsights.dominantEmotion}
+                      </span>
+                    </div>
+                    <div className={`flex items-center space-x-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <Award className="w-4 h-4" />
+                      <span className="text-sm">Balance Score:</span>
+                      <span className={`text-sm font-medium ${
+                        balanceInsights.balanceScore >= 80 ? 'text-green-500' :
+                        balanceInsights.balanceScore >= 60 ? 'text-yellow-500' : 'text-red-500'
+                      }`}>
+                        {balanceInsights.balanceScore}/100
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
