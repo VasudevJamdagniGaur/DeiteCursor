@@ -237,6 +237,81 @@ class FirestoreService {
       return { success: false, error: error.message, chatDay: null };
     }
   }
+
+  /**
+   * Save or update daily highlights cache
+   */
+  async saveHighlightsCache(uid, period, highlightsData) {
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const cacheRef = doc(this.db, `users/${uid}/highlightsCache/${period}`);
+      
+      await setDoc(cacheRef, {
+        period: period,
+        lastUpdated: today,
+        updatedAt: serverTimestamp(),
+        highlights: highlightsData,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error saving highlights cache:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get cached highlights for a period
+   */
+  async getHighlightsCache(uid, period) {
+    try {
+      const cacheRef = doc(this.db, `users/${uid}/highlightsCache/${period}`);
+      const snapshot = await getDoc(cacheRef);
+      
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Check if cache is from today
+        const isToday = data.lastUpdated === today;
+        
+        return { 
+          success: true, 
+          cache: {
+            id: snapshot.id,
+            ...data,
+            isValid: isToday
+          }
+        };
+      } else {
+        return { success: true, cache: null };
+      }
+    } catch (error) {
+      console.error('Error getting highlights cache:', error);
+      return { success: false, error: error.message, cache: null };
+    }
+  }
+
+  /**
+   * Check if highlights cache needs updating (not from today)
+   */
+  async needsHighlightsUpdate(uid, period) {
+    try {
+      const result = await this.getHighlightsCache(uid, period);
+      if (!result.success) {
+        return { success: false, needsUpdate: true };
+      }
+      
+      // If no cache exists or cache is not from today, needs update
+      const needsUpdate = !result.cache || !result.cache.isValid;
+      
+      return { success: true, needsUpdate };
+    } catch (error) {
+      console.error('Error checking highlights update need:', error);
+      return { success: false, error: error.message, needsUpdate: true };
+    }
+  }
 }
 
 export default new FirestoreService();
