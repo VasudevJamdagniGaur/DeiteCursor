@@ -254,6 +254,19 @@ Return only a JSON object in this exact format:
       return [];
     }
   }
+
+  // Helper method to get all emotional data (for lifetime analysis)
+  getAllEmotionalData(userId) {
+    try {
+      const data = JSON.parse(localStorage.getItem(`emotional_data_${userId}`) || '[]');
+      
+      // Sort by date and return all data
+      return data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    } catch (error) {
+      console.error('❌ Error getting all emotional data:', error);
+      return [];
+    }
+  }
 }
 
 export default new EmotionalAnalysisService();
