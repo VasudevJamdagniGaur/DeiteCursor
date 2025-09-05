@@ -263,6 +263,103 @@ Provide analysis in this exact JSON format:
       };
     }
   }
+
+  async analyzeChatContextForDay(messages, dayType, date) {
+    console.log(`🔍 Analyzing chat context for ${dayType} day on ${date}...`);
+    
+    try {
+      if (!messages || messages.length === 0) {
+        return `No chat data available for ${date}, but emotional scores indicate this was a ${dayType === 'best' ? 'positive' : 'challenging'} day.`;
+      }
+
+      // Filter and prepare conversation content
+      const userMessages = messages
+        .filter(msg => msg.sender === 'user')
+        .map(msg => msg.text.trim())
+        .filter(text => text.length > 3);
+
+      const aiMessages = messages
+        .filter(msg => msg.sender === 'ai')
+        .map(msg => msg.text.trim());
+
+      if (userMessages.length === 0) {
+        return `Limited chat activity on ${date}, but emotional patterns suggest this was a ${dayType === 'best' ? 'positive' : 'challenging'} day.`;
+      }
+
+      // Build conversation context
+      let conversationContext = '';
+      userMessages.forEach((userMsg, index) => {
+        conversationContext += `User: "${userMsg}"\n`;
+        if (aiMessages[index]) {
+          const aiResponse = aiMessages[index].substring(0, 200);
+          conversationContext += `Deite: "${aiResponse}${aiMessages[index].length > 200 ? '...' : ''}"\n\n`;
+        }
+      });
+
+      const prompt = `Analyze this chat conversation from ${date} and explain what made this day ${dayType === 'best' ? 'the best/happiest' : 'the most challenging/difficult'} day.
+
+**Chat Conversation:**
+${conversationContext}
+
+**Task:** Write 1-2 sentences explaining what specifically happened on this day that made it ${dayType === 'best' ? 'positive and uplifting' : 'challenging and difficult'}. Focus on:
+- Specific topics discussed
+- Emotions expressed
+- Events mentioned
+- Achievements or challenges shared
+- Overall tone and context
+
+Be specific about what the person talked about, not just general emotional states. Make it personal and contextual.`;
+
+      const messages_api = [
+        {
+          role: 'system',
+          content: 'You are an empathetic AI that analyzes conversations to understand what made specific days meaningful. Focus on concrete events, topics, and experiences mentioned in the chat.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ];
+
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: messages_api,
+          stream: false,
+          options: {
+            temperature: 0.7,
+            top_p: 0.9
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.message && data.message.content) {
+        return data.message.content.trim();
+      }
+
+      throw new Error('Invalid response format');
+
+    } catch (error) {
+      console.error(`❌ Error analyzing chat context for ${dayType} day:`, error);
+      
+      // Return fallback based on day type
+      if (dayType === 'best') {
+        return `This day showed exceptional positivity and high energy levels, indicating meaningful conversations and positive experiences.`;
+      } else {
+        return `This day presented significant challenges with elevated stress levels, suggesting difficult topics or situations were discussed.`;
+      }
+    }
+  }
 }
 
 export default new ChatService();
