@@ -616,13 +616,39 @@ export default function EmotionalWellbeing() {
         { name: 'Negative', value: negativeScore, color: '#9BB5FF' }
       ]);
 
-      // Update pattern analysis with AI insights
+      // Generate comprehensive personalized guidance
+      console.log('🎯 Generating comprehensive personalized guidance...');
+      
+      // Get lifetime and recent chat messages
+      const [lifetimeMessagesResult, recentMessagesResult] = await Promise.all([
+        firestoreService.getAllChatMessages(userId), // All messages
+        firestoreService.getRecentChatMessages(userId, 30) // Last 30 days
+      ]);
+      
+      const lifetimeMessages = lifetimeMessagesResult.messages || [];
+      const recentMessages = recentMessagesResult.messages || [];
+      
+      console.log(`📚 Lifetime messages: ${lifetimeMessages.length}, Recent messages: ${recentMessages.length}`);
+      
+      // Generate personalized guidance using comprehensive analysis
+      const personalizedGuidance = await chatService.generatePersonalizedGuidance(
+        lifetimeMessages,
+        recentMessages,
+        validData, // emotional data
+        {
+          stress: aiAnalysis.triggers.stressFactors || ["Work pressure", "Time constraints"],
+          joy: aiAnalysis.triggers.joyFactors || ["Meaningful conversations", "Personal achievements"],
+          distraction: aiAnalysis.triggers.energyDrains || ["Overthinking", "Worry cycles"]
+        }
+      );
+
+      // Update pattern analysis with AI insights and comprehensive guidance
       setPatternAnalysis({
         overallTrend: aiAnalysis.patterns.overallTrend,
         keyInsight: aiAnalysis.patterns.keyInsight,
         recommendation: aiAnalysis.patterns.recommendation,
         emotionalBalance: aiAnalysis.emotionalBalance,
-        personalizedGuidance: aiAnalysis.personalizedGuidance
+        personalizedGuidance: personalizedGuidance
       });
 
       // Refresh mood chart data
@@ -1249,62 +1275,130 @@ export default function EmotionalWellbeing() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* AI Recommendations */}
-              {hasEnoughData && patternAnalysis && patternAnalysis.recommendations && patternAnalysis.recommendations.length > 0 ? (
-                patternAnalysis.recommendations.slice(0, 3).map((recommendation, index) => (
-                  <div key={index} className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Award className="w-5 h-5 text-green-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
-                        AI Recommendation
-                      </h4>
-                    </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
-                      {recommendation}
-                    </p>
+            {/* Comprehensive Personalized Guidance */}
+            {patternAnalysis && patternAnalysis.personalizedGuidance ? (
+              <div className="space-y-4">
+                {/* Focus Area */}
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Target className="w-5 h-5 text-blue-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                      Focus Area
+                    </h4>
                   </div>
-                ))
-              ) : (
-                <>
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Sun className="w-5 h-5 text-blue-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                        Continue Chatting
-                      </h4>
-                    </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
-                      Keep engaging with Deite to build more comprehensive emotional insights and patterns.
-                    </p>
-                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                    {patternAnalysis.personalizedGuidance.focus}
+                  </p>
+                </div>
 
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
+                {/* Strength Recognition */}
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Award className="w-5 h-5 text-green-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                      Your Strength
+                    </h4>
+                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                    {patternAnalysis.personalizedGuidance.strength}
+                  </p>
+                </div>
+
+                {/* Action Step */}
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Zap className="w-5 h-5 text-purple-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                      Action Step
+                    </h4>
+                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                    {patternAnalysis.personalizedGuidance.actionStep}
+                  </p>
+                </div>
+
+                {/* Recent Observation */}
+                {patternAnalysis.personalizedGuidance.recentObservation && (
+                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-orange-50 border border-orange-200'}`}>
                     <div className="flex items-center space-x-2 mb-3">
-                      <Star className="w-5 h-5 text-purple-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
-                        Reflect Daily
+                      <Sun className="w-5 h-5 text-orange-500" />
+                      <h4 className={`font-medium ${isDarkMode ? 'text-orange-400' : 'text-orange-700'}`}>
+                        Recent Observation
                       </h4>
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
-                      Regular conversations help create more accurate emotional tracking and better insights.
+                    <p className={`text-sm ${isDarkMode ? 'text-orange-300' : 'text-orange-600'}`}>
+                      {patternAnalysis.personalizedGuidance.recentObservation}
                     </p>
                   </div>
+                )}
 
+                {/* Lifetime Growth */}
+                {patternAnalysis.personalizedGuidance.lifetimeGrowth && (
                   <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50 border border-teal-200'}`}>
                     <div className="flex items-center space-x-2 mb-3">
-                      <Brain className="w-5 h-5 text-teal-500" />
+                      <TrendingUp className="w-5 h-5 text-teal-500" />
                       <h4 className={`font-medium ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
-                        Build Patterns
+                        Your Growth Journey
                       </h4>
                     </div>
                     <p className={`text-sm ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`}>
-                      Share more details about your experiences to unlock personalized insights.
+                      {patternAnalysis.personalizedGuidance.lifetimeGrowth}
                     </p>
                   </div>
-                </>
-              )}
-            </div>
+                )}
+
+                {/* Deep Insight */}
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-indigo-500/10 border border-indigo-500/20' : 'bg-indigo-50 border border-indigo-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Lightbulb className="w-5 h-5 text-indigo-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-indigo-400' : 'text-indigo-700'}`}>
+                      Deep Insight
+                    </h4>
+                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                    {patternAnalysis.personalizedGuidance.insight}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Sun className="w-5 h-5 text-blue-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                      Continue Chatting
+                    </h4>
+                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                    Keep engaging with Deite to build comprehensive emotional insights. Click "AI Update" to generate personalized guidance.
+                  </p>
+                </div>
+
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Star className="w-5 h-5 text-purple-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                      Reflect Daily
+                    </h4>
+                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                    Regular conversations help create more accurate emotional tracking and better insights.
+                  </p>
+                </div>
+
+                <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50 border border-teal-200'}`}>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Brain className="w-5 h-5 text-teal-500" />
+                    <h4 className={`font-medium ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
+                      Build Patterns
+                    </h4>
+                  </div>
+                  <p className={`text-sm ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`}>
+                    Share more details about your experiences to unlock personalized insights.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Data Summary */}

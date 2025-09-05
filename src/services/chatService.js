@@ -360,6 +360,185 @@ Be specific about what the person talked about, not just general emotional state
       }
     }
   }
+
+  async generatePersonalizedGuidance(lifetimeMessages, recentMessages, emotionalData, triggers) {
+    console.log('🎯 Generating comprehensive personalized guidance...');
+    
+    try {
+      if (!recentMessages || recentMessages.length === 0) {
+        return {
+          focus: "Continue building your emotional awareness through regular check-ins",
+          strength: "Taking steps to understand your emotional patterns",
+          actionStep: "Start by sharing your daily experiences and feelings",
+          insight: "Regular emotional tracking is the foundation of wellbeing growth"
+        };
+      }
+
+      // Prepare lifetime context (summarized)
+      const lifetimeUserMessages = lifetimeMessages
+        .filter(msg => msg.sender === 'user')
+        .map(msg => msg.text.trim())
+        .filter(text => text.length > 10);
+
+      const lifetimeContext = lifetimeUserMessages.length > 0 
+        ? this.summarizeLifetimeContext(lifetimeUserMessages)
+        : "Limited historical context available";
+
+      // Prepare recent detailed context (last 30 days)
+      const recentUserMessages = recentMessages
+        .filter(msg => msg.sender === 'user')
+        .map(msg => ({
+          text: msg.text.trim(),
+          date: msg.dateId,
+          timestamp: msg.timestamp
+        }))
+        .filter(msg => msg.text.length > 3);
+
+      const recentAiMessages = recentMessages
+        .filter(msg => msg.sender === 'ai')
+        .map(msg => msg.text.trim());
+
+      // Build recent conversation context
+      let recentContext = '';
+      recentUserMessages.slice(-20).forEach((userMsg, index) => {
+        const date = new Date(userMsg.timestamp).toLocaleDateString();
+        recentContext += `[${date}] User: "${userMsg.text}"\n`;
+        if (recentAiMessages[index]) {
+          const aiResponse = recentAiMessages[index].substring(0, 150);
+          recentContext += `[${date}] Deite: "${aiResponse}${recentAiMessages[index].length > 150 ? '...' : ''}"\n\n`;
+        }
+      });
+
+      // Calculate emotional trends
+      const avgHappiness = emotionalData.reduce((sum, day) => sum + day.happiness, 0) / emotionalData.length;
+      const avgEnergy = emotionalData.reduce((sum, day) => sum + day.energy, 0) / emotionalData.length;
+      const avgAnxiety = emotionalData.reduce((sum, day) => sum + day.anxiety, 0) / emotionalData.length;
+      const avgStress = emotionalData.reduce((sum, day) => sum + day.stress, 0) / emotionalData.length;
+
+      const prompt = `As an expert emotional wellness coach, provide personalized guidance based on this person's complete chat history and recent conversations.
+
+**LIFETIME CONTEXT SUMMARY:**
+${lifetimeContext}
+
+**RECENT CONVERSATIONS (Last 30 days):**
+${recentContext}
+
+**EMOTIONAL PATTERNS:**
+- Average Happiness: ${Math.round(avgHappiness)}%
+- Average Energy: ${Math.round(avgEnergy)}%
+- Average Anxiety: ${Math.round(avgAnxiety)}%
+- Average Stress: ${Math.round(avgStress)}%
+
+**IDENTIFIED TRIGGERS:**
+- Stress factors: ${triggers.stress?.join(', ') || 'Not identified'}
+- Joy factors: ${triggers.joy?.join(', ') || 'Not identified'}
+- Energy drains: ${triggers.distraction?.join(', ') || 'Not identified'}
+
+**TASK:** Provide personalized guidance in this exact JSON format:
+{
+  "focus": "What they should focus on improving based on recent patterns and lifetime context",
+  "strength": "What they're doing well based on their journey and growth",
+  "actionStep": "One specific, actionable step they can take this week",
+  "insight": "A deeper insight about their emotional patterns and growth journey",
+  "recentObservation": "What you noticed about their recent conversations and emotional state",
+  "lifetimeGrowth": "How they've grown or what patterns you see across their lifetime"
+}
+
+Focus on:
+1. Recent events and conversations (last 30 days) as primary guidance
+2. Use lifetime context to understand their overall journey and growth
+3. Connect recent patterns to longer-term trends
+4. Provide specific, actionable advice based on what they've actually shared
+5. Be encouraging about their progress while addressing current challenges`;
+
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are a compassionate emotional wellness coach with deep insight into human psychology. Provide personalized, actionable guidance based on comprehensive conversation history. Be specific, empathetic, and encouraging.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ];
+
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: messages,
+          stream: false,
+          options: {
+            temperature: 0.8,
+            top_p: 0.9
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.message && data.message.content) {
+        const responseText = data.message.content.trim();
+        
+        // Parse JSON response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const guidance = JSON.parse(jsonMatch[0]);
+          return guidance;
+        }
+        
+        throw new Error('Invalid JSON format in response');
+      }
+
+      throw new Error('Invalid response format');
+
+    } catch (error) {
+      console.error('❌ Error generating personalized guidance:', error);
+      
+      // Return fallback guidance
+      return {
+        focus: "Building emotional awareness and resilience",
+        strength: "Taking proactive steps to understand your emotional patterns",
+        actionStep: "Continue regular check-ins and be mindful of your emotional triggers",
+        insight: "Emotional growth is a journey that requires patience and self-compassion",
+        recentObservation: "Your commitment to emotional wellbeing is commendable",
+        lifetimeGrowth: "Every conversation contributes to your emotional intelligence and self-awareness"
+      };
+    }
+  }
+
+  summarizeLifetimeContext(messages) {
+    // Create a summary of key themes and patterns from lifetime messages
+    const messageText = messages.slice(-100).join(' '); // Last 100 messages for context
+    
+    // Extract key themes (simplified approach)
+    const themes = [];
+    
+    if (messageText.toLowerCase().includes('work') || messageText.toLowerCase().includes('job')) {
+      themes.push('career/work discussions');
+    }
+    if (messageText.toLowerCase().includes('family') || messageText.toLowerCase().includes('relationship')) {
+      themes.push('family/relationship topics');
+    }
+    if (messageText.toLowerCase().includes('stress') || messageText.toLowerCase().includes('anxiety')) {
+      themes.push('stress and anxiety management');
+    }
+    if (messageText.toLowerCase().includes('goal') || messageText.toLowerCase().includes('dream')) {
+      themes.push('personal goals and aspirations');
+    }
+    if (messageText.toLowerCase().includes('health') || messageText.toLowerCase().includes('exercise')) {
+      themes.push('health and wellness');
+    }
+    
+    return `Historical conversations have covered: ${themes.length > 0 ? themes.join(', ') : 'various personal topics'}. Total conversation history: ${messages.length} messages showing ongoing emotional growth journey.`;
+  }
 }
 
 export default new ChatService();
