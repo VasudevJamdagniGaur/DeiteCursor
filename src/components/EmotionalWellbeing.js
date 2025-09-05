@@ -189,14 +189,35 @@ export default function EmotionalWellbeing() {
     let highlightsData;
 
     try {
-      // Generate AI descriptions for best and challenging days
-      console.log('🤖 Generating AI descriptions for highlights...');
-      const periodText = highlightsPeriod === 'week' ? 'last week' : 
-                        highlightsPeriod === 'month' ? 'last month' : 'their lifetime';
+      // Get chat messages for the best and challenging days to analyze actual conversations
+      console.log('🤖 Analyzing chat conversations for highlights...');
       
+      // Convert timestamps to date IDs for Firebase
+      const bestDayDateId = new Date(bestDay.timestamp).toISOString().split('T')[0];
+      const worstDayDateId = new Date(worstDay.timestamp).toISOString().split('T')[0];
+      
+      console.log(`📅 Best day: ${bestDayDateId}, Challenging day: ${worstDayDateId}`);
+      
+      // Get chat messages for both days
+      const [bestDayMessages, worstDayMessages] = await Promise.all([
+        firestoreService.getMessages(userId, bestDayDateId),
+        firestoreService.getMessages(userId, worstDayDateId)
+      ]);
+      
+      console.log(`💬 Best day messages: ${bestDayMessages.messages?.length || 0}, Challenging day messages: ${worstDayMessages.messages?.length || 0}`);
+      
+      // Analyze chat context for both days
       const [bestDayDescription, worstDayDescription] = await Promise.all([
-        chatService.generateDayDescription(bestDay, 'best', periodText),
-        chatService.generateDayDescription(worstDay, 'challenging', periodText)
+        chatService.analyzeChatContextForDay(
+          bestDayMessages.messages || [], 
+          'best', 
+          new Date(bestDay.timestamp).toLocaleDateString()
+        ),
+        chatService.analyzeChatContextForDay(
+          worstDayMessages.messages || [], 
+          'challenging', 
+          new Date(worstDay.timestamp).toLocaleDateString()
+        )
       ]);
 
       highlightsData = {
@@ -514,7 +535,7 @@ export default function EmotionalWellbeing() {
       const aiAnalysis = await chatService.generateComprehensiveAnalysis(emotionalDataRaw, periodText);
       console.log('🎯 AI Analysis received:', aiAnalysis);
 
-      // Update highlights with AI-generated descriptions
+      // Update highlights with chat-based AI analysis
       const validData = emotionalDataRaw.filter(item => item.happiness !== undefined);
       if (validData.length > 0) {
         const bestDay = validData.reduce((best, current) => 
@@ -524,16 +545,39 @@ export default function EmotionalWellbeing() {
           (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
         );
 
+        // Get chat messages for the best and challenging days
+        const bestDayDateId = new Date(bestDay.timestamp).toISOString().split('T')[0];
+        const worstDayDateId = new Date(worstDay.timestamp).toISOString().split('T')[0];
+        
+        const [bestDayMessages, worstDayMessages] = await Promise.all([
+          firestoreService.getMessages(userId, bestDayDateId),
+          firestoreService.getMessages(userId, worstDayDateId)
+        ]);
+        
+        // Analyze chat context for both days
+        const [bestDayDescription, worstDayDescription] = await Promise.all([
+          chatService.analyzeChatContextForDay(
+            bestDayMessages.messages || [], 
+            'best', 
+            new Date(bestDay.timestamp).toLocaleDateString()
+          ),
+          chatService.analyzeChatContextForDay(
+            worstDayMessages.messages || [], 
+            'challenging', 
+            new Date(worstDay.timestamp).toLocaleDateString()
+          )
+        ]);
+
         const updatedHighlights = {
           peak: {
             title: "Best Mood Day",
-            description: aiAnalysis.highlights.bestDayReason,
+            description: bestDayDescription,
             date: new Date(bestDay.timestamp).toLocaleDateString(),
             score: Math.round((bestDay.happiness + bestDay.energy) / 2)
           },
           toughestDay: {
             title: "Challenging Day",
-            description: aiAnalysis.highlights.challengingDayReason,
+            description: worstDayDescription,
             date: new Date(worstDay.timestamp).toLocaleDateString(),
             score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
           }
