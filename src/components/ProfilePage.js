@@ -447,7 +447,7 @@ export default function ProfilePage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Danger Zone</h3>
             <p className="text-gray-300 mb-6">
-              Delete your account permanently
+              Clear your account data permanently
             </p>
 
             {!showDeleteConfirm ? (
@@ -459,7 +459,7 @@ export default function ProfilePage() {
                 }}
               >
                 <Trash2 className="w-4 h-4 inline mr-2" />
-                Delete Account
+                Clear Account Data
               </button>
             ) : (
               <div className="space-y-4">
