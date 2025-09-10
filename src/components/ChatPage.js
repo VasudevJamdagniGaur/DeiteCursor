@@ -71,7 +71,14 @@ export default function ChatPage() {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
-    if (!inputMessage.trim() || isLoading) return;
+    console.log('🎯 CHAT PAGE DEBUG: handleSendMessage called');
+    console.log('🎯 CHAT PAGE DEBUG: inputMessage:', inputMessage);
+    console.log('🎯 CHAT PAGE DEBUG: isLoading:', isLoading);
+    
+    if (!inputMessage.trim() || isLoading) {
+      console.log('🎯 CHAT PAGE DEBUG: Returning early - empty message or loading');
+      return;
+    }
 
     const userMessageText = inputMessage.trim();
     const userMessage = {
@@ -81,19 +88,30 @@ export default function ChatPage() {
       timestamp: new Date()
     };
 
+    console.log('🎯 CHAT PAGE DEBUG: Created user message:', userMessage);
+
     // Add user message immediately
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
 
+    console.log('🎯 CHAT PAGE DEBUG: About to call chatService.sendMessage...');
+
     try {
-      console.log('🚀 Sending message to AI...');
+      console.log('🚀 CHAT PAGE DEBUG: Sending message to AI...');
+      console.log('🚀 CHAT PAGE DEBUG: Message text:', userMessageText);
+      console.log('🚀 CHAT PAGE DEBUG: Conversation history length:', messages.length);
       
-      // Call the chat service
+      // Call the chat service (using improved structure)
       const aiResponse = await chatService.sendMessage(userMessageText, messages);
       
-      console.log('✅ Received AI response:', aiResponse);
+      console.log('✅ CHAT PAGE DEBUG: Received AI response:', aiResponse);
+      
+      // Validate response
+      if (!aiResponse || typeof aiResponse !== 'string') {
+        throw new Error('Invalid AI response format');
+      }
 
       // Add AI response
       const aiMessage = {
@@ -303,6 +321,7 @@ export default function ChatPage() {
         
         <div ref={messagesEndRef} />
       </div>
+
 
       {/* Input */}
       <div className="relative z-10 p-4 border-t border-gray-700/30">
