@@ -659,11 +659,11 @@ export default function EmotionalWellbeing() {
                 </h3>
               </div>
               
-              {/* Period Selection Buttons */}
+              {/* Period Toggle - moved inside line graph container */}
               <div className="flex space-x-2">
                 <button
                   onClick={() => setSelectedPeriod(7)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                  className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
                     selectedPeriod === 7
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -675,7 +675,7 @@ export default function EmotionalWellbeing() {
                 </button>
                 <button
                   onClick={() => setSelectedPeriod(15)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                  className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
                     selectedPeriod === 15
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
