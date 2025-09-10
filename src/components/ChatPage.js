@@ -115,55 +115,39 @@ export default function ChatPage() {
       let currentMessages = [...newMessages, aiMessage];
       setMessages(currentMessages);
 
-      let fullResponse = '';
-      let typewriterQueue = [];
-      let isTyping = false;
 
-      // Typewriter effect function
-      const typewriterEffect = () => {
-        if (isTyping || typewriterQueue.length === 0) return;
-        
-        isTyping = true;
-        const processQueue = () => {
-          if (typewriterQueue.length === 0) {
-            isTyping = false;
-            return;
-          }
-          
-          const token = typewriterQueue.shift();
-          fullResponse += token;
-          
-          // Update the message with current text
+
+      // Token callback for streaming - Direct appending like your example
+      const onToken = (token) => {
+        if (token === null) {
+          // Stream finished
+          console.log('📝 STREAM DEBUG: Stream finished (null token received)');
           setMessages(prevMessages => {
             const updated = [...prevMessages];
             const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
             if (aiMsgIndex !== -1) {
               updated[aiMsgIndex] = {
                 ...updated[aiMsgIndex],
-                text: fullResponse
+                isStreaming: false
               };
             }
             return updated;
           });
-          
-          // Continue with next token with minimal delay for smooth typewriter effect
-          setTimeout(processQueue, Math.random() * 20 + 10); // 10-30ms delay (faster!)
-        };
-        
-        processQueue();
-      };
-
-      // Token callback for streaming - IMMEDIATE processing
-      const onToken = (token) => {
-        console.log('📝 TYPEWRITER DEBUG: IMMEDIATE token received:', token);
-        
-        // Add token to queue immediately
-        typewriterQueue.push(token);
-        
-        // Start typewriter effect IMMEDIATELY if not already running
-        if (!isTyping) {
-          console.log('📝 TYPEWRITER DEBUG: Starting IMMEDIATE typewriter effect');
-          typewriterEffect();
+        } else {
+          // Append token directly to UI - no queue, no delays!
+          console.log('📝 STREAM DEBUG: Appending token:', token);
+          setMessages(prevMessages => {
+            const updated = [...prevMessages];
+            const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
+            if (aiMsgIndex !== -1) {
+              updated[aiMsgIndex] = {
+                ...updated[aiMsgIndex],
+                text: updated[aiMsgIndex].text + token, // Append token directly!
+                isStreaming: true
+              };
+            }
+            return updated;
+          });
         }
       };
       
@@ -177,37 +161,14 @@ export default function ChatPage() {
         throw new Error('Invalid AI response format');
       }
 
-      // Wait for typewriter effect to finish
-      const waitForTypewriter = () => {
-        return new Promise((resolve) => {
-          const checkQueue = () => {
-            if (typewriterQueue.length === 0 && !isTyping) {
-              resolve();
-            } else {
-              setTimeout(checkQueue, 100);
-            }
-          };
-          checkQueue();
-        });
-      };
+      // No need to wait - streaming handles everything directly
 
-      await waitForTypewriter();
-
-      // Update final message and get finalMessages for later use
+      // Get final messages for reflection/analysis
       let finalMessages;
       setMessages(prevMessages => {
-        const updated = [...prevMessages];
-        const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
-        if (aiMsgIndex !== -1) {
-          updated[aiMsgIndex] = {
-            ...updated[aiMsgIndex],
-            text: fullResponse || aiResponse, // Use fullResponse if available, otherwise aiResponse
-            isStreaming: false
-          };
-        }
-        finalMessages = updated;
+        finalMessages = prevMessages;
         saveMessages(finalMessages);
-        return finalMessages;
+        return prevMessages;
       });
 
       // Generate and save reflection after the conversation
