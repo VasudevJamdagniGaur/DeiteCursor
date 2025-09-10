@@ -1,10 +1,11 @@
 class ChatService {
   constructor() {
-    this.baseURL = 'https://a02e6t44mrmvgx-11434.proxy.runpod.net/';
+    this.baseURL = 'https://7ic2kux3jto4fa-11434.proxy.runpod.net/';
   }
 
   async sendMessage(userMessage, conversationHistory = []) {
-    console.log('🚀 Sending message to RunPod:', userMessage);
+    console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
+    console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
     
     try {
       // Prepare messages for the API
@@ -24,38 +25,262 @@ class ChatService {
         }
       ];
 
-      console.log('📤 Making API request...');
+      console.log('📤 CHAT DEBUG: Prepared messages:', messages);
 
-      const response = await fetch(`${this.baseURL}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // First, let's check what models are available
+      let availableModels = [];
+      try {
+        const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (modelsResponse.ok) {
+          const modelsData = await modelsResponse.json();
+          availableModels = modelsData.models?.map(m => m.name) || [];
+          console.log('🔍 CHAT DEBUG: Available models:', availableModels);
+        }
+      } catch (e) {
+        console.log('🔍 CHAT DEBUG: Could not fetch models:', e.message);
+      }
+
+      // Create a simple prompt from messages for generate API
+      const simplePrompt = messages.map(msg => {
+        if (msg.role === 'system') return msg.content;
+        if (msg.role === 'user') return `Human: ${msg.content}`;
+        if (msg.role === 'assistant') return `Assistant: ${msg.content}`;
+        return msg.content;
+      }).join('\n\n') + '\n\nAssistant:';
+
+      // Try multiple approaches to make this work
+      const attempts = [
+        // Attempt 1: Basic connection test first
+        {
+          url: `${this.baseURL}`,
+          method: 'GET',
+          name: 'Basic Connection Test'
         },
-        body: JSON.stringify({
-          model: 'llama3:70b',
-          messages: messages,
-          stream: false
-        })
-      });
+        // Attempt 2: Check available models
+        {
+          url: `${this.baseURL}api/tags`,
+          method: 'GET',
+          name: 'Get Available Models'
+        },
+        // Attempt 3: Generate API with common models
+        {
+          url: `${this.baseURL}api/generate`,
+          body: {
+            model: 'llama3.1',
+            prompt: simplePrompt,
+            stream: false
+          },
+          name: 'Ollama Generate API (llama3.1)'
+        },
+        {
+          url: `${this.baseURL}api/generate`,
+          body: {
+            model: 'llama3',
+            prompt: simplePrompt,
+            stream: false
+          },
+          name: 'Ollama Generate API (llama3)'
+        },
+        {
+          url: `${this.baseURL}api/generate`,
+          body: {
+            model: 'llama2',
+            prompt: simplePrompt,
+            stream: false
+          },
+          name: 'Ollama Generate API (llama2)'
+        },
+        // Attempt 4: Try with first available model if we found any
+        ...(availableModels.length > 0 ? [{
+          url: `${this.baseURL}api/generate`,
+          body: {
+            model: availableModels[0],
+            prompt: simplePrompt,
+            stream: false
+          },
+          name: `Ollama Generate API (${availableModels[0]})`
+        }] : []),
+        // Attempt 5: Chat API attempts
+        {
+          url: `${this.baseURL}api/chat`,
+          body: {
+            model: 'llama3.1',
+            messages: messages,
+            stream: false
+          },
+          name: 'Ollama Chat API (llama3.1)'
+        },
+        {
+          url: `${this.baseURL}api/chat`,
+          body: {
+            model: 'llama3',
+            messages: messages,
+            stream: false
+          },
+          name: 'Ollama Chat API (llama3)'
+        },
+        // Attempt 6: Try OpenAI compatible format
+        {
+          url: `${this.baseURL}v1/chat/completions`,
+          body: {
+            model: 'llama3.1',
+            messages: messages,
+            stream: false,
+            max_tokens: 1000
+          },
+          name: 'OpenAI Compatible API'
+        }
+      ];
 
-      console.log('📥 Response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+      for (const attempt of attempts) {
+        try {
+          console.log(`🔄 CHAT DEBUG: Trying ${attempt.name}...`);
+          console.log(`🔄 CHAT DEBUG: URL: ${attempt.url}`);
+          console.log(`🔄 CHAT DEBUG: Body:`, attempt.body);
+          
+          const fetchOptions = {
+            method: attempt.method || 'POST',
+            headers: attempt.headers || {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            }
+          };
+          
+          if (attempt.body && fetchOptions.method === 'POST') {
+            fetchOptions.body = JSON.stringify(attempt.body);
+          }
+          
+          const response = await fetch(attempt.url, fetchOptions);
+          
+          console.log(`📥 CHAT DEBUG: ${attempt.name} Response status:`, response.status);
+          console.log(`📥 CHAT DEBUG: ${attempt.name} Response headers:`, [...response.headers.entries()]);
+          
+          if (response.ok) {
+            // Handle GET requests differently (connection tests)
+            if (attempt.method === 'GET') {
+              const responseText = await response.text();
+              console.log(`✅ CHAT DEBUG: ${attempt.name} Response:`, responseText);
+              
+              // For GET requests, just continue to next attempt unless it's a model list
+              if (attempt.name === 'Get Available Models') {
+                try {
+                  const data = JSON.parse(responseText);
+                  console.log('📋 CHAT DEBUG: Models data:', data);
+                } catch (e) {
+                  console.log('📋 CHAT DEBUG: Could not parse models response');
+                }
+              }
+              continue; // Don't return for GET requests, just log and continue
+            }
+            
+            // Handle POST requests (actual chat attempts)
+            const data = await response.json();
+            console.log(`✅ CHAT DEBUG: ${attempt.name} Response data:`, data);
+            
+            // Handle different response formats
+            if (data.message && data.message.content) {
+              console.log('✅ CHAT DEBUG: Using message.content format');
+              return data.message.content.trim();
+            } else if (data.response) {
+              console.log('✅ CHAT DEBUG: Using response format');
+              return data.response.trim();
+            } else if (data.content) {
+              console.log('✅ CHAT DEBUG: Using content format');
+              return data.content.trim();
+            } else if (data.choices && data.choices[0] && data.choices[0].message) {
+              console.log('✅ CHAT DEBUG: Using OpenAI format');
+              return data.choices[0].message.content.trim();
+            } else if (typeof data === 'string') {
+              console.log('✅ CHAT DEBUG: Using string format');
+              return data.trim();
+            }
+            
+            console.log('⚠️ CHAT DEBUG: Unknown response format, trying to extract text...');
+            const responseText = JSON.stringify(data);
+            if (responseText.length > 50) {
+              return `Response received but format unknown: ${responseText.substring(0, 200)}...`;
+            }
+          } else {
+            const errorText = await response.text();
+            console.log(`❌ CHAT DEBUG: ${attempt.name} Error response (${response.status}):`, errorText);
+          }
+        } catch (attemptError) {
+          console.log(`❌ CHAT DEBUG: ${attempt.name} failed:`, attemptError.message);
+        }
       }
 
-      const data = await response.json();
-      console.log('✅ Response received:', data);
-
-      if (data.message && data.message.content) {
-        return data.message.content.trim();
-      }
-
-      throw new Error('Invalid response format');
+      // If all attempts fail, return a debug response so we can at least see the chat is working
+      console.log('⚠️ CHAT DEBUG: All API attempts failed, returning debug response');
+      return `I'm having trouble connecting to the AI service right now, but I can see your message: "${userMessage}". Please check the browser console for detailed debug information. The system is trying to connect to: ${this.baseURL}`;
 
     } catch (error) {
-      console.error('❌ Chat error:', error);
-      throw error;
+      console.error('❌ CHAT DEBUG: Final error:', error);
+      // Return error info instead of throwing
+      return `Debug Error: ${error.message}. Check console for details.`;
+    }
+  }
+
+  async testConnection() {
+    console.log('🔍 Testing RunPod connection...');
+    
+    try {
+      // First, try to check if Ollama is running
+      const healthResponse = await fetch(`${this.baseURL}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('Health check response:', healthResponse.status);
+
+      if (healthResponse.ok) {
+        // Try to get available models
+        try {
+          const modelsResponse = await fetch(`${this.baseURL}/api/tags`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (modelsResponse.ok) {
+            const modelsData = await modelsResponse.json();
+            console.log('Available models:', modelsData);
+            
+            return {
+              status: 'success',
+              message: 'RunPod connection successful',
+              details: `Available models: ${modelsData.models?.map(m => m.name).join(', ') || 'No models found'}`
+            };
+          }
+        } catch (modelsError) {
+          console.log('Models endpoint not available, but base connection works');
+        }
+
+        return {
+          status: 'success',
+          message: 'RunPod connection successful',
+          details: 'Ollama is running'
+        };
+      }
+
+      return {
+        status: 'error',
+        message: 'RunPod connection failed',
+        details: `HTTP ${healthResponse.status}`
+      };
+
+    } catch (error) {
+      console.error('Connection test error:', error);
+      return {
+        status: 'error',
+        message: 'RunPod connection failed',
+        details: error.message
+      };
     }
   }
 
@@ -90,7 +315,7 @@ class ChatService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3:70b',
+          model: 'llama3.1:70b',
           messages: messages,
           stream: false
         })
@@ -200,7 +425,7 @@ Provide analysis in this exact JSON format:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3:70b',
+          model: 'llama3.1:70b',
           messages: messages,
           stream: false,
           options: {
