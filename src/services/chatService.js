@@ -254,9 +254,9 @@ class ChatService {
         }
         
         const chunk = decoder.decode(value, { stream: true });
-        console.log('🌊 STREAM DEBUG: Received chunk:', chunk);
+        console.log('🌊 STREAM DEBUG: IMMEDIATE CHUNK processing:', chunk);
         
-        // Handle different streaming formats
+        // Process lines immediately as they arrive - no waiting!
         const lines = chunk.split('\n').filter(line => line.trim());
         
         for (const line of lines) {
@@ -264,23 +264,35 @@ class ChatService {
             // Try to parse as JSON (Ollama format)
             const data = JSON.parse(line);
             
-            // Handle Ollama generate API streaming format
-            if (data.response) {
-              console.log('🌊 STREAM DEBUG: Token from response field:', data.response);
-              fullResponse += data.response;
-              if (onToken) onToken(data.response);
+            // Handle Ollama generate API streaming format - IMMEDIATE processing
+            if (data.response !== undefined) {
+              const token = data.response;
+              console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from response field:', token);
+              fullResponse += token;
+              // Send token IMMEDIATELY to UI - no delays!
+              if (onToken && token) {
+                onToken(token);
+              }
             }
-            // Handle Ollama chat API streaming format
-            else if (data.message && data.message.content) {
-              console.log('🌊 STREAM DEBUG: Token from message.content:', data.message.content);
-              fullResponse += data.message.content;
-              if (onToken) onToken(data.message.content);
+            // Handle Ollama chat API streaming format - IMMEDIATE processing
+            else if (data.message && data.message.content !== undefined) {
+              const token = data.message.content;
+              console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from message.content:', token);
+              fullResponse += token;
+              // Send token IMMEDIATELY to UI - no delays!
+              if (onToken && token) {
+                onToken(token);
+              }
             }
-            // Handle OpenAI streaming format
+            // Handle OpenAI streaming format - IMMEDIATE processing
             else if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
-              console.log('🌊 STREAM DEBUG: Token from OpenAI delta:', data.choices[0].delta.content);
-              fullResponse += data.choices[0].delta.content;
-              if (onToken) onToken(data.choices[0].delta.content);
+              const token = data.choices[0].delta.content;
+              console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from OpenAI delta:', token);
+              fullResponse += token;
+              // Send token IMMEDIATELY to UI - no delays!
+              if (onToken && token) {
+                onToken(token);
+              }
             }
             
             // Check if stream is done

@@ -146,20 +146,23 @@ export default function ChatPage() {
             return updated;
           });
           
-          // Continue with next token after a small delay for typewriter effect
-          setTimeout(processQueue, Math.random() * 30 + 20); // 20-50ms delay
+          // Continue with next token with minimal delay for smooth typewriter effect
+          setTimeout(processQueue, Math.random() * 20 + 10); // 10-30ms delay (faster!)
         };
         
         processQueue();
       };
 
-      // Token callback for streaming
+      // Token callback for streaming - IMMEDIATE processing
       const onToken = (token) => {
-        console.log('📝 TYPEWRITER DEBUG: Received token:', token);
+        console.log('📝 TYPEWRITER DEBUG: IMMEDIATE token received:', token);
+        
+        // Add token to queue immediately
         typewriterQueue.push(token);
         
-        // Start typewriter effect if not already running
+        // Start typewriter effect IMMEDIATELY if not already running
         if (!isTyping) {
+          console.log('📝 TYPEWRITER DEBUG: Starting IMMEDIATE typewriter effect');
           typewriterEffect();
         }
       };
