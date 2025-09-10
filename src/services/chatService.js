@@ -3,9 +3,10 @@ class ChatService {
     this.baseURL = 'https://7ic2kux3jto4fa-11434.proxy.runpod.net/';
   }
 
-  async sendMessage(userMessage, conversationHistory = []) {
+  async sendMessage(userMessage, conversationHistory = [], onToken = null) {
     console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
     console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
+    console.log('🚀 CHAT DEBUG: Streaming enabled:', !!onToken);
     
     try {
       // Prepare messages for the API
@@ -65,33 +66,36 @@ class ChatService {
           method: 'GET',
           name: 'Get Available Models'
         },
-        // Attempt 3: Generate API with common models
+        // Attempt 3: Generate API with common models (streaming enabled)
         {
           url: `${this.baseURL}api/generate`,
           body: {
             model: 'llama3.1',
             prompt: simplePrompt,
-            stream: false
+            stream: true  // 👈 ALWAYS enable streaming
           },
-          name: 'Ollama Generate API (llama3.1)'
+          name: 'Ollama Generate API (llama3.1)',
+          streaming: true
         },
         {
           url: `${this.baseURL}api/generate`,
           body: {
             model: 'llama3',
             prompt: simplePrompt,
-            stream: false
+            stream: true  // 👈 ALWAYS enable streaming
           },
-          name: 'Ollama Generate API (llama3)'
+          name: 'Ollama Generate API (llama3)',
+          streaming: true
         },
         {
           url: `${this.baseURL}api/generate`,
           body: {
             model: 'llama2',
             prompt: simplePrompt,
-            stream: false
+            stream: true  // 👈 ALWAYS enable streaming
           },
-          name: 'Ollama Generate API (llama2)'
+          name: 'Ollama Generate API (llama2)',
+          streaming: true
         },
         // Attempt 4: Try with first available model if we found any
         ...(availableModels.length > 0 ? [{
@@ -99,39 +103,43 @@ class ChatService {
           body: {
             model: availableModels[0],
             prompt: simplePrompt,
-            stream: false
+            stream: true  // 👈 ALWAYS enable streaming
           },
-          name: `Ollama Generate API (${availableModels[0]})`
+          name: `Ollama Generate API (${availableModels[0]})`,
+          streaming: true
         }] : []),
-        // Attempt 5: Chat API attempts
+        // Attempt 5: Chat API attempts (streaming enabled)
         {
           url: `${this.baseURL}api/chat`,
           body: {
             model: 'llama3.1',
             messages: messages,
-            stream: false
+            stream: true  // 👈 ALWAYS enable streaming
           },
-          name: 'Ollama Chat API (llama3.1)'
+          name: 'Ollama Chat API (llama3.1)',
+          streaming: true
         },
         {
           url: `${this.baseURL}api/chat`,
           body: {
             model: 'llama3',
             messages: messages,
-            stream: false
+            stream: true  // 👈 ALWAYS enable streaming
           },
-          name: 'Ollama Chat API (llama3)'
+          name: 'Ollama Chat API (llama3)',
+          streaming: true
         },
-        // Attempt 6: Try OpenAI compatible format
+        // Attempt 6: Try OpenAI compatible format (streaming enabled)
         {
           url: `${this.baseURL}v1/chat/completions`,
           body: {
             model: 'llama3.1',
             messages: messages,
-            stream: false,
+            stream: true,  // 👈 Enable streaming for OpenAI format too
             max_tokens: 1000
           },
-          name: 'OpenAI Compatible API'
+          name: 'OpenAI Compatible API',
+          streaming: true
         }
       ];
 
@@ -176,7 +184,13 @@ class ChatService {
               continue; // Don't return for GET requests, just log and continue
             }
             
-            // Handle POST requests (actual chat attempts)
+            // Handle streaming responses
+            if (attempt.streaming && onToken) {
+              console.log('🌊 CHAT DEBUG: Processing streaming response...');
+              return await this.handleStreamingResponse(response, onToken, attempt.name);
+            }
+            
+            // Handle non-streaming POST requests (actual chat attempts)
             const data = await response.json();
             console.log(`✅ CHAT DEBUG: ${attempt.name} Response data:`, data);
             
@@ -220,6 +234,78 @@ class ChatService {
       console.error('❌ CHAT DEBUG: Final error:', error);
       // Return error info instead of throwing
       return `Debug Error: ${error.message}. Check console for details.`;
+    }
+  }
+
+  async handleStreamingResponse(response, onToken, attemptName) {
+    console.log('🌊 STREAM DEBUG: Starting to process streaming response...');
+    
+    try {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('🌊 STREAM DEBUG: Stream completed');
+          break;
+        }
+        
+        const chunk = decoder.decode(value, { stream: true });
+        console.log('🌊 STREAM DEBUG: Received chunk:', chunk);
+        
+        // Handle different streaming formats
+        const lines = chunk.split('\n').filter(line => line.trim());
+        
+        for (const line of lines) {
+          try {
+            // Try to parse as JSON (Ollama format)
+            const data = JSON.parse(line);
+            
+            // Handle Ollama generate API streaming format
+            if (data.response) {
+              console.log('🌊 STREAM DEBUG: Token from response field:', data.response);
+              fullResponse += data.response;
+              if (onToken) onToken(data.response);
+            }
+            // Handle Ollama chat API streaming format
+            else if (data.message && data.message.content) {
+              console.log('🌊 STREAM DEBUG: Token from message.content:', data.message.content);
+              fullResponse += data.message.content;
+              if (onToken) onToken(data.message.content);
+            }
+            // Handle OpenAI streaming format
+            else if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+              console.log('🌊 STREAM DEBUG: Token from OpenAI delta:', data.choices[0].delta.content);
+              fullResponse += data.choices[0].delta.content;
+              if (onToken) onToken(data.choices[0].delta.content);
+            }
+            
+            // Check if stream is done
+            if (data.done === true) {
+              console.log('🌊 STREAM DEBUG: Stream marked as done');
+              break;
+            }
+            
+          } catch (parseError) {
+            // If not JSON, might be raw text
+            console.log('🌊 STREAM DEBUG: Non-JSON chunk, treating as raw text:', line);
+            if (line.trim()) {
+              fullResponse += line;
+              if (onToken) onToken(line);
+            }
+          }
+        }
+      }
+      
+      console.log('🌊 STREAM DEBUG: Final response:', fullResponse);
+      return fullResponse.trim();
+      
+    } catch (streamError) {
+      console.error('❌ STREAM DEBUG: Error processing stream:', streamError);
+      throw streamError;
     }
   }
 

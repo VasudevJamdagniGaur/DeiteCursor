@@ -103,27 +103,109 @@ export default function ChatPage() {
       console.log('🚀 CHAT PAGE DEBUG: Message text:', userMessageText);
       console.log('🚀 CHAT PAGE DEBUG: Conversation history length:', messages.length);
       
-      // Call the chat service (using improved structure)
-      const aiResponse = await chatService.sendMessage(userMessageText, messages);
+      // Create AI message placeholder for streaming
+      const aiMessage = {
+        id: Date.now() + 1,
+        text: '',
+        sender: 'ai',
+        timestamp: new Date(),
+        isStreaming: true
+      };
+
+      let currentMessages = [...newMessages, aiMessage];
+      setMessages(currentMessages);
+
+      let fullResponse = '';
+      let typewriterQueue = [];
+      let isTyping = false;
+
+      // Typewriter effect function
+      const typewriterEffect = () => {
+        if (isTyping || typewriterQueue.length === 0) return;
+        
+        isTyping = true;
+        const processQueue = () => {
+          if (typewriterQueue.length === 0) {
+            isTyping = false;
+            return;
+          }
+          
+          const token = typewriterQueue.shift();
+          fullResponse += token;
+          
+          // Update the message with current text
+          setMessages(prevMessages => {
+            const updated = [...prevMessages];
+            const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
+            if (aiMsgIndex !== -1) {
+              updated[aiMsgIndex] = {
+                ...updated[aiMsgIndex],
+                text: fullResponse
+              };
+            }
+            return updated;
+          });
+          
+          // Continue with next token after a small delay for typewriter effect
+          setTimeout(processQueue, Math.random() * 30 + 20); // 20-50ms delay
+        };
+        
+        processQueue();
+      };
+
+      // Token callback for streaming
+      const onToken = (token) => {
+        console.log('📝 TYPEWRITER DEBUG: Received token:', token);
+        typewriterQueue.push(token);
+        
+        // Start typewriter effect if not already running
+        if (!isTyping) {
+          typewriterEffect();
+        }
+      };
       
-      console.log('✅ CHAT PAGE DEBUG: Received AI response:', aiResponse);
+      // Call the chat service with streaming enabled
+      const aiResponse = await chatService.sendMessage(userMessageText, messages, onToken);
+      
+      console.log('✅ CHAT PAGE DEBUG: Received final AI response:', aiResponse);
       
       // Validate response
       if (!aiResponse || typeof aiResponse !== 'string') {
         throw new Error('Invalid AI response format');
       }
 
-      // Add AI response
-      const aiMessage = {
-        id: Date.now() + 1,
-        text: aiResponse,
-        sender: 'ai',
-        timestamp: new Date()
+      // Wait for typewriter effect to finish
+      const waitForTypewriter = () => {
+        return new Promise((resolve) => {
+          const checkQueue = () => {
+            if (typewriterQueue.length === 0 && !isTyping) {
+              resolve();
+            } else {
+              setTimeout(checkQueue, 100);
+            }
+          };
+          checkQueue();
+        });
       };
 
-      const finalMessages = [...newMessages, aiMessage];
-      setMessages(finalMessages);
-      saveMessages(finalMessages);
+      await waitForTypewriter();
+
+      // Update final message and get finalMessages for later use
+      let finalMessages;
+      setMessages(prevMessages => {
+        const updated = [...prevMessages];
+        const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
+        if (aiMsgIndex !== -1) {
+          updated[aiMsgIndex] = {
+            ...updated[aiMsgIndex],
+            text: fullResponse || aiResponse, // Use fullResponse if available, otherwise aiResponse
+            isStreaming: false
+          };
+        }
+        finalMessages = updated;
+        saveMessages(finalMessages);
+        return finalMessages;
+      });
 
       // Generate and save reflection after the conversation
       try {
@@ -189,14 +271,23 @@ export default function ChatPage() {
   };
 
   return (
-    <div
-      className="min-h-screen flex flex-col relative overflow-hidden"
-      style={{
-        background: isDarkMode 
-          ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
-          : "#FAFAF8",
-      }}
-    >
+    <>
+      <style>
+        {`
+          @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+          }
+        `}
+      </style>
+      <div
+        className="min-h-screen flex flex-col relative overflow-hidden"
+        style={{
+          background: isDarkMode 
+            ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+            : "#FAFAF8",
+        }}
+      >
       {/* Header */}
       <div className={`sticky top-0 z-20 flex items-center justify-between p-6 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
@@ -294,30 +385,19 @@ export default function ChatPage() {
                 border: `1px solid ${message.sender === 'user' ? 'rgba(125, 211, 192, 0.2)' : 'rgba(155, 181, 255, 0.2)'}`,
               }}
             >
-              <p className="text-white text-sm leading-relaxed">{message.text}</p>
+              <p className="text-white text-sm leading-relaxed">
+                {message.text}
+                {message.isStreaming && (
+                  <span className="inline-block ml-1 w-2 h-4 bg-gray-400 animate-pulse" style={{
+                    animation: 'blink 1s infinite'
+                  }}>|</span>
+                )}
+              </p>
               <p className="text-xs text-gray-400 mt-1">{formatTime(message.timestamp)}</p>
             </div>
           </div>
         ))}
         
-        {isLoading && (
-          <div className="flex justify-start">
-            <div
-              className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl backdrop-blur-lg relative overflow-hidden mr-4"
-              style={{
-                backgroundColor: "rgba(28, 31, 46, 0.4)",
-                boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.1), 0 8px 32px rgba(155, 181, 255, 0.05)",
-                border: "1px solid rgba(155, 181, 255, 0.2)",
-              }}
-            >
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-            </div>
-          </div>
-        )}
         
         <div ref={messagesEndRef} />
       </div>
@@ -361,5 +441,6 @@ export default function ChatPage() {
         </form>
       </div>
     </div>
+    </>
   );
 }
