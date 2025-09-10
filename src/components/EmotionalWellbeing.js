@@ -597,33 +597,6 @@ export default function EmotionalWellbeing() {
 
   const renderMoodSurvey = () => (
     <div className="space-y-6">
-      {/* Period Toggle */}
-      <div className="flex justify-center space-x-4 mb-6">
-        <button
-          onClick={() => setSelectedPeriod(7)}
-          className={`px-6 py-2 rounded-full transition-all duration-300 ${
-            selectedPeriod === 7
-              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-              : isDarkMode
-                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          7 Days
-        </button>
-        <button
-          onClick={() => setSelectedPeriod(15)}
-          className={`px-6 py-2 rounded-full transition-all duration-300 ${
-            selectedPeriod === 15
-              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-              : isDarkMode
-                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          15 Days
-        </button>
-      </div>
 
       {/* Empty State Message */}
       {emotionalData.length === 0 && (
@@ -670,19 +643,49 @@ export default function EmotionalWellbeing() {
                 : "inset 0 0 20px rgba(134, 169, 107, 0.1), 0 8px 32px rgba(134, 169, 107, 0.05)",
             }}
           >
-            <div className="flex items-center space-x-3 mb-6">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(125, 211, 192, 0.2) 0%, rgba(212, 175, 55, 0.2) 100%)",
-                  border: "1px solid rgba(125, 211, 192, 0.3)",
-                }}
-              >
-                <BarChart3 className="w-5 h-5" style={{ color: "#7DD3C0" }} />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(125, 211, 192, 0.2) 0%, rgba(212, 175, 55, 0.2) 100%)",
+                    border: "1px solid rgba(125, 211, 192, 0.3)",
+                  }}
+                >
+                  <BarChart3 className="w-5 h-5" style={{ color: "#7DD3C0" }} />
+                </div>
+                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Mood Chart - {selectedPeriod} Day Summary
+                </h3>
               </div>
-              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                Mood Chart - {selectedPeriod} Day Summary
-              </h3>
+              
+              {/* Period Selection Buttons */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setSelectedPeriod(7)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                    selectedPeriod === 7
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      : isDarkMode
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  7 Days
+                </button>
+                <button
+                  onClick={() => setSelectedPeriod(15)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                    selectedPeriod === 15
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      : isDarkMode
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  15 Days
+                </button>
+              </div>
             </div>
 
             <div className="h-64 w-full">
