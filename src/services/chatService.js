@@ -249,7 +249,11 @@ class ChatService {
         const { done, value } = await reader.read();
         
         if (done) {
-          console.log('🌊 STREAM DEBUG: Stream completed');
+          console.log('🌊 STREAM DEBUG: Stream completed - sending end signal');
+          // ALWAYS send null token when stream ends
+          if (onToken) {
+            onToken(null);
+          }
           break;
         }
         
@@ -295,10 +299,14 @@ class ChatService {
               }
             }
             
-            // Check if stream is done
+            // Check if stream is done via data.done flag
             if (data.done === true) {
-              console.log('🌊 STREAM DEBUG: Stream marked as done');
-              break;
+              console.log('🌊 STREAM DEBUG: Stream marked as done via data.done');
+              // Send null token to indicate stream finished
+              if (onToken) {
+                onToken(null);
+              }
+              return fullResponse.trim(); // Return immediately when done
             }
             
           } catch (parseError) {
@@ -313,10 +321,18 @@ class ChatService {
       }
       
       console.log('🌊 STREAM DEBUG: Final response:', fullResponse);
+      // Ensure end signal is sent even if we reach here without explicit done
+      if (onToken) {
+        onToken(null);
+      }
       return fullResponse.trim();
       
     } catch (streamError) {
       console.error('❌ STREAM DEBUG: Error processing stream:', streamError);
+      // Send end signal even on error to stop typing indicator
+      if (onToken) {
+        onToken(null);
+      }
       throw streamError;
     }
   }
