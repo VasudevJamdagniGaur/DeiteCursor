@@ -176,63 +176,125 @@ IMPORTANT:
 - If no clear patterns exist, use empty arrays
 - Be specific, not generic`;
 
-    try {
-      const response = await fetch(`${this.baseURL}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    // Try multiple models and API endpoints for better reliability
+    const attempts = [
+      // Try generate API with common models
+      {
+        url: `${this.baseURL}api/generate`,
+        body: {
+          model: 'llama3.1',
+          prompt: analysisPrompt,
+          stream: false
         },
-        body: JSON.stringify({
+        name: 'Generate API (llama3.1)'
+      },
+      {
+        url: `${this.baseURL}api/generate`,
+        body: {
+          model: 'llama3',
+          prompt: analysisPrompt,
+          stream: false
+        },
+        name: 'Generate API (llama3)'
+      },
+      // Try chat API with common models
+      {
+        url: `${this.baseURL}api/chat`,
+        body: {
+          model: 'llama3.1',
+          messages: [{ role: 'user', content: analysisPrompt }],
+          stream: false
+        },
+        name: 'Chat API (llama3.1)'
+      },
+      {
+        url: `${this.baseURL}api/chat`,
+        body: {
+          model: 'llama3',
+          messages: [{ role: 'user', content: analysisPrompt }],
+          stream: false
+        },
+        name: 'Chat API (llama3)'
+      },
+      // Try original approach as fallback
+      {
+        url: `${this.baseURL}api/chat`,
+        body: {
           model: 'llama3:70b',
-          messages: [
-            {
-              role: 'user',
-              content: analysisPrompt
-            }
-          ],
+          messages: [{ role: 'user', content: analysisPrompt }],
           stream: false,
-          options: {
-            temperature: 0.3, // Lower temperature for more consistent analysis
-            top_p: 0.9
+          options: { temperature: 0.3, top_p: 0.9 }
+        },
+        name: 'Chat API (llama3:70b)'
+      }
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        console.log(`🔄 PATTERN DEBUG: Trying ${attempt.name}...`);
+        
+        const response = await fetch(attempt.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(attempt.body)
+        });
+
+        console.log(`📥 PATTERN DEBUG: ${attempt.name} Response status:`, response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`✅ PATTERN DEBUG: ${attempt.name} Response data:`, data);
+          
+          // Handle different response formats
+          let responseText = null;
+          if (data.message && data.message.content) {
+            responseText = data.message.content.trim();
+          } else if (data.response) {
+            responseText = data.response.trim();
+          } else if (data.content) {
+            responseText = data.content.trim();
+          } else if (data.choices && data.choices[0] && data.choices[0].message) {
+            responseText = data.choices[0].message.content.trim();
           }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+          
+          if (responseText && responseText.length > 10) {
+            const analysisResult = this.parseAnalysisResult(responseText);
+            console.log('✅ AI analysis completed:', analysisResult);
+            return analysisResult;
+          }
+        } else {
+          const errorText = await response.text();
+          console.log(`❌ PATTERN DEBUG: ${attempt.name} Error response (${response.status}):`, errorText);
+        }
+      } catch (attemptError) {
+        console.log(`❌ PATTERN DEBUG: ${attempt.name} failed:`, attemptError.message);
       }
-
-      const data = await response.json();
-      
-      if (data.message && data.message.content) {
-        const analysisResult = this.parseAnalysisResult(data.message.content);
-        console.log('✅ AI analysis completed:', analysisResult);
-        return analysisResult;
-      } else {
-        throw new Error('Invalid response format from API');
-      }
-
-    } catch (error) {
-      console.error('❌ Error in AI analysis:', error);
-      // Return default structure on error
-      return {
-        triggers: {
-          stress: [],
-          joy: [],
-          distraction: []
-        },
-        insights: {
-          primaryStressSource: "Analysis temporarily unavailable",
-          mainJoySource: "Analysis temporarily unavailable",
-          behavioralPattern: "Service temporarily unavailable"
-        },
-        recommendations: [
-          "Continue chatting to build pattern data",
-          "Share specific details about your experiences",
-          "Check back later when service is restored"
-        ]
-      };
     }
+
+    // If all attempts fail, log and return defaults
+    console.log('⚠️ PATTERN DEBUG: All API attempts failed, returning default analysis');
+    const error = new Error('All API attempts failed for pattern analysis');
+    console.error('❌ Error in AI analysis:', error);
+    // Return default structure on error
+    return {
+      triggers: {
+        stress: [],
+        joy: [],
+        distraction: []
+      },
+      insights: {
+        primaryStressSource: "Analysis temporarily unavailable",
+        mainJoySource: "Analysis temporarily unavailable",
+        behavioralPattern: "Service temporarily unavailable"
+      },
+      recommendations: [
+        "Continue chatting to build pattern data",
+        "Share specific details about your experiences",
+        "Check back later when service is restored"
+      ]
+    };
   }
 
   /**

@@ -74,65 +74,116 @@ Return only a JSON object in this exact format:
   "stress": [0-100 integer]
 }`;
 
-    try {
-      console.log('🌐 Making API call for emotional analysis...');
-
-      const response = await fetch(`${this.baseURL}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    // Try multiple models and API endpoints for better reliability
+    const attempts = [
+      // Try generate API with common models
+      {
+        url: `${this.baseURL}api/generate`,
+        body: {
+          model: 'llama3.1',
+          prompt: analysisPrompt,
+          stream: false
         },
-        body: JSON.stringify({
+        name: 'Generate API (llama3.1)'
+      },
+      {
+        url: `${this.baseURL}api/generate`,
+        body: {
+          model: 'llama3',
+          prompt: analysisPrompt,
+          stream: false
+        },
+        name: 'Generate API (llama3)'
+      },
+      // Try chat API with common models
+      {
+        url: `${this.baseURL}api/chat`,
+        body: {
+          model: 'llama3.1',
+          messages: [{ role: 'user', content: analysisPrompt }],
+          stream: false
+        },
+        name: 'Chat API (llama3.1)'
+      },
+      {
+        url: `${this.baseURL}api/chat`,
+        body: {
+          model: 'llama3',
+          messages: [{ role: 'user', content: analysisPrompt }],
+          stream: false
+        },
+        name: 'Chat API (llama3)'
+      },
+      // Try original approach as fallback
+      {
+        url: `${this.baseURL}api/chat`,
+        body: {
           model: 'llama3:70b',
-          messages: [
-            {
-              role: 'user',
-              content: analysisPrompt
-            }
-          ],
+          messages: [{ role: 'user', content: analysisPrompt }],
           stream: false,
-          options: {
-            temperature: 0.3, // Lower temperature for more consistent scoring
-            top_p: 0.9
-          }
-        })
-      });
-
-      console.log('📥 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', response.status, errorText);
-        throw new Error(`API error: ${response.status} - ${errorText}`);
+          options: { temperature: 0.3, top_p: 0.9 }
+        },
+        name: 'Chat API (llama3:70b)'
       }
+    ];
 
-      const data = await response.json();
-      console.log('✅ Raw response received');
-
-      if (data.message && data.message.content) {
-        const responseText = data.message.content.trim();
-        console.log('📊 Analysis response:', responseText);
-
-        // Parse the JSON response
-        const scores = this.parseEmotionalScores(responseText);
-        console.log('✅ Parsed emotional scores:', scores);
+    for (const attempt of attempts) {
+      try {
+        console.log(`🔄 EMOTIONAL DEBUG: Trying ${attempt.name}...`);
         
-        return scores;
-      } else {
-        console.error('❌ Invalid response format:', data);
-        throw new Error('Invalid response format from API');
-      }
+        const response = await fetch(attempt.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(attempt.body)
+        });
 
-    } catch (error) {
-      console.error('💥 Error in emotional analysis:', error);
-      // Return default scores if analysis fails
-      return {
-        happiness: 50,
-        energy: 50,
-        anxiety: 50,
-        stress: 50
-      };
+        console.log(`📥 EMOTIONAL DEBUG: ${attempt.name} Response status:`, response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`✅ EMOTIONAL DEBUG: ${attempt.name} Response data:`, data);
+          
+          // Handle different response formats
+          let responseText = null;
+          if (data.message && data.message.content) {
+            responseText = data.message.content.trim();
+          } else if (data.response) {
+            responseText = data.response.trim();
+          } else if (data.content) {
+            responseText = data.content.trim();
+          } else if (data.choices && data.choices[0] && data.choices[0].message) {
+            responseText = data.choices[0].message.content.trim();
+          }
+          
+          if (responseText && responseText.length > 10) {
+            console.log('📊 Analysis response:', responseText);
+            // Parse the JSON response
+            const scores = this.parseEmotionalScores(responseText);
+            console.log('✅ Parsed emotional scores:', scores);
+            return scores;
+          }
+        } else {
+          const errorText = await response.text();
+          console.log(`❌ EMOTIONAL DEBUG: ${attempt.name} Error response (${response.status}):`, errorText);
+        }
+      } catch (attemptError) {
+        console.log(`❌ EMOTIONAL DEBUG: ${attempt.name} failed:`, attemptError.message);
+      }
     }
+
+    // If all attempts fail, log and return defaults
+    console.log('⚠️ EMOTIONAL DEBUG: All API attempts failed, returning default scores');
+    const error = new Error('All API attempts failed for emotional analysis');
+    console.error('💥 Error in emotional analysis:', error);
+    // Return default scores if analysis fails
+    return {
+      happiness: 50,
+      energy: 50,
+      anxiety: 50,
+      stress: 50
+    };
   }
 
   parseEmotionalScores(responseText) {
