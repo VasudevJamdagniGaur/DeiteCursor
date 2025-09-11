@@ -4,12 +4,33 @@ class ChatService {
   }
 
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {
-    console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
-    console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
-    console.log('🚀 CHAT DEBUG: Streaming enabled:', !!onToken);
+    console.log('🚀 RUNPOD: Starting sendMessage with:', userMessage);
+    console.log('🚀 RUNPOD: Using URL:', this.baseURL);
+    console.log('🚀 RUNPOD: Streaming enabled:', !!onToken);
     
     try {
-      // Prepare messages for the API
+      // First, check what models are available
+      let availableModels = [];
+      try {
+        console.log('🔍 RUNPOD: Fetching available models...');
+        const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (modelsResponse.ok) {
+          const modelsData = await modelsResponse.json();
+          availableModels = modelsData.models?.map(m => m.name) || [];
+          console.log('🔍 RUNPOD: Available models:', availableModels);
+        }
+      } catch (e) {
+        console.log('🔍 RUNPOD: Could not fetch models:', e.message);
+      }
+
+      // Use the first available model, or fallback to common ones
+      const modelToUse = availableModels[0] || 'llama3.1' || 'llama3' || 'llama2';
+      console.log('🎯 RUNPOD: Using model:', modelToUse);
+
+      // Prepare messages for chat API
       const messages = [
         {
           role: 'system',
@@ -26,25 +47,7 @@ class ChatService {
         }
       ];
 
-      console.log('📤 CHAT DEBUG: Prepared messages:', messages);
-
-      // First, let's check what models are available
-      let availableModels = [];
-      try {
-        const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (modelsResponse.ok) {
-          const modelsData = await modelsResponse.json();
-          availableModels = modelsData.models?.map(m => m.name) || [];
-          console.log('🔍 CHAT DEBUG: Available models:', availableModels);
-        }
-      } catch (e) {
-        console.log('🔍 CHAT DEBUG: Could not fetch models:', e.message);
-      }
-
-      // Create a simple prompt from messages for generate API
+      // Create simple prompt for generate API as backup
       const simplePrompt = messages.map(msg => {
         if (msg.role === 'system') return msg.content;
         if (msg.role === 'user') return `Human: ${msg.content}`;
@@ -52,193 +55,98 @@ class ChatService {
         return msg.content;
       }).join('\n\n') + '\n\nAssistant:';
 
-      // Try multiple approaches to make this work
+      console.log('📤 RUNPOD: Prepared messages for API');
+
+      // Try the most reliable approaches first
       const attempts = [
-        // Attempt 1: Basic connection test first
-        {
-          url: `${this.baseURL}`,
-          method: 'GET',
-          name: 'Basic Connection Test'
-        },
-        // Attempt 2: Check available models
-        {
-          url: `${this.baseURL}api/tags`,
-          method: 'GET',
-          name: 'Get Available Models'
-        },
-        // Attempt 3: Generate API with common models (streaming enabled)
+        // Try generate API with streaming (most reliable for Ollama)
         {
           url: `${this.baseURL}api/generate`,
           body: {
-            model: 'llama3.1',
+            model: modelToUse,
             prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: !!onToken
           },
-          name: 'Ollama Generate API (llama3.1)',
-          streaming: true
+          name: `Generate API (${modelToUse})`,
+          streaming: !!onToken
         },
-        {
-          url: `${this.baseURL}api/generate`,
-          body: {
-            model: 'llama3',
-            prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
-          },
-          name: 'Ollama Generate API (llama3)',
-          streaming: true
-        },
-        {
-          url: `${this.baseURL}api/generate`,
-          body: {
-            model: 'llama2',
-            prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
-          },
-          name: 'Ollama Generate API (llama2)',
-          streaming: true
-        },
-        // Attempt 4: Try with first available model if we found any
-        ...(availableModels.length > 0 ? [{
-          url: `${this.baseURL}api/generate`,
-          body: {
-            model: availableModels[0],
-            prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
-          },
-          name: `Ollama Generate API (${availableModels[0]})`,
-          streaming: true
-        }] : []),
-        // Attempt 5: Chat API attempts (streaming enabled)
+        // Try chat API with streaming
         {
           url: `${this.baseURL}api/chat`,
           body: {
-            model: 'llama3.1',
+            model: modelToUse,
             messages: messages,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: !!onToken
           },
-          name: 'Ollama Chat API (llama3.1)',
-          streaming: true
-        },
-        {
-          url: `${this.baseURL}api/chat`,
-          body: {
-            model: 'llama3',
-            messages: messages,
-            stream: true  // 👈 ALWAYS enable streaming
-          },
-          name: 'Ollama Chat API (llama3)',
-          streaming: true
-        },
-        // Attempt 6: Try OpenAI compatible format (streaming enabled)
-        {
-          url: `${this.baseURL}v1/chat/completions`,
-          body: {
-            model: 'llama3.1',
-            messages: messages,
-            stream: true,  // 👈 Enable streaming for OpenAI format too
-            max_tokens: 1000
-          },
-          name: 'OpenAI Compatible API',
-          streaming: true
+          name: `Chat API (${modelToUse})`,
+          streaming: !!onToken
         }
       ];
 
+      // Try each approach
       for (const attempt of attempts) {
         try {
-          console.log(`🔄 CHAT DEBUG: Trying ${attempt.name}...`);
-          console.log(`🔄 CHAT DEBUG: URL: ${attempt.url}`);
-          console.log(`🔄 CHAT DEBUG: Body:`, attempt.body);
+          console.log(`🔄 RUNPOD: Trying ${attempt.name}...`);
           
-          const fetchOptions = {
-            method: attempt.method || 'POST',
-            headers: attempt.headers || {
+          const response = await fetch(attempt.url, {
+            method: 'POST',
+            headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-            }
-          };
+            },
+            body: JSON.stringify(attempt.body)
+          });
           
-          if (attempt.body && fetchOptions.method === 'POST') {
-            fetchOptions.body = JSON.stringify(attempt.body);
-          }
-          
-          const response = await fetch(attempt.url, fetchOptions);
-          
-          console.log(`📥 CHAT DEBUG: ${attempt.name} Response status:`, response.status);
-          console.log(`📥 CHAT DEBUG: ${attempt.name} Response headers:`, [...response.headers.entries()]);
+          console.log(`📥 RUNPOD: ${attempt.name} Response status:`, response.status);
           
           if (response.ok) {
-            // Handle GET requests differently (connection tests)
-            if (attempt.method === 'GET') {
-              const responseText = await response.text();
-              console.log(`✅ CHAT DEBUG: ${attempt.name} Response:`, responseText);
-              
-              // For GET requests, just continue to next attempt unless it's a model list
-              if (attempt.name === 'Get Available Models') {
-                try {
-                  const data = JSON.parse(responseText);
-                  console.log('📋 CHAT DEBUG: Models data:', data);
-                } catch (e) {
-                  console.log('📋 CHAT DEBUG: Could not parse models response');
-                }
-              }
-              continue; // Don't return for GET requests, just log and continue
-            }
-            
             // Handle streaming responses
             if (attempt.streaming && onToken) {
-              console.log('🌊 CHAT DEBUG: Processing streaming response...');
+              console.log('🌊 RUNPOD: Processing streaming response...');
               return await this.handleStreamingResponse(response, onToken, attempt.name);
             }
             
-            // Handle non-streaming POST requests (actual chat attempts)
+            // Handle non-streaming responses
             const data = await response.json();
-            console.log(`✅ CHAT DEBUG: ${attempt.name} Response data:`, data);
+            console.log(`✅ RUNPOD: ${attempt.name} Response data:`, data);
             
-            // Handle different response formats
+            // Extract response content
+            let responseText = null;
             if (data.message && data.message.content) {
-              console.log('✅ CHAT DEBUG: Using message.content format');
-              return data.message.content.trim();
+              responseText = data.message.content.trim();
             } else if (data.response) {
-              console.log('✅ CHAT DEBUG: Using response format');
-              return data.response.trim();
+              responseText = data.response.trim();
             } else if (data.content) {
-              console.log('✅ CHAT DEBUG: Using content format');
-              return data.content.trim();
+              responseText = data.content.trim();
             } else if (data.choices && data.choices[0] && data.choices[0].message) {
-              console.log('✅ CHAT DEBUG: Using OpenAI format');
-              return data.choices[0].message.content.trim();
-            } else if (typeof data === 'string') {
-              console.log('✅ CHAT DEBUG: Using string format');
-              return data.trim();
+              responseText = data.choices[0].message.content.trim();
             }
             
-            console.log('⚠️ CHAT DEBUG: Unknown response format, trying to extract text...');
-            const responseText = JSON.stringify(data);
-            if (responseText.length > 50) {
-              return `Response received but format unknown: ${responseText.substring(0, 200)}...`;
+            if (responseText && responseText.length > 0) {
+              console.log('🎉 RUNPOD: Successfully got response:', responseText.substring(0, 100) + '...');
+              return responseText;
             }
           } else {
             const errorText = await response.text();
-            console.log(`❌ CHAT DEBUG: ${attempt.name} Error response (${response.status}):`, errorText);
+            console.log(`❌ RUNPOD: ${attempt.name} Error (${response.status}):`, errorText);
           }
         } catch (attemptError) {
-          console.log(`❌ CHAT DEBUG: ${attempt.name} failed:`, attemptError.message);
+          console.log(`❌ RUNPOD: ${attempt.name} failed:`, attemptError.message);
         }
       }
 
-      // If all attempts fail, return a helpful response without exposing technical details
-      console.log('⚠️ CHAT DEBUG: All API attempts failed, returning user-friendly response');
-      return `I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment. If the problem persists, check the browser console for technical details.`;
+      // If all attempts fail, return a helpful response
+      console.log('⚠️ RUNPOD: All API attempts failed');
+      return `I'm having trouble connecting to the AI service right now. Please try again in a moment.`;
 
     } catch (error) {
-      console.error('❌ CHAT DEBUG: Final error:', error);
-      // Return error info instead of throwing
-      return `Debug Error: ${error.message}. Check console for details.`;
+      console.error('❌ RUNPOD: Final error:', error);
+      return `I apologize, but there was an error processing your message. Please try again.`;
     }
   }
 
   async handleStreamingResponse(response, onToken, attemptName) {
-    console.log('🌊 STREAM DEBUG: Starting to process streaming response...');
+    console.log('🌊 RUNPOD: Starting to process streaming response for:', attemptName);
     
     try {
       const reader = response.body.getReader();
@@ -249,8 +157,7 @@ class ChatService {
         const { done, value } = await reader.read();
         
         if (done) {
-          console.log('🌊 STREAM DEBUG: Stream completed - sending end signal');
-          // ALWAYS send null token when stream ends
+          console.log('🌊 RUNPOD: Stream completed');
           if (onToken) {
             onToken(null);
           }
@@ -258,108 +165,62 @@ class ChatService {
         }
         
         const chunk = decoder.decode(value, { stream: true });
-        console.log('🌊 STREAM DEBUG: IMMEDIATE CHUNK processing:', chunk);
-        
-        // Process lines immediately as they arrive - no waiting!
         const lines = chunk.split('\n').filter(line => line.trim());
         
         for (const line of lines) {
           try {
-            // Try to parse as JSON (Ollama format)
             const data = JSON.parse(line);
             
-            // Skip if this is just metadata without actual content
-            if (data.context || 
-                data.prompt_eval_count || 
-                data.eval_count ||
-                data.total_duration ||
-                data.load_duration ||
-                data.prompt_eval_duration ||
-                data.eval_duration ||
-                (data.done_reason && !data.response && !data.message)) {
-              console.log('🌊 STREAM DEBUG: Skipping metadata chunk');
+            // Skip metadata
+            if (data.context || data.prompt_eval_count || data.eval_count || 
+                data.total_duration || data.load_duration || data.prompt_eval_duration || 
+                data.eval_duration) {
               continue;
             }
             
-            // Handle Ollama generate API streaming format - IMMEDIATE processing
+            // Extract token from response
+            let token = null;
             if (data.response !== undefined) {
-              const token = data.response;
-              // Only process non-empty tokens
-              if (token && token.length > 0) {
-                console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from response field:', token);
-                fullResponse += token;
-                // Send token IMMEDIATELY to UI - no delays!
-                if (onToken) {
-                  onToken(token);
-                }
-              }
+              token = data.response;
+            } else if (data.message && data.message.content !== undefined) {
+              token = data.message.content;
+            } else if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+              token = data.choices[0].delta.content;
             }
-            // Handle Ollama chat API streaming format - IMMEDIATE processing
-            else if (data.message && data.message.content !== undefined) {
-              const token = data.message.content;
-              // Only process non-empty tokens
-              if (token && token.length > 0) {
-                console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from message.content:', token);
-                fullResponse += token;
-                // Send token IMMEDIATELY to UI - no delays!
-                if (onToken) {
-                  onToken(token);
-                }
-              }
-            }
-            // Handle OpenAI streaming format - IMMEDIATE processing
-            else if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
-              const token = data.choices[0].delta.content;
-              // Only process non-empty tokens
-              if (token && token.length > 0) {
-                console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from OpenAI delta:', token);
-                fullResponse += token;
-                // Send token IMMEDIATELY to UI - no delays!
-                if (onToken) {
-                  onToken(token);
-                }
+            
+            // Process valid tokens
+            if (token !== null && token.length > 0) {
+              console.log('🌊 RUNPOD: Token:', token);
+              fullResponse += token;
+              if (onToken) {
+                onToken(token);
               }
             }
             
-            // Check if stream is done via data.done flag
+            // Check if stream is done
             if (data.done === true) {
-              console.log('🌊 STREAM DEBUG: Stream marked as done via data.done');
-              // Send null token to indicate stream finished
+              console.log('🌊 RUNPOD: Stream marked as done');
               if (onToken) {
                 onToken(null);
               }
-              return fullResponse.trim(); // Return immediately when done
+              return fullResponse.trim();
             }
             
           } catch (parseError) {
-            // If not JSON, might be raw text - but filter out obvious garbage
-            const cleanLine = line.trim();
-            if (cleanLine && 
-                !cleanLine.includes('context') && 
-                !cleanLine.includes('prompt_eval') &&
-                !cleanLine.includes('eval_count') &&
-                !cleanLine.match(/^\d+,\d+,\d+/) && // Filter out number sequences
-                cleanLine.length < 1000) { // Filter out very long chunks
-              console.log('🌊 STREAM DEBUG: Non-JSON chunk, treating as raw text:', cleanLine);
-              fullResponse += cleanLine;
-              if (onToken) onToken(cleanLine);
-            } else {
-              console.log('🌊 STREAM DEBUG: Filtered out non-content chunk:', cleanLine ? cleanLine.substring(0, Math.min(50, cleanLine.length)) + '...' : '[empty line]');
-            }
+            // Skip non-JSON lines or handle as plain text if needed
+            console.log('🌊 RUNPOD: Non-JSON line skipped');
           }
         }
       }
       
-      console.log('🌊 STREAM DEBUG: Final response:', fullResponse);
-      // Ensure end signal is sent even if we reach here without explicit done
+      console.log('🌊 RUNPOD: Final response length:', fullResponse.length);
       if (onToken) {
         onToken(null);
       }
       return fullResponse.trim();
       
     } catch (streamError) {
-      console.error('❌ STREAM DEBUG: Error processing stream:', streamError);
-      // Send end signal even on error to stop typing indicator
+      console.error('❌ RUNPOD: Error processing stream:', streamError);
       if (onToken) {
         onToken(null);
       }
@@ -368,41 +229,38 @@ class ChatService {
   }
 
   async testConnection() {
-    console.log('🔍 Testing RunPod connection...');
+    console.log('🔍 RUNPOD: Testing connection...');
     
     try {
-      // First, try to check if Ollama is running
+      // Test basic connectivity
       const healthResponse = await fetch(`${this.baseURL}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      console.log('Health check response:', healthResponse.status);
+      console.log('🔍 RUNPOD: Health check response:', healthResponse.status);
 
       if (healthResponse.ok) {
-        // Try to get available models
+        // Get available models
         try {
-          const modelsResponse = await fetch(`${this.baseURL}/api/tags`, {
+          const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            }
+            headers: { 'Content-Type': 'application/json' }
           });
 
           if (modelsResponse.ok) {
             const modelsData = await modelsResponse.json();
-            console.log('Available models:', modelsData);
+            console.log('🔍 RUNPOD: Available models:', modelsData);
             
             return {
               status: 'success',
               message: 'RunPod connection successful',
-              details: `Available models: ${modelsData.models?.map(m => m.name).join(', ') || 'No models found'}`
+              details: `Available models: ${modelsData.models?.map(m => m.name).join(', ') || 'No models found'}`,
+              models: modelsData.models || []
             };
           }
         } catch (modelsError) {
-          console.log('Models endpoint not available, but base connection works');
+          console.log('🔍 RUNPOD: Models endpoint error, but base connection works');
         }
 
         return {
@@ -419,11 +277,33 @@ class ChatService {
       };
 
     } catch (error) {
-      console.error('Connection test error:', error);
+      console.error('🔍 RUNPOD: Connection test error:', error);
       return {
         status: 'error',
         message: 'RunPod connection failed',
         details: error.message
+      };
+    }
+  }
+
+  // Test function for debugging
+  async testSimpleChat() {
+    console.log('🧪 RUNPOD: Testing simple chat...');
+    
+    try {
+      const testMessage = "Hello, can you respond with just 'Hi there!'?";
+      const response = await this.sendMessage(testMessage, [], null); // No streaming
+      
+      console.log('🧪 RUNPOD: Test response:', response);
+      return {
+        success: true,
+        response: response
+      };
+    } catch (error) {
+      console.error('🧪 RUNPOD: Test chat failed:', error);
+      return {
+        success: false,
+        error: error.message
       };
     }
   }
@@ -634,4 +514,19 @@ Provide analysis in this exact JSON format:
   }
 }
 
-export default new ChatService();
+const chatServiceInstance = new ChatService();
+
+// Add global test functions for debugging
+if (typeof window !== 'undefined') {
+  window.testRunPodConnection = async () => {
+    console.log('🧪 GLOBAL: Testing RunPod connection...');
+    return await chatServiceInstance.testConnection();
+  };
+  
+  window.testRunPodChat = async () => {
+    console.log('🧪 GLOBAL: Testing RunPod chat...');
+    return await chatServiceInstance.testSimpleChat();
+  };
+}
+
+export default chatServiceInstance;
