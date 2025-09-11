@@ -134,20 +134,37 @@ export default function ChatPage() {
             return updated;
           });
         } else {
-          // Append token directly to UI - no queue, no delays!
-          console.log('📝 STREAM DEBUG: Appending token:', token);
-          setMessages(prevMessages => {
-            const updated = [...prevMessages];
-            const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
-            if (aiMsgIndex !== -1) {
-              updated[aiMsgIndex] = {
-                ...updated[aiMsgIndex],
-                text: updated[aiMsgIndex].text + token, // Append token directly!
-                isStreaming: true
-              };
-            }
-            return updated;
-          });
+          // Filter out any unwanted content before appending to UI
+          const cleanToken = token.toString().trim();
+          
+          // Skip tokens that look like raw data, JSON, or metadata
+          // Be more permissive - only filter out obvious non-text content
+          const isValidToken = cleanToken && 
+              cleanToken.length > 0 &&
+              cleanToken.length < 1000 && // Very generous length limit
+              !cleanToken.match(/^[0-9,]{20,}$/) && // Only filter very long number sequences
+              !cleanToken.includes('prompt_eval_count') &&
+              !cleanToken.includes('total_duration') &&
+              !(cleanToken.startsWith('{') && cleanToken.endsWith('}') && cleanToken.includes('context'));
+          
+          if (isValidToken) {
+            
+            console.log('📝 STREAM DEBUG: Appending clean token:', cleanToken);
+            setMessages(prevMessages => {
+              const updated = [...prevMessages];
+              const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
+              if (aiMsgIndex !== -1) {
+                updated[aiMsgIndex] = {
+                  ...updated[aiMsgIndex],
+                  text: updated[aiMsgIndex].text + cleanToken, // Append clean token directly!
+                  isStreaming: true
+                };
+              }
+              return updated;
+            });
+          } else {
+            console.log('📝 STREAM DEBUG: Filtered out unwanted token:', cleanToken ? cleanToken.substring(0, Math.min(100, cleanToken.length)) + '...' : '[empty token]');
+          }
         }
       };
       
@@ -173,20 +190,47 @@ export default function ChatPage() {
 
       // Generate and save reflection after the conversation
       try {
-        console.log('📝 Generating reflection...');
+        console.log('📝 CHAT PAGE: Starting reflection generation...');
+        console.log('📝 CHAT PAGE: Final messages count:', finalMessages.length);
+        console.log('📝 CHAT PAGE: Selected date ID:', selectedDateId);
+        
+        // Test connection first
+        const connectionTest = await reflectionService.testConnection();
+        console.log('🔍 CHAT PAGE: Reflection service connection test:', connectionTest);
+        
         const reflection = await reflectionService.generateReflection(finalMessages);
-        console.log('✅ Reflection generated:', reflection);
+        console.log('✅ CHAT PAGE: Reflection generated successfully:', reflection);
         
         const user = getCurrentUser();
         if (user) {
-          await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
-          console.log('💾 Reflection saved to Firestore');
+          console.log('💾 CHAT PAGE: Saving reflection to Firestore for user:', user.uid);
+          const saveResult = await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
+          console.log('💾 CHAT PAGE: Firestore save result:', saveResult);
         } else {
+          console.log('💾 CHAT PAGE: No user logged in, saving to localStorage');
           localStorage.setItem(`reflection_${selectedDateId}`, reflection);
-          console.log('💾 Reflection saved to localStorage');
+          console.log('💾 CHAT PAGE: Reflection saved to localStorage with key:', `reflection_${selectedDateId}`);
         }
+        
+        // Also save to localStorage as backup
+        localStorage.setItem(`reflection_backup_${selectedDateId}`, reflection);
+        console.log('💾 CHAT PAGE: Backup reflection saved to localStorage');
+        
       } catch (reflectionError) {
-        console.error('❌ Error generating reflection:', reflectionError);
+        console.error('❌ CHAT PAGE: Error generating reflection:', reflectionError);
+        console.error('❌ CHAT PAGE: Error stack:', reflectionError.stack);
+        
+        // Try to create a simple fallback reflection
+        try {
+          const userMessages = finalMessages.filter(msg => msg.sender === 'user').map(msg => msg.text);
+          if (userMessages.length > 0) {
+            const fallbackReflection = `Today I chatted with Deite about: ${userMessages.join('. ')}`;
+            localStorage.setItem(`reflection_${selectedDateId}`, fallbackReflection);
+            console.log('💾 CHAT PAGE: Saved fallback reflection to localStorage');
+          }
+        } catch (fallbackError) {
+          console.error('❌ CHAT PAGE: Even fallback reflection failed:', fallbackError);
+        }
       }
 
       // Generate and save emotional analysis after the conversation
