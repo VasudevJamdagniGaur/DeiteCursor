@@ -65,7 +65,7 @@ Daily journal entry:`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3:70b',
+          model: 'llama3.1',
           messages: [
             {
               role: 'user',

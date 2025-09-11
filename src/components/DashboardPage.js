@@ -69,6 +69,54 @@ export default function DashboardPage() {
     loadReflection();
   }, [selectedDate]);
 
+  // Refresh reflection when component becomes visible (user returns from chat)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('📖 DASHBOARD: Page became visible, refreshing reflection...');
+        // Re-run the loadReflection logic
+        const refreshReflection = async () => {
+          const dateId = getDateId(selectedDate);
+          const user = getCurrentUser();
+          
+          if (!user) {
+            const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+            const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+            const finalReflection = storedReflection || backupReflection || '';
+            setReflection(finalReflection);
+            return;
+          }
+
+          try {
+            const result = await reflectionService.getReflection(user.uid, dateId);
+            if (result.success && result.reflection) {
+              setReflection(result.reflection);
+            } else {
+              const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+              const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+              const finalReflection = storedReflection || backupReflection || '';
+              setReflection(finalReflection);
+            }
+          } catch (error) {
+            console.error('Error refreshing reflection:', error);
+            const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+            const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+            const finalReflection = storedReflection || backupReflection || '';
+            setReflection(finalReflection);
+          }
+        };
+        
+        refreshReflection();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [selectedDate]);
+
   const formatDate = (date) => {
     const options = { 
       weekday: 'long', 
