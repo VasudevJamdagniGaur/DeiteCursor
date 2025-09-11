@@ -98,9 +98,9 @@ export default function EmotionalWellbeing() {
         day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         date: dateStr,
         happiness: dayData ? dayData.happiness : 50,
-        anxiety: dayData ? dayData.anxiety : 25,
+        anxiety: dayData ? dayData.anxiety : 50,
         energy: dayData ? dayData.energy : 50,
-        stress: dayData ? dayData.stress : 25
+        stress: dayData ? dayData.stress : 50
       };
     });
 
@@ -192,9 +192,9 @@ export default function EmotionalWellbeing() {
       day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       date: date.toISOString().split('T')[0],
       happiness: Math.floor(Math.random() * 40) + 60,
-      anxiety: Math.floor(Math.random() * 30) + 10,
+      anxiety: Math.floor(Math.random() * 40) + 30,
       energy: Math.floor(Math.random() * 35) + 65,
-      stress: Math.floor(Math.random() * 25) + 5,
+      stress: Math.floor(Math.random() * 50) + 25,
     }));
     setWeeklyMoodData(weeklyData);
 

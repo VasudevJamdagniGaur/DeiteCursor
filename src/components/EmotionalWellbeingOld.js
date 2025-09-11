@@ -65,9 +65,9 @@ export default function EmotionalWellbeing() {
     const weeklyData = weekDays.map((day, index) => ({
       day,
       happiness: Math.floor(Math.random() * 40) + 60, // 60-100%
-      anxiety: Math.floor(Math.random() * 30) + 10,   // 10-40%
+      anxiety: Math.floor(Math.random() * 40) + 30,   // 30-70%
       energy: Math.floor(Math.random() * 35) + 65,    // 65-100%
-      stress: Math.floor(Math.random() * 25) + 5,     // 5-30%
+      stress: Math.floor(Math.random() * 50) + 25,     // 25-75%
     }));
     setWeeklyMoodData(weeklyData);
 
