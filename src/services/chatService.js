@@ -226,9 +226,9 @@ class ChatService {
         }
       }
 
-      // If all attempts fail, return a debug response so we can at least see the chat is working
-      console.log('⚠️ CHAT DEBUG: All API attempts failed, returning debug response');
-      return `I'm having trouble connecting to the AI service right now, but I can see your message: "${userMessage}". Please check the browser console for detailed debug information. The system is trying to connect to: ${this.baseURL}`;
+      // If all attempts fail, return a helpful response without exposing technical details
+      console.log('⚠️ CHAT DEBUG: All API attempts failed, returning user-friendly response');
+      return `I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment. If the problem persists, check the browser console for technical details.`;
 
     } catch (error) {
       console.error('❌ CHAT DEBUG: Final error:', error);
@@ -268,34 +268,56 @@ class ChatService {
             // Try to parse as JSON (Ollama format)
             const data = JSON.parse(line);
             
+            // Skip if this is just metadata without actual content
+            if (data.context || 
+                data.prompt_eval_count || 
+                data.eval_count ||
+                data.total_duration ||
+                data.load_duration ||
+                data.prompt_eval_duration ||
+                data.eval_duration ||
+                (data.done_reason && !data.response && !data.message)) {
+              console.log('🌊 STREAM DEBUG: Skipping metadata chunk');
+              continue;
+            }
+            
             // Handle Ollama generate API streaming format - IMMEDIATE processing
             if (data.response !== undefined) {
               const token = data.response;
-              console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from response field:', token);
-              fullResponse += token;
-              // Send token IMMEDIATELY to UI - no delays!
-              if (onToken && token) {
-                onToken(token);
+              // Only process non-empty tokens
+              if (token && token.length > 0) {
+                console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from response field:', token);
+                fullResponse += token;
+                // Send token IMMEDIATELY to UI - no delays!
+                if (onToken) {
+                  onToken(token);
+                }
               }
             }
             // Handle Ollama chat API streaming format - IMMEDIATE processing
             else if (data.message && data.message.content !== undefined) {
               const token = data.message.content;
-              console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from message.content:', token);
-              fullResponse += token;
-              // Send token IMMEDIATELY to UI - no delays!
-              if (onToken && token) {
-                onToken(token);
+              // Only process non-empty tokens
+              if (token && token.length > 0) {
+                console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from message.content:', token);
+                fullResponse += token;
+                // Send token IMMEDIATELY to UI - no delays!
+                if (onToken) {
+                  onToken(token);
+                }
               }
             }
             // Handle OpenAI streaming format - IMMEDIATE processing
             else if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
               const token = data.choices[0].delta.content;
-              console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from OpenAI delta:', token);
-              fullResponse += token;
-              // Send token IMMEDIATELY to UI - no delays!
-              if (onToken && token) {
-                onToken(token);
+              // Only process non-empty tokens
+              if (token && token.length > 0) {
+                console.log('🌊 STREAM DEBUG: IMMEDIATE TOKEN from OpenAI delta:', token);
+                fullResponse += token;
+                // Send token IMMEDIATELY to UI - no delays!
+                if (onToken) {
+                  onToken(token);
+                }
               }
             }
             
@@ -310,11 +332,19 @@ class ChatService {
             }
             
           } catch (parseError) {
-            // If not JSON, might be raw text
-            console.log('🌊 STREAM DEBUG: Non-JSON chunk, treating as raw text:', line);
-            if (line.trim()) {
-              fullResponse += line;
-              if (onToken) onToken(line);
+            // If not JSON, might be raw text - but filter out obvious garbage
+            const cleanLine = line.trim();
+            if (cleanLine && 
+                !cleanLine.includes('context') && 
+                !cleanLine.includes('prompt_eval') &&
+                !cleanLine.includes('eval_count') &&
+                !cleanLine.match(/^\d+,\d+,\d+/) && // Filter out number sequences
+                cleanLine.length < 1000) { // Filter out very long chunks
+              console.log('🌊 STREAM DEBUG: Non-JSON chunk, treating as raw text:', cleanLine);
+              fullResponse += cleanLine;
+              if (onToken) onToken(cleanLine);
+            } else {
+              console.log('🌊 STREAM DEBUG: Filtered out non-content chunk:', cleanLine ? cleanLine.substring(0, Math.min(50, cleanLine.length)) + '...' : '[empty line]');
             }
           }
         }
