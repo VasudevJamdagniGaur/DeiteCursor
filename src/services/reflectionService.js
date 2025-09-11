@@ -56,53 +56,61 @@ ${conversationContext}
 
 Daily journal entry:`;
 
-    console.log('🌐 Making API call to RunPod...');
+    console.log('🌐 Making API call to RunPod for reflection...');
 
-    try {
-      const response = await fetch(`${this.baseURL}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama3.1',
-          messages: [
-            {
-              role: 'user',
-              content: reflectionPrompt
+    // Try multiple models for better compatibility
+    const modelOptions = ['llama3.1', 'llama3', 'llama2'];
+    
+    for (const model of modelOptions) {
+      try {
+        console.log(`🔄 Trying model: ${model} for reflection`);
+        
+        const response = await fetch(`${this.baseURL}api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model,
+            prompt: reflectionPrompt,
+            stream: false,
+            options: {
+              temperature: 0.7,
+              top_p: 0.9,
+              max_tokens: 150
             }
-          ],
-          stream: false,
-          options: {
-            temperature: 0.7,
-            top_p: 0.9
-          }
-        })
-      });
+          })
+        });
 
-      console.log('📥 Response status:', response.status);
+        console.log(`📥 Response status for ${model}:`, response.status);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ RunPod API Error:', response.status, errorText);
-        throw new Error(`RunPod API error: ${response.status} - ${errorText}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ RunPod API Error for ${model}:`, response.status, errorText);
+          continue; // Try next model
+        }
+
+        const data = await response.json();
+        console.log(`✅ RunPod response received for journal generation with ${model}`);
+        
+        // Parse response from generate API format
+        if (data.response !== undefined) {
+          const summary = data.response.trim();
+          console.log('📖 Generated journal summary:', summary);
+          return summary;
+        } else {
+          console.error(`❌ Invalid response format from ${model}:`, data);
+          console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
+          continue; // Try next model
+        }
+      } catch (modelError) {
+        console.error(`💥 Error with model ${model}:`, modelError.message);
+        continue; // Try next model
       }
-
-      const data = await response.json();
-      console.log('✅ RunPod response received for journal generation');
-      
-      if (data.message && data.message.content) {
-        const summary = data.message.content.trim();
-        console.log('📖 Generated journal summary:', summary);
-        return summary;
-      } else {
-        console.error('❌ Invalid response format:', data);
-        throw new Error('Invalid response format from API');
-      }
-    } catch (error) {
-      console.error('💥 Error calling RunPod API for journal summary:', error);
-      throw error;
     }
+    
+    // If all models failed, throw error
+    throw new Error('All models failed for reflection generation');
   }
 
   buildConversationContext(userMessages, aiMessages) {
