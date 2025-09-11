@@ -43,12 +43,11 @@ class ReflectionService {
   }
 
   async generateAISummary(userMessages, aiMessages) {
-    console.log('🤖 REFLECTION: Starting AI journal summary generation...');
-    console.log('🤖 REFLECTION: RunPod URL:', this.baseURL);
+    console.log('🤖 Starting AI journal summary generation...');
     
     // Create a conversation context for the AI
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
-    console.log('📋 REFLECTION: Conversation context created, length:', conversationContext.length);
+    console.log('📋 Conversation context created');
     
     const reflectionPrompt = `Based on the user's chat messages, generate a concise and realistic daily journal entry. Do not invent or exaggerate events. Summarize the main emotions, concerns, and insights discussed during the conversation. Write in a grounded, honest tone — like a real person journaling about their day. Only use the content actually discussed in the messages. Do not make up metaphors or fictional events. The tone should be factual. Keep it brief and to the point.
 
@@ -57,145 +56,53 @@ ${conversationContext}
 
 Daily journal entry:`;
 
-    console.log('🌐 REFLECTION: Making API call to RunPod...');
+    console.log('🌐 Making API call to RunPod...');
 
-    // First, let's check what models are available
-    let availableModels = [];
     try {
-      console.log('🔍 REFLECTION: Checking available models...');
-      const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          messages: [
+            {
+              role: 'user',
+              content: reflectionPrompt
+            }
+          ],
+          stream: false,
+          options: {
+            temperature: 0.7,
+            top_p: 0.9
+          }
+        })
       });
-      if (modelsResponse.ok) {
-        const modelsData = await modelsResponse.json();
-        availableModels = modelsData.models?.map(m => m.name) || [];
-        console.log('🔍 REFLECTION: Available models:', availableModels);
+
+      console.log('📥 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ RunPod API Error:', response.status, errorText);
+        throw new Error(`RunPod API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ RunPod response received for journal generation');
+      
+      if (data.message && data.message.content) {
+        const summary = data.message.content.trim();
+        console.log('📖 Generated journal summary:', summary);
+        return summary;
       } else {
-        console.log('🔍 REFLECTION: Could not fetch models, status:', modelsResponse.status);
+        console.error('❌ Invalid response format:', data);
+        throw new Error('Invalid response format from API');
       }
-    } catch (e) {
-      console.log('🔍 REFLECTION: Could not fetch models:', e.message);
+    } catch (error) {
+      console.error('💥 Error calling RunPod API for journal summary:', error);
+      throw error;
     }
-
-    // Create attempts based on available models first, then fallbacks
-    const attempts = [];
-    
-    // Add attempts for available models
-    if (availableModels.length > 0) {
-      for (const model of availableModels.slice(0, 3)) { // Try first 3 models
-        attempts.push({
-          url: `${this.baseURL}api/generate`,
-          body: {
-            model: model,
-            prompt: reflectionPrompt,
-            stream: false
-          },
-          name: `Generate API (${model})`
-        });
-        attempts.push({
-          url: `${this.baseURL}api/chat`,
-          body: {
-            model: model,
-            messages: [{ role: 'user', content: reflectionPrompt }],
-            stream: false
-          },
-          name: `Chat API (${model})`
-        });
-      }
-    }
-    
-    // Add common fallback attempts
-    const fallbackModels = ['llama3.1', 'llama3', 'llama2', 'llama3:8b', 'llama3:70b'];
-    for (const model of fallbackModels) {
-      if (!availableModels.includes(model)) {
-        attempts.push({
-          url: `${this.baseURL}api/generate`,
-          body: {
-            model: model,
-            prompt: reflectionPrompt,
-            stream: false
-          },
-          name: `Generate API (${model})`
-        });
-        attempts.push({
-          url: `${this.baseURL}api/chat`,
-          body: {
-            model: model,
-            messages: [{ role: 'user', content: reflectionPrompt }],
-            stream: false
-          },
-          name: `Chat API (${model})`
-        });
-      }
-    }
-
-    console.log(`🎯 REFLECTION: Will try ${attempts.length} different approaches`);
-
-    for (const attempt of attempts) {
-      try {
-        console.log(`🔄 REFLECTION: Trying ${attempt.name}...`);
-        
-        const response = await fetch(attempt.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(attempt.body)
-        });
-
-        console.log(`📥 REFLECTION: ${attempt.name} Response status:`, response.status);
-        console.log(`📥 REFLECTION: ${attempt.name} Response headers:`, [...response.headers.entries()]);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`✅ REFLECTION: ${attempt.name} Response data:`, data);
-          
-          // Handle different response formats
-          let summary = null;
-          if (data.message && data.message.content) {
-            summary = data.message.content.trim();
-            console.log('📖 REFLECTION: Using message.content format');
-          } else if (data.response) {
-            summary = data.response.trim();
-            console.log('📖 REFLECTION: Using response format');
-          } else if (data.content) {
-            summary = data.content.trim();
-            console.log('📖 REFLECTION: Using content format');
-          } else if (data.choices && data.choices[0] && data.choices[0].message) {
-            summary = data.choices[0].message.content.trim();
-            console.log('📖 REFLECTION: Using OpenAI format');
-          }
-          
-          if (summary && summary.length > 10) {
-            console.log('🎉 REFLECTION: Successfully generated journal summary:', summary);
-            return summary;
-          } else {
-            console.log('⚠️ REFLECTION: Response too short or empty:', summary);
-          }
-        } else {
-          const errorText = await response.text();
-          console.log(`❌ REFLECTION: ${attempt.name} Error response (${response.status}):`, errorText);
-        }
-      } catch (attemptError) {
-        console.log(`❌ REFLECTION: ${attempt.name} failed:`, attemptError.message);
-      }
-    }
-
-    // If all attempts fail, return a fallback reflection
-    console.log('⚠️ REFLECTION: All API attempts failed, creating fallback reflection');
-    
-    // Create a simple fallback based on user messages
-    if (userMessages.length > 0) {
-      const topics = this.extractTopics(userMessages);
-      const fallbackReflection = `Today I had a meaningful conversation with Deite. We discussed ${topics.join(', ')}. It was helpful to reflect on these thoughts and feelings.`;
-      console.log('📝 REFLECTION: Generated fallback reflection:', fallbackReflection);
-      return fallbackReflection;
-    }
-    
-    const defaultReflection = "Had a brief chat with Deite today but didn't share much.";
-    console.log('📝 REFLECTION: Using default reflection:', defaultReflection);
-    return defaultReflection;
   }
 
   buildConversationContext(userMessages, aiMessages) {
@@ -212,94 +119,6 @@ Daily journal entry:`;
     });
     
     return context.trim();
-  }
-
-  extractTopics(userMessages) {
-    // Simple topic extraction for fallback reflections
-    const topics = [];
-    const topicKeywords = {
-      'work': ['work', 'job', 'career', 'office', 'boss', 'colleague'],
-      'family': ['family', 'mom', 'dad', 'parent', 'sibling', 'child'],
-      'relationships': ['friend', 'relationship', 'partner', 'boyfriend', 'girlfriend'],
-      'health': ['health', 'doctor', 'sick', 'tired', 'exercise', 'sleep'],
-      'emotions': ['feel', 'emotion', 'happy', 'sad', 'angry', 'anxious', 'stressed'],
-      'future': ['future', 'plan', 'goal', 'dream', 'hope', 'worry']
-    };
-    
-    const messageText = userMessages.join(' ').toLowerCase();
-    
-    for (const [topic, keywords] of Object.entries(topicKeywords)) {
-      if (keywords.some(keyword => messageText.includes(keyword))) {
-        topics.push(topic);
-      }
-    }
-    
-    return topics.length > 0 ? topics : ['various topics'];
-  }
-
-  async testConnection() {
-    console.log('🔍 REFLECTION: Testing RunPod connection...');
-    
-    try {
-      // First, try to check if Ollama is running
-      const healthResponse = await fetch(`${this.baseURL}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      console.log('🔍 REFLECTION: Health check response:', healthResponse.status);
-
-      if (healthResponse.ok) {
-        const healthText = await healthResponse.text();
-        console.log('🔍 REFLECTION: Health response text:', healthText);
-        
-        // Try to get available models
-        try {
-          const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-
-          if (modelsResponse.ok) {
-            const modelsData = await modelsResponse.json();
-            console.log('🔍 REFLECTION: Available models:', modelsData);
-            
-            return {
-              status: 'success',
-              message: 'RunPod connection successful for reflections',
-              details: `Available models: ${modelsData.models?.map(m => m.name).join(', ') || 'No models found'}`,
-              models: modelsData.models || []
-            };
-          }
-        } catch (modelsError) {
-          console.log('🔍 REFLECTION: Models endpoint not available, but base connection works');
-        }
-
-        return {
-          status: 'success',
-          message: 'RunPod connection successful for reflections',
-          details: 'Ollama is running'
-        };
-      }
-
-      return {
-        status: 'error',
-        message: 'RunPod connection failed for reflections',
-        details: `HTTP ${healthResponse.status}`
-      };
-
-    } catch (error) {
-      console.error('🔍 REFLECTION: Connection test error:', error);
-      return {
-        status: 'error',
-        message: 'RunPod connection failed for reflections',
-        details: error.message
-      };
-    }
   }
 
   async saveReflection(userId, dateId, reflection) {
@@ -406,44 +225,4 @@ Daily journal entry:`;
   }
 }
 
-const reflectionServiceInstance = new ReflectionService();
-
-// Add a global test function for debugging
-if (typeof window !== 'undefined') {
-  window.testReflectionService = async () => {
-    console.log('🧪 TESTING: Starting reflection service test...');
-    
-    // Test connection
-    const connectionResult = await reflectionServiceInstance.testConnection();
-    console.log('🧪 TESTING: Connection result:', connectionResult);
-    
-    // Test with sample messages
-    const sampleMessages = [
-      { sender: 'user', text: 'Hi, I had a tough day at work today' },
-      { sender: 'ai', text: 'I understand that work can be challenging. Would you like to talk about what made it difficult?' },
-      { sender: 'user', text: 'My boss was being really demanding and I felt overwhelmed' },
-      { sender: 'ai', text: 'Feeling overwhelmed by demanding expectations is really stressful. How are you feeling about it now?' }
-    ];
-    
-    console.log('🧪 TESTING: Testing reflection generation with sample messages...');
-    
-    try {
-      const reflection = await reflectionServiceInstance.generateReflection(sampleMessages);
-      console.log('🧪 TESTING: Generated reflection:', reflection);
-      return {
-        success: true,
-        reflection: reflection,
-        connection: connectionResult
-      };
-    } catch (error) {
-      console.error('🧪 TESTING: Reflection generation failed:', error);
-      return {
-        success: false,
-        error: error.message,
-        connection: connectionResult
-      };
-    }
-  };
-}
-
-export default reflectionServiceInstance;
+export default new ReflectionService();

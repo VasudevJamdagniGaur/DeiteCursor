@@ -115,56 +115,55 @@ export default function ChatPage() {
       let currentMessages = [...newMessages, aiMessage];
       setMessages(currentMessages);
 
+      let fullResponse = '';
+      let typewriterQueue = [];
+      let isTyping = false;
 
-
-      // Token callback for streaming - Direct appending like your example
-      const onToken = (token) => {
-        if (token === null) {
-          // Stream finished
-          console.log('📝 STREAM DEBUG: Stream finished (null token received)');
+      // Typewriter effect function
+      const typewriterEffect = () => {
+        if (isTyping || typewriterQueue.length === 0) return;
+        
+        isTyping = true;
+        const processQueue = () => {
+          if (typewriterQueue.length === 0) {
+            isTyping = false;
+            return;
+          }
+          
+          const token = typewriterQueue.shift();
+          fullResponse += token;
+          
+          // Update the message with current text
           setMessages(prevMessages => {
             const updated = [...prevMessages];
             const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
             if (aiMsgIndex !== -1) {
               updated[aiMsgIndex] = {
                 ...updated[aiMsgIndex],
-                isStreaming: false
+                text: fullResponse
               };
             }
             return updated;
           });
-        } else {
-          // Filter out any unwanted content before appending to UI
-          const cleanToken = token.toString().trim();
           
-          // Skip tokens that look like raw data, JSON, or metadata
-          // Be more permissive - only filter out obvious non-text content
-          const isValidToken = cleanToken && 
-              cleanToken.length > 0 &&
-              cleanToken.length < 1000 && // Very generous length limit
-              !cleanToken.match(/^[0-9,]{20,}$/) && // Only filter very long number sequences
-              !cleanToken.includes('prompt_eval_count') &&
-              !cleanToken.includes('total_duration') &&
-              !(cleanToken.startsWith('{') && cleanToken.endsWith('}') && cleanToken.includes('context'));
-          
-          if (isValidToken) {
-            
-            console.log('📝 STREAM DEBUG: Appending clean token:', cleanToken);
-            setMessages(prevMessages => {
-              const updated = [...prevMessages];
-              const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
-              if (aiMsgIndex !== -1) {
-                updated[aiMsgIndex] = {
-                  ...updated[aiMsgIndex],
-                  text: updated[aiMsgIndex].text + cleanToken, // Append clean token directly!
-                  isStreaming: true
-                };
-              }
-              return updated;
-            });
-          } else {
-            console.log('📝 STREAM DEBUG: Filtered out unwanted token:', cleanToken ? cleanToken.substring(0, Math.min(100, cleanToken.length)) + '...' : '[empty token]');
-          }
+          // Continue with next token with minimal delay for smooth typewriter effect
+          setTimeout(processQueue, Math.random() * 20 + 10); // 10-30ms delay (faster!)
+        };
+        
+        processQueue();
+      };
+
+      // Token callback for streaming - IMMEDIATE processing
+      const onToken = (token) => {
+        console.log('📝 TYPEWRITER DEBUG: IMMEDIATE token received:', token);
+        
+        // Add token to queue immediately
+        typewriterQueue.push(token);
+        
+        // Start typewriter effect IMMEDIATELY if not already running
+        if (!isTyping) {
+          console.log('📝 TYPEWRITER DEBUG: Starting IMMEDIATE typewriter effect');
+          typewriterEffect();
         }
       };
       
@@ -178,59 +177,55 @@ export default function ChatPage() {
         throw new Error('Invalid AI response format');
       }
 
-      // No need to wait - streaming handles everything directly
+      // Wait for typewriter effect to finish
+      const waitForTypewriter = () => {
+        return new Promise((resolve) => {
+          const checkQueue = () => {
+            if (typewriterQueue.length === 0 && !isTyping) {
+              resolve();
+            } else {
+              setTimeout(checkQueue, 100);
+            }
+          };
+          checkQueue();
+        });
+      };
 
-      // Get final messages for reflection/analysis
+      await waitForTypewriter();
+
+      // Update final message and get finalMessages for later use
       let finalMessages;
       setMessages(prevMessages => {
-        finalMessages = prevMessages;
-        saveMessages(finalMessages);
-        return prevMessages;
+        const updated = [...prevMessages];
+        const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
+        if (aiMsgIndex !== -1) {
+          updated[aiMsgIndex] = {
+            ...updated[aiMsgIndex],
+            text: fullResponse || aiResponse, // Use fullResponse if available, otherwise aiResponse
+            isStreaming: false
+          };
+        }
+        finalMessages = updated;
+      saveMessages(finalMessages);
+        return finalMessages;
       });
 
       // Generate and save reflection after the conversation
       try {
-        console.log('📝 CHAT PAGE: Starting reflection generation...');
-        console.log('📝 CHAT PAGE: Final messages count:', finalMessages.length);
-        console.log('📝 CHAT PAGE: Selected date ID:', selectedDateId);
-        
-        // Test connection first
-        const connectionTest = await reflectionService.testConnection();
-        console.log('🔍 CHAT PAGE: Reflection service connection test:', connectionTest);
-        
+        console.log('📝 Generating reflection...');
         const reflection = await reflectionService.generateReflection(finalMessages);
-        console.log('✅ CHAT PAGE: Reflection generated successfully:', reflection);
+        console.log('✅ Reflection generated:', reflection);
         
         const user = getCurrentUser();
         if (user) {
-          console.log('💾 CHAT PAGE: Saving reflection to Firestore for user:', user.uid);
-          const saveResult = await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
-          console.log('💾 CHAT PAGE: Firestore save result:', saveResult);
+          await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
+          console.log('💾 Reflection saved to Firestore');
         } else {
-          console.log('💾 CHAT PAGE: No user logged in, saving to localStorage');
           localStorage.setItem(`reflection_${selectedDateId}`, reflection);
-          console.log('💾 CHAT PAGE: Reflection saved to localStorage with key:', `reflection_${selectedDateId}`);
+          console.log('💾 Reflection saved to localStorage');
         }
-        
-        // Also save to localStorage as backup
-        localStorage.setItem(`reflection_backup_${selectedDateId}`, reflection);
-        console.log('💾 CHAT PAGE: Backup reflection saved to localStorage');
-        
       } catch (reflectionError) {
-        console.error('❌ CHAT PAGE: Error generating reflection:', reflectionError);
-        console.error('❌ CHAT PAGE: Error stack:', reflectionError.stack);
-        
-        // Try to create a simple fallback reflection
-        try {
-          const userMessages = finalMessages.filter(msg => msg.sender === 'user').map(msg => msg.text);
-          if (userMessages.length > 0) {
-            const fallbackReflection = `Today I chatted with Deite about: ${userMessages.join('. ')}`;
-            localStorage.setItem(`reflection_${selectedDateId}`, fallbackReflection);
-            console.log('💾 CHAT PAGE: Saved fallback reflection to localStorage');
-          }
-        } catch (fallbackError) {
-          console.error('❌ CHAT PAGE: Even fallback reflection failed:', fallbackError);
-        }
+        console.error('❌ Error generating reflection:', reflectionError);
       }
 
       // Generate and save emotional analysis after the conversation
@@ -288,14 +283,14 @@ export default function ChatPage() {
           }
         `}
       </style>
-      <div
-        className="min-h-screen flex flex-col relative overflow-hidden"
-        style={{
-          background: isDarkMode 
-            ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
-            : "#FAFAF8",
-        }}
-      >
+    <div
+      className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{
+        background: isDarkMode 
+          ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+          : "#FAFAF8",
+      }}
+    >
       {/* Header */}
       <div className={`sticky top-0 z-20 flex items-center justify-between p-6 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'

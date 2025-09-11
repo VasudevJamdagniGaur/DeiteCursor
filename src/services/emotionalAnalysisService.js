@@ -11,8 +11,8 @@ class EmotionalAnalysisService {
       return {
         happiness: 50,
         energy: 50,
-        anxiety: 50,
-        stress: 50
+        anxiety: 25,
+        stress: 25
       };
     }
 
@@ -30,8 +30,8 @@ class EmotionalAnalysisService {
       return {
         happiness: 50,
         energy: 50,
-        anxiety: 50,
-        stress: 50
+        anxiety: 25,
+        stress: 25
       };
     }
 
@@ -74,116 +74,65 @@ Return only a JSON object in this exact format:
   "stress": [0-100 integer]
 }`;
 
-    // Try multiple models and API endpoints for better reliability
-    const attempts = [
-      // Try generate API with common models
-      {
-        url: `${this.baseURL}api/generate`,
-        body: {
-          model: 'llama3.1',
-          prompt: analysisPrompt,
-          stream: false
+    try {
+      console.log('🌐 Making API call for emotional analysis...');
+
+      const response = await fetch(`${this.baseURL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        name: 'Generate API (llama3.1)'
-      },
-      {
-        url: `${this.baseURL}api/generate`,
-        body: {
-          model: 'llama3',
-          prompt: analysisPrompt,
-          stream: false
-        },
-        name: 'Generate API (llama3)'
-      },
-      // Try chat API with common models
-      {
-        url: `${this.baseURL}api/chat`,
-        body: {
-          model: 'llama3.1',
-          messages: [{ role: 'user', content: analysisPrompt }],
-          stream: false
-        },
-        name: 'Chat API (llama3.1)'
-      },
-      {
-        url: `${this.baseURL}api/chat`,
-        body: {
-          model: 'llama3',
-          messages: [{ role: 'user', content: analysisPrompt }],
-          stream: false
-        },
-        name: 'Chat API (llama3)'
-      },
-      // Try original approach as fallback
-      {
-        url: `${this.baseURL}api/chat`,
-        body: {
+        body: JSON.stringify({
           model: 'llama3:70b',
-          messages: [{ role: 'user', content: analysisPrompt }],
+          messages: [
+            {
+              role: 'user',
+              content: analysisPrompt
+            }
+          ],
           stream: false,
-          options: { temperature: 0.3, top_p: 0.9 }
-        },
-        name: 'Chat API (llama3:70b)'
-      }
-    ];
+          options: {
+            temperature: 0.3, // Lower temperature for more consistent scoring
+            top_p: 0.9
+          }
+        })
+      });
 
-    for (const attempt of attempts) {
-      try {
-        console.log(`🔄 EMOTIONAL DEBUG: Trying ${attempt.name}...`);
+      console.log('📥 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', response.status, errorText);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Raw response received');
+
+      if (data.message && data.message.content) {
+        const responseText = data.message.content.trim();
+        console.log('📊 Analysis response:', responseText);
+
+        // Parse the JSON response
+        const scores = this.parseEmotionalScores(responseText);
+        console.log('✅ Parsed emotional scores:', scores);
         
-        const response = await fetch(attempt.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(attempt.body)
-        });
-
-        console.log(`📥 EMOTIONAL DEBUG: ${attempt.name} Response status:`, response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`✅ EMOTIONAL DEBUG: ${attempt.name} Response data:`, data);
-          
-          // Handle different response formats
-          let responseText = null;
-          if (data.message && data.message.content) {
-            responseText = data.message.content.trim();
-          } else if (data.response) {
-            responseText = data.response.trim();
-          } else if (data.content) {
-            responseText = data.content.trim();
-          } else if (data.choices && data.choices[0] && data.choices[0].message) {
-            responseText = data.choices[0].message.content.trim();
-          }
-          
-          if (responseText && responseText.length > 10) {
-            console.log('📊 Analysis response:', responseText);
-            // Parse the JSON response
-            const scores = this.parseEmotionalScores(responseText);
-            console.log('✅ Parsed emotional scores:', scores);
-            return scores;
-          }
-        } else {
-          const errorText = await response.text();
-          console.log(`❌ EMOTIONAL DEBUG: ${attempt.name} Error response (${response.status}):`, errorText);
-        }
-      } catch (attemptError) {
-        console.log(`❌ EMOTIONAL DEBUG: ${attempt.name} failed:`, attemptError.message);
+        return scores;
+      } else {
+        console.error('❌ Invalid response format:', data);
+        throw new Error('Invalid response format from API');
       }
-    }
 
-    // If all attempts fail, log and return defaults
-    console.log('⚠️ EMOTIONAL DEBUG: All API attempts failed, returning default scores');
-    const error = new Error('All API attempts failed for emotional analysis');
-    console.error('💥 Error in emotional analysis:', error);
-    // Return default scores if analysis fails
-    return {
-      happiness: 50,
-      energy: 50,
-      anxiety: 50,
-      stress: 50
-    };
+    } catch (error) {
+      console.error('💥 Error in emotional analysis:', error);
+      // Return default scores if analysis fails
+      return {
+        happiness: 50,
+        energy: 50,
+        anxiety: 25,
+        stress: 25
+      };
+    }
   }
 
   parseEmotionalScores(responseText) {
@@ -198,8 +147,8 @@ Return only a JSON object in this exact format:
         const scores = {
           happiness: this.clampScore(parsed.happiness || 50),
           energy: this.clampScore(parsed.energy || 50),
-          anxiety: this.clampScore(parsed.anxiety || 50),
-          stress: this.clampScore(parsed.stress || 50)
+          anxiety: this.clampScore(parsed.anxiety || 25),
+          stress: this.clampScore(parsed.stress || 25)
         };
 
         return scores;
@@ -216,8 +165,8 @@ Return only a JSON object in this exact format:
     const defaultScores = {
       happiness: 50,
       energy: 50,
-      anxiety: 50,
-      stress: 50
+      anxiety: 25,
+      stress: 25
     };
 
     try {

@@ -306,9 +306,9 @@ export default function EmotionalWellbeing() {
         day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         date: dateStr,
         happiness: dayData ? dayData.happiness : 50,
-        anxiety: dayData ? dayData.anxiety : 50,
+        anxiety: dayData ? dayData.anxiety : 25,
         energy: dayData ? dayData.energy : 50,
-        stress: dayData ? dayData.stress : 50
+        stress: dayData ? dayData.stress : 25
       };
     });
 
