@@ -1,6 +1,6 @@
 class EmotionalAnalysisService {
   constructor() {
-    this.baseURL = 'https://7ic2kux3jto4fa-11434.proxy.runpod.net/';
+    this.baseURL = 'https://c64hx4nq6b4am2-11434.proxy.runpod.net/';
   }
 
   async analyzeEmotionalScores(messages) {
@@ -11,8 +11,8 @@ class EmotionalAnalysisService {
       return {
         happiness: 50,
         energy: 50,
-        anxiety: 25,
-        stress: 25
+        anxiety: 50,
+        stress: 50
       };
     }
 
@@ -30,8 +30,8 @@ class EmotionalAnalysisService {
       return {
         happiness: 50,
         energy: 50,
-        anxiety: 25,
-        stress: 25
+        anxiety: 50,
+        stress: 50
       };
     }
 
@@ -129,8 +129,8 @@ Return only a JSON object in this exact format:
       return {
         happiness: 50,
         energy: 50,
-        anxiety: 25,
-        stress: 25
+        anxiety: 50,
+        stress: 50
       };
     }
   }
@@ -147,8 +147,8 @@ Return only a JSON object in this exact format:
         const scores = {
           happiness: this.clampScore(parsed.happiness || 50),
           energy: this.clampScore(parsed.energy || 50),
-          anxiety: this.clampScore(parsed.anxiety || 25),
-          stress: this.clampScore(parsed.stress || 25)
+          anxiety: this.clampScore(parsed.anxiety || 50),
+          stress: this.clampScore(parsed.stress || 50)
         };
 
         return scores;
@@ -165,8 +165,8 @@ Return only a JSON object in this exact format:
     const defaultScores = {
       happiness: 50,
       energy: 50,
-      anxiety: 25,
-      stress: 25
+      anxiety: 50,
+      stress: 50
     };
 
     try {
