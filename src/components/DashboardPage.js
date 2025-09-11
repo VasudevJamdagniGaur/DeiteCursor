@@ -18,33 +18,49 @@ export default function DashboardPage() {
   useEffect(() => {
     // Load reflection for the current date from Firestore
     const loadReflection = async () => {
+      console.log('📖 DASHBOARD: Loading reflection for date:', selectedDate);
+      const dateId = getDateId(selectedDate);
+      console.log('📖 DASHBOARD: Date ID:', dateId);
+      
       const user = getCurrentUser();
       if (!user) {
+        console.log('📖 DASHBOARD: No user logged in, checking localStorage');
         // If no user is logged in, try localStorage as fallback
-        const dateId = getDateId(selectedDate);
         const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-        setReflection(storedReflection || '');
+        const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+        const finalReflection = storedReflection || backupReflection || '';
+        console.log('📖 DASHBOARD: Found reflection in localStorage:', finalReflection ? 'Yes' : 'No');
+        console.log('📖 DASHBOARD: Reflection content:', finalReflection);
+        setReflection(finalReflection);
         return;
       }
 
       setIsLoadingReflection(true);
       try {
-        const dateId = getDateId(selectedDate);
+        console.log('📖 DASHBOARD: User logged in, checking Firestore for user:', user.uid);
         const result = await reflectionService.getReflection(user.uid, dateId);
-        if (result.success) {
-          setReflection(result.reflection || '');
+        console.log('📖 DASHBOARD: Firestore result:', result);
+        
+        if (result.success && result.reflection) {
+          console.log('📖 DASHBOARD: Found reflection in Firestore:', result.reflection);
+          setReflection(result.reflection);
         } else {
-          console.error('Error loading reflection:', result.error);
+          console.log('📖 DASHBOARD: No reflection in Firestore, checking localStorage fallback');
           // Fallback to localStorage
           const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-          setReflection(storedReflection || '');
+          const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+          const finalReflection = storedReflection || backupReflection || '';
+          console.log('📖 DASHBOARD: Found reflection in localStorage fallback:', finalReflection ? 'Yes' : 'No');
+          setReflection(finalReflection);
         }
       } catch (error) {
-        console.error('Error loading reflection:', error);
+        console.error('📖 DASHBOARD: Error loading reflection from Firestore:', error);
         // Fallback to localStorage
-        const dateId = getDateId(selectedDate);
         const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-        setReflection(storedReflection || '');
+        const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+        const finalReflection = storedReflection || backupReflection || '';
+        console.log('📖 DASHBOARD: Using localStorage fallback due to error:', finalReflection ? 'Yes' : 'No');
+        setReflection(finalReflection);
       } finally {
         setIsLoadingReflection(false);
       }
