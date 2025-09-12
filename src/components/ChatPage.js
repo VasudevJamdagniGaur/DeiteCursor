@@ -292,13 +292,40 @@ export default function ChatPage() {
         const messagesToProcess = Array.isArray(finalMessagesLocal) ? finalMessagesLocal : [];
         console.log('🔍 CHAT DEBUG: Using messages array with length:', messagesToProcess.length);
         
+        console.log('🤖 FORCING AI emotional analysis with RunPod...');
+        console.log('🤖 Messages to analyze:', messagesToProcess.map(m => `${m.sender}: ${m.text.slice(0, 50)}...`));
+        
         const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesToProcess);
-        console.log('✅ Emotional analysis generated:', emotionalScores);
+        console.log('✅ AI Emotional analysis generated:', emotionalScores);
+        console.log('🎯 Scores breakdown - H:', emotionalScores.happiness, 'E:', emotionalScores.energy, 'A:', emotionalScores.anxiety, 'S:', emotionalScores.stress);
         
         const user = getCurrentUser();
-        const userId = user?.uid || 'anonymous';
+        if (user) {
+          // Save to NEW Firestore structure - moodChart
+          console.log('💾 SAVING AI SCORES TO FIREBASE:', emotionalScores);
+          console.log('💾 User ID:', user.uid, 'Date ID:', selectedDateId);
+          
+          await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
+          console.log('💾 ✅ AI Mood chart saved to Firestore NEW structure - DONE!');
+          
+          // Also calculate and save emotional balance
+          const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
+          const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+          const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+          const neutral = 100 - positive - negative;
+          
+          await firestoreService.saveEmotionalBalanceNew(user.uid, selectedDateId, {
+            positive: Math.round(positive),
+            negative: Math.round(negative),
+            neutral: Math.round(neutral)
+          });
+          console.log('💾 AI Emotional balance saved to Firestore NEW structure');
+        } else {
+          // Fallback for anonymous users
+          const userId = 'anonymous';
         await emotionalAnalysisService.saveEmotionalData(userId, selectedDateId, emotionalScores);
-        console.log('💾 Emotional data saved');
+          console.log('💾 Emotional data saved (anonymous)');
+        }
       } catch (emotionalError) {
         console.error('❌ Error generating emotional analysis:', emotionalError);
       }
