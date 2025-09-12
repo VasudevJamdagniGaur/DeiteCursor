@@ -489,6 +489,7 @@ class FirestoreService {
         const date = new Date();
         date.setDate(date.getDate() - i);
         const dateId = date.toLocaleDateString('en-CA');
+        console.log(`📊 FIRESTORE NEW: Checking mood data for date: ${dateId}`);
         
         try {
           const moodRef = doc(this.db, `users/${uid}/days/${dateId}/moodChart/daily`);
