@@ -687,6 +687,47 @@ export default function EmotionalWellbeing() {
                 <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                   Mood Chart - {selectedPeriod === 365 ? 'Lifetime' : `${selectedPeriod} Day`} Summary
                 </h3>
+                <button
+                  onClick={async () => {
+                    console.log('🔍 DEBUG: Checking September 12th data...');
+                    const user = getCurrentUser();
+                    if (user) {
+                      // Check Firebase for Sept 12
+                      try {
+                        const result = await firestoreService.getMoodChartDataNew(user.uid, 7);
+                        console.log('🔍 DEBUG: Firebase mood data:', result);
+                        
+                        // Check localStorage for Sept 12
+                        const localKeys = Object.keys(localStorage).filter(k => k.includes('2025-09-12'));
+                        console.log('🔍 DEBUG: localStorage keys for Sept 12:', localKeys);
+                        
+                        localKeys.forEach(key => {
+                          const data = localStorage.getItem(key);
+                          console.log(`🔍 DEBUG: ${key}:`, data);
+                        });
+                        
+                        // Force create test data for Sept 12
+                        const testScores = {
+                          happiness: 75,
+                          energy: 65,
+                          anxiety: 30,
+                          stress: 40
+                        };
+                        
+                        await firestoreService.saveMoodChartNew(user.uid, '2025-09-12', testScores);
+                        console.log('🔍 DEBUG: Test scores saved for Sept 12');
+                        
+                        // Reload data
+                        loadRealEmotionalData();
+                      } catch (error) {
+                        console.error('🔍 DEBUG: Error:', error);
+                      }
+                    }
+                  }}
+                  className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Debug Sept 12
+                </button>
               </div>
               
               {/* Period Toggle - moved inside line graph container */}
