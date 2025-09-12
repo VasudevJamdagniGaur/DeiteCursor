@@ -66,6 +66,7 @@ export default function DashboardPage() {
       }
     };
 
+    // Load actual reflection only (no test injection)
     loadReflection();
   }, [selectedDate]);
 
@@ -459,6 +460,17 @@ export default function DashboardPage() {
               <span className={isDarkMode ? "text-black" : "text-white"} style={{ fontSize: '14px' }}>⚡</span>
             </div>
             <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Day's Reflect</h2>
+            <button
+              onClick={() => {
+                const debugReflection = `DEBUG: Test reflection created at ${new Date().toLocaleString()}. This proves the dashboard can display reflections. The system is working!`;
+                setReflection(debugReflection);
+                localStorage.setItem(`reflection_${getDateId(selectedDate)}`, debugReflection);
+                console.log('🔧 DEBUG: Force created test reflection');
+              }}
+              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Test Reflection
+            </button>
           </div>
           <div
             className={`rounded-xl p-5 min-h-24 relative overflow-hidden ${

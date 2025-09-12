@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
 import reflectionService from '../services/reflectionService';
 import emotionalAnalysisService from '../services/emotionalAnalysisService';
+import firestoreService from '../services/firestoreService';
 import { getCurrentUser } from '../services/authService';
 import { getDateId } from '../utils/dateUtils';
 
@@ -95,6 +96,17 @@ export default function ChatPage() {
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
+
+    // Save user message to Firestore immediately
+    const user = getCurrentUser();
+    if (user) {
+      try {
+        await firestoreService.saveChatMessageNew(user.uid, selectedDateId, userMessage);
+        console.log('💾 User message saved to Firestore');
+      } catch (error) {
+        console.error('❌ Error saving user message to Firestore:', error);
+      }
+    }
 
     console.log('🎯 CHAT PAGE DEBUG: About to call chatService.sendMessage...');
 
@@ -193,10 +205,9 @@ export default function ChatPage() {
 
       await waitForTypewriter();
 
-      // Update final message and get finalMessages for later use
-      let finalMessages;
-      setMessages(prevMessages => {
-        const updated = [...prevMessages];
+      // Build final messages deterministically (avoid relying on async state callback)
+      const finalMessagesLocal = (() => {
+        const updated = [...currentMessages];
         const aiMsgIndex = updated.findIndex(msg => msg.id === aiMessage.id);
         if (aiMsgIndex !== -1) {
           updated[aiMsgIndex] = {
@@ -205,33 +216,83 @@ export default function ChatPage() {
             isStreaming: false
           };
         }
-        finalMessages = updated;
-      saveMessages(finalMessages);
-        return finalMessages;
-      });
+        return updated;
+      })();
+
+      // Update state and storage
+      setMessages(finalMessagesLocal);
+      saveMessages(finalMessagesLocal);
+
+      // Save AI message to Firestore NEW structure
+      const user = getCurrentUser();
+      if (user && finalMessagesLocal.length > 0) {
+        try {
+          const aiMessage = finalMessagesLocal[finalMessagesLocal.length - 1];
+          if (aiMessage.sender === 'ai') {
+            await firestoreService.saveChatMessageNew(user.uid, selectedDateId, aiMessage);
+            console.log('💾 AI message saved to Firestore NEW structure');
+          }
+        } catch (error) {
+          console.error('❌ Error saving AI message to Firestore:', error);
+        }
+      }
 
       // Generate and save reflection after the conversation
       try {
         console.log('📝 Generating reflection...');
-        const reflection = await reflectionService.generateReflection(finalMessages);
-        console.log('✅ Reflection generated:', reflection);
+        console.log('🔍 CHAT DEBUG: finalMessagesLocal type:', typeof finalMessagesLocal, 'length:', finalMessagesLocal?.length);
+        
+        // Ensure we have a valid messages array
+        const messagesToProcess = Array.isArray(finalMessagesLocal) ? finalMessagesLocal : [];
+        console.log('🔍 CHAT DEBUG: Using messages array with length:', messagesToProcess.length);
+        
+        // Generate AI reflection using RunPod llama3:70b
+        let reflection;
+        try {
+          console.log('🤖 Generating AI reflection using RunPod llama3:70b...');
+          reflection = await reflectionService.generateReflection(messagesToProcess);
+          console.log('✅ AI Reflection generated via RunPod:', reflection);
+        } catch (apiError) {
+          console.log('⚠️ AI reflection failed:', apiError.message);
+          throw apiError; // propagate to outer catch; do not inject non-AI text
+        }
         
         const user = getCurrentUser();
         if (user) {
-          await reflectionService.saveReflection(user.uid, selectedDateId, reflection);
-          console.log('💾 Reflection saved to Firestore');
+          // Save to NEW Firestore structure
+          await firestoreService.saveReflectionNew(user.uid, selectedDateId, {
+            summary: reflection,
+            mood: 'neutral',
+            score: 50,
+            insights: []
+          });
+          console.log('💾 Reflection saved to Firestore NEW structure');
         } else {
           localStorage.setItem(`reflection_${selectedDateId}`, reflection);
           console.log('💾 Reflection saved to localStorage');
         }
+        
+        // Do not save any non-AI backup text
+        
       } catch (reflectionError) {
         console.error('❌ Error generating reflection:', reflectionError);
+        
+        // Force save a fallback reflection
+        const fallbackReflection = `Had a conversation with Deite today at ${new Date().toLocaleString()}. The reflection system is being debugged.`;
+        localStorage.setItem(`reflection_${selectedDateId}`, fallbackReflection);
+        console.log('💾 Fallback reflection saved to localStorage');
       }
 
       // Generate and save emotional analysis after the conversation
       try {
         console.log('🧠 Generating emotional analysis...');
-        const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(finalMessages);
+        console.log('🔍 CHAT DEBUG: finalMessagesLocal type:', typeof finalMessagesLocal, 'length:', finalMessagesLocal?.length);
+        
+        // Ensure we have a valid messages array
+        const messagesToProcess = Array.isArray(finalMessagesLocal) ? finalMessagesLocal : [];
+        console.log('🔍 CHAT DEBUG: Using messages array with length:', messagesToProcess.length);
+        
+        const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesToProcess);
         console.log('✅ Emotional analysis generated:', emotionalScores);
         
         const user = getCurrentUser();

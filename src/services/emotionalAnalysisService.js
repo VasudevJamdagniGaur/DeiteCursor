@@ -5,6 +5,19 @@ class EmotionalAnalysisService {
 
   async analyzeEmotionalScores(messages) {
     console.log('🧠 Starting emotional analysis...');
+    console.log('🔍 EMOTIONAL DEBUG: messages type:', typeof messages, 'length:', messages?.length);
+    
+    // Safety check and fix for messages
+    if (!messages || !Array.isArray(messages)) {
+      console.error('❌ EMOTIONAL ERROR: Invalid messages array, using defaults');
+      return {
+        happiness: 50,
+        energy: 50,
+        anxiety: 25,
+        stress: 25
+      };
+    }
+    
     console.log('💬 Analyzing messages:', messages.length);
 
     if (!messages || messages.length === 0) {
