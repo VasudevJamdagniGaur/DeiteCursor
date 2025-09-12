@@ -474,6 +474,70 @@ class FirestoreService {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * NEW STRUCTURE: Get mood chart data for multiple days
+   */
+  async getMoodChartDataNew(uid, days = 7) {
+    try {
+      console.log(`📊 FIRESTORE NEW: Getting mood chart data for ${days} days...`);
+      
+      const moodData = [];
+      
+      // Get data for each day in the range
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateId = date.toLocaleDateString('en-CA');
+        
+        try {
+          const moodRef = doc(this.db, `users/${uid}/days/${dateId}/moodChart/daily`);
+          const snapshot = await getDoc(moodRef);
+          
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            moodData.push({
+              date: dateId,
+              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              happiness: data.happiness || 50,
+              anxiety: data.anxiety || 25,
+              stress: data.stress || 25,
+              energy: data.energy || 50
+            });
+            console.log(`📊 FIRESTORE NEW: Found mood data for ${dateId}:`, data);
+          } else {
+            // No data for this day
+            moodData.push({
+              date: dateId,
+              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              happiness: 50,
+              anxiety: 25,
+              stress: 25,
+              energy: 50
+            });
+            console.log(`📊 FIRESTORE NEW: No mood data for ${dateId}, using defaults`);
+          }
+        } catch (dayError) {
+          console.error(`❌ Error getting mood data for ${dateId}:`, dayError);
+          // Add default data for this day
+          moodData.push({
+            date: dateId,
+            day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            happiness: 50,
+            anxiety: 25,
+            stress: 25,
+            energy: 50
+          });
+        }
+      }
+      
+      console.log(`📊 FIRESTORE NEW: Retrieved mood data for ${moodData.length} days`);
+      return { success: true, moodData };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error getting mood chart data:', error);
+      return { success: false, error: error.message, moodData: [] };
+    }
+  }
 }
 
 export default new FirestoreService();

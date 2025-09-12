@@ -54,7 +54,7 @@ export default function EmotionalWellbeing() {
   const [topEmotions, setTopEmotions] = useState([]);
   const [highlights, setHighlights] = useState({});
   const [triggers, setTriggers] = useState({});
-  const [selectedPeriod, setSelectedPeriod] = useState(7); // 7 or 15 days
+  const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
   const [patternPeriod, setPatternPeriod] = useState(7); // 7 or 30 days for pattern analysis
   const [highlightsPeriod, setHighlightsPeriod] = useState('week'); // 'week', 'month', or 'lifetime'
@@ -86,23 +86,53 @@ export default function EmotionalWellbeing() {
     loadHighlightsData();
   }, [highlightsPeriod]);
 
-  const loadRealEmotionalData = () => {
-    console.log(`📊 Loading emotional data for ${selectedPeriod} days...`);
+  const loadRealEmotionalData = async () => {
+    console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod} days from NEW Firebase structure...`);
     
     const user = getCurrentUser();
-    const userId = user?.uid || 'anonymous';
-    
-    // Get emotional data from the analysis service
-    const emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, selectedPeriod);
-    console.log('📈 Raw emotional data:', emotionalDataRaw);
-
-    if (emotionalDataRaw.length === 0) {
-      console.log('📝 No emotional data found, showing empty state');
+    if (!user) {
+      console.log('📊 UNIFIED: No user logged in, showing empty state');
       showEmptyState(selectedPeriod);
       return;
     }
 
-    processRealEmotionalData(emotionalDataRaw);
+    try {
+      // Get AI-generated mood data from new Firebase structure
+      const result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+      console.log('📊 UNIFIED: Mood chart data result:', result);
+
+      if (result.success && result.moodData && result.moodData.length > 0) {
+        console.log('📊 UNIFIED: Processing AI-generated mood data:', result.moodData.length, 'days');
+        
+        // Filter out any invalid data and ensure we have real AI scores
+        const validMoodData = result.moodData.filter(day => 
+          day.happiness !== 50 || day.energy !== 50 || day.anxiety !== 25 || day.stress !== 25
+        );
+        
+        if (validMoodData.length > 0) {
+          console.log('📊 UNIFIED: Found', validMoodData.length, 'days with AI-generated scores');
+          setWeeklyMoodData(result.moodData);
+          setEmotionalData(result.moodData);
+          
+          // Calculate averages for display
+          const avgHappiness = validMoodData.reduce((sum, item) => sum + item.happiness, 0) / validMoodData.length;
+          const avgEnergy = validMoodData.reduce((sum, item) => sum + item.energy, 0) / validMoodData.length;
+          const avgAnxiety = validMoodData.reduce((sum, item) => sum + item.anxiety, 0) / validMoodData.length;
+          const avgStress = validMoodData.reduce((sum, item) => sum + item.stress, 0) / validMoodData.length;
+          
+          console.log('📊 UNIFIED: AI Mood Averages - H:', Math.round(avgHappiness), 'E:', Math.round(avgEnergy), 'A:', Math.round(avgAnxiety), 'S:', Math.round(avgStress));
+        } else {
+          console.log('📊 UNIFIED: No real AI scores found, showing empty state');
+          showEmptyState(selectedPeriod);
+        }
+      } else {
+        console.log('📊 UNIFIED: No AI mood data found, showing empty state');
+        showEmptyState(selectedPeriod);
+      }
+    } catch (error) {
+      console.error('❌ UNIFIED: Error loading AI mood data:', error);
+      showEmptyState(selectedPeriod);
+    }
   };
 
   const loadBalanceData = () => {
@@ -655,7 +685,7 @@ export default function EmotionalWellbeing() {
                   <BarChart3 className="w-5 h-5" style={{ color: "#7DD3C0" }} />
                 </div>
                 <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Mood Chart - {selectedPeriod} Day Summary
+                  Mood Chart - {selectedPeriod === 365 ? 'Lifetime' : `${selectedPeriod} Day`} Summary
                 </h3>
               </div>
               
@@ -684,6 +714,18 @@ export default function EmotionalWellbeing() {
                   }`}
                 >
                   15 Days
+                </button>
+                <button
+                  onClick={() => setSelectedPeriod(365)}
+                  className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
+                    selectedPeriod === 365
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      : isDarkMode
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Lifetime
                 </button>
               </div>
             </div>

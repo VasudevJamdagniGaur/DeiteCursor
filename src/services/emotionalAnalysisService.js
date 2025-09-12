@@ -29,17 +29,13 @@ class EmotionalAnalysisService {
       };
     }
 
-    // Filter meaningful messages
-    const userMessages = messages
-      .filter(msg => msg.sender === 'user')
-      .map(msg => msg.text.trim())
-      .filter(text => text.length > 3);
+    // Create daily conversation transcript from ALL messages
+    const conversationTranscript = this.createDailyTranscript(messages);
+    console.log('📄 Daily conversation transcript created, length:', conversationTranscript.length);
+    console.log('📄 Transcript preview:', conversationTranscript.slice(0, 300));
 
-    const aiMessages = messages
-      .filter(msg => msg.sender === 'ai')
-      .map(msg => msg.text.trim());
-
-    if (userMessages.length === 0) {
+    if (conversationTranscript.length < 20) {
+      console.log('⚠️ Conversation too short for analysis');
       return {
         happiness: 50,
         energy: 50,
@@ -47,9 +43,6 @@ class EmotionalAnalysisService {
         stress: 25
       };
     }
-
-    // Build conversation context
-    const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     
     const analysisPrompt = `Your task is to analyze a person's daily chat conversation and assign numeric scores (0–100) to four emotional states:
 1. Happiness
@@ -76,37 +69,35 @@ class EmotionalAnalysisService {
 - If emotions are mixed, distribute appropriately (e.g., both high stress and some happiness can coexist).
 - Always return a JSON object with integer scores only.
 
-Chat conversation to analyze:
-${conversationContext}
+Daily Conversation Transcript:
+${conversationTranscript}
 
-Return only a JSON object in this exact format:
+Analyze this conversation and rate the user's happiness, stress, anxiety, and energy on a scale of 0–100, where 0 means none and 100 means very high.
+
+Return ONLY a JSON object with integer scores:
 {
-  "happiness": [0-100 integer],
-  "energy": [0-100 integer], 
-  "anxiety": [0-100 integer],
-  "stress": [0-100 integer]
+  "happiness": 0-100,
+  "energy": 0-100,
+  "anxiety": 0-100,
+  "stress": 0-100
 }`;
 
     try {
       console.log('🌐 Making API call for emotional analysis...');
 
-      const response = await fetch(`${this.baseURL}/api/chat`, {
+      const response = await fetch(`${this.baseURL}api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'llama3:70b',
-          messages: [
-            {
-              role: 'user',
-              content: analysisPrompt
-            }
-          ],
+          prompt: analysisPrompt,
           stream: false,
           options: {
-            temperature: 0.3, // Lower temperature for more consistent scoring
-            top_p: 0.9
+            temperature: 0.3,
+            top_p: 0.9,
+            max_tokens: 200
           }
         })
       });
@@ -122,19 +113,34 @@ Return only a JSON object in this exact format:
       const data = await response.json();
       console.log('✅ Raw response received');
 
-      if (data.message && data.message.content) {
-        const responseText = data.message.content.trim();
-        console.log('📊 Analysis response:', responseText);
+      if (data.response) {
+        const responseText = data.response.trim();
+        console.log('📊 AI Analysis response:', responseText);
 
         // Parse the JSON response
-        const scores = this.parseEmotionalScores(responseText);
-        console.log('✅ Parsed emotional scores:', scores);
-        
-        return scores;
-      } else {
-        console.error('❌ Invalid response format:', data);
-        throw new Error('Invalid response format from API');
+        try {
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const scores = JSON.parse(jsonMatch[0]);
+            
+            // Validate and clamp scores to 0-100
+            const validatedScores = {
+              happiness: Math.max(0, Math.min(100, parseInt(scores.happiness) || 50)),
+              energy: Math.max(0, Math.min(100, parseInt(scores.energy) || 50)),
+              anxiety: Math.max(0, Math.min(100, parseInt(scores.anxiety) || 25)),
+              stress: Math.max(0, Math.min(100, parseInt(scores.stress) || 25))
+            };
+            
+            console.log('✅ AI Emotional scores validated:', validatedScores);
+            return validatedScores;
+          }
+        } catch (parseError) {
+          console.error('❌ JSON parse error:', parseError.message);
+          console.log('Raw response for debugging:', responseText);
+        }
       }
+      
+      throw new Error('Could not parse AI response');
 
     } catch (error) {
       console.error('💥 Error in emotional analysis:', error);
@@ -203,6 +209,21 @@ Return only a JSON object in this exact format:
   clampScore(score) {
     // Ensure score is between 0 and 100
     return Math.max(0, Math.min(100, Math.round(score || 50)));
+  }
+
+  createDailyTranscript(messages) {
+    console.log('📄 Creating daily conversation transcript...');
+    
+    let transcript = 'Daily Conversation:\n\n';
+    
+    // Add all messages in chronological order
+    messages.forEach((msg, index) => {
+      const speaker = msg.sender === 'user' ? 'User' : 'Deite';
+      const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+      transcript += `[${timestamp}] ${speaker}: ${msg.text}\n\n`;
+    });
+    
+    return transcript.trim();
   }
 
   buildConversationContext(userMessages, aiMessages) {
