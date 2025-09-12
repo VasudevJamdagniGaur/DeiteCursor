@@ -9,7 +9,8 @@ import {
   limit, 
   getDocs,
   serverTimestamp,
-  where 
+  where,
+  increment
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDateId } from '../utils/dateUtils';
@@ -310,6 +311,167 @@ class FirestoreService {
     } catch (error) {
       console.error('Error checking highlights update need:', error);
       return { success: false, error: error.message, needsUpdate: true };
+    }
+  }
+  /**
+   * NEW STRUCTURE: Save chat message to /users/{uid}/days/{dateId}/messages/{messageId}
+   */
+  async saveChatMessageNew(uid, dateId, messageData) {
+    try {
+      console.log('💾 FIRESTORE NEW: Saving chat message...');
+      console.log('💾 FIRESTORE NEW: uid:', uid, 'dateId:', dateId, 'messageData:', messageData);
+      
+      // Create message in new structure
+      const messageRef = doc(collection(this.db, `users/${uid}/days/${dateId}/messages`));
+      await setDoc(messageRef, {
+        role: messageData.sender === 'user' ? 'user' : 'assistant',
+        text: messageData.text,
+        ts: serverTimestamp()
+      });
+
+      console.log('💾 FIRESTORE NEW: Message saved with ID:', messageRef.id);
+
+      // Update day info
+      const dayRef = doc(this.db, `users/${uid}/days/${dateId}`);
+      await setDoc(dayRef, {
+        date: dateId,
+        lastMessageAt: serverTimestamp(),
+        messageCount: increment(1)
+      }, { merge: true });
+
+      console.log('💾 FIRESTORE NEW: Day info updated');
+      return { success: true, messageId: messageRef.id };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error saving chat message:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Get chat messages from /users/{uid}/days/{dateId}/messages
+   */
+  async getChatMessagesNew(uid, dateId) {
+    try {
+      console.log('📖 FIRESTORE NEW: Getting chat messages...');
+      const messagesRef = collection(this.db, `users/${uid}/days/${dateId}/messages`);
+      const q = query(messagesRef, orderBy('ts', 'asc'));
+      const snapshot = await getDocs(q);
+      
+      const messages = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        messages.push({
+          id: doc.id,
+          sender: data.role === 'user' ? 'user' : 'ai',
+          text: data.text,
+          timestamp: data.ts?.toDate() || new Date()
+        });
+      });
+
+      console.log('📖 FIRESTORE NEW: Retrieved', messages.length, 'messages');
+      return { success: true, messages };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error getting chat messages:', error);
+      return { success: false, error: error.message, messages: [] };
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Save reflection to /users/{uid}/days/{dateId}/reflection/meta
+   */
+  async saveReflectionNew(uid, dateId, reflectionData) {
+    try {
+      console.log('💾 FIRESTORE NEW: Saving reflection...');
+      const reflectionRef = doc(this.db, `users/${uid}/days/${dateId}/reflection/meta`);
+      
+      await setDoc(reflectionRef, {
+        summary: reflectionData.summary,
+        mood: reflectionData.mood || 'neutral',
+        score: reflectionData.score || 50,
+        insights: reflectionData.insights || [],
+        updatedAt: serverTimestamp(),
+        source: 'auto'
+      });
+
+      console.log('💾 FIRESTORE NEW: Reflection saved successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error saving reflection:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Get reflection from /users/{uid}/days/{dateId}/reflection/meta
+   */
+  async getReflectionNew(uid, dateId) {
+    try {
+      console.log('📖 FIRESTORE NEW: Getting reflection...');
+      const reflectionRef = doc(this.db, `users/${uid}/days/${dateId}/reflection/meta`);
+      const snapshot = await getDoc(reflectionRef);
+      
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        console.log('📖 FIRESTORE NEW: Found reflection:', data.summary);
+        return { 
+          success: true, 
+          reflection: data.summary,
+          fullData: data
+        };
+      } else {
+        console.log('📖 FIRESTORE NEW: No reflection found');
+        return { success: true, reflection: null };
+      }
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error getting reflection:', error);
+      return { success: false, error: error.message, reflection: null };
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Save mood chart data to /users/{uid}/days/{dateId}/moodChart/daily
+   */
+  async saveMoodChartNew(uid, dateId, moodData) {
+    try {
+      console.log('💾 FIRESTORE NEW: Saving mood chart...');
+      const moodRef = doc(this.db, `users/${uid}/days/${dateId}/moodChart/daily`);
+      
+      await setDoc(moodRef, {
+        happiness: moodData.happiness,
+        anxiety: moodData.anxiety,
+        stress: moodData.stress,
+        energy: moodData.energy,
+        updatedAt: serverTimestamp()
+      });
+
+      console.log('💾 FIRESTORE NEW: Mood chart saved successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error saving mood chart:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Save emotional balance to /users/{uid}/days/{dateId}/emotionalBalance/daily
+   */
+  async saveEmotionalBalanceNew(uid, dateId, balanceData) {
+    try {
+      console.log('💾 FIRESTORE NEW: Saving emotional balance...');
+      const balanceRef = doc(this.db, `users/${uid}/days/${dateId}/emotionalBalance/daily`);
+      
+      await setDoc(balanceRef, {
+        positive: balanceData.positive,
+        negative: balanceData.negative,
+        neutral: balanceData.neutral,
+        updatedAt: serverTimestamp()
+      });
+
+      console.log('💾 FIRESTORE NEW: Emotional balance saved successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error saving emotional balance:', error);
+      return { success: false, error: error.message };
     }
   }
 }

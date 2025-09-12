@@ -18,6 +18,14 @@ class ReflectionService {
 
   async generateReflection(messages) {
     console.log('🔄 Starting reflection generation...');
+    console.log('🔍 REFLECTION DEBUG: messages type:', typeof messages, 'length:', messages?.length);
+    
+    // Safety check and fix for messages
+    if (!messages || !Array.isArray(messages)) {
+      console.error('❌ REFLECTION ERROR: Invalid messages array, using fallback');
+      return "Had a brief chat with Deite today.";
+    }
+    
     console.log('💬 Total messages for reflection:', messages.length);
     
     // Filter out system messages and get meaningful messages
@@ -37,9 +45,14 @@ class ReflectionService {
       return "Had a brief chat with Deite today but didn't share much.";
     }
 
-    // Generate AI summary
-    const aiSummary = await this.generateAISummary(userMessages, aiMessages);
-    return aiSummary;
+    // Generate AI summary with safe fallback
+    try {
+      const aiSummary = await this.generateAISummary(userMessages, aiMessages);
+      return aiSummary;
+    } catch (err) {
+      console.error('⚠️ Reflection generation via API failed, using fallback:', err?.message || err);
+      return this.createFallbackSummary(userMessages, aiMessages);
+    }
   }
 
   async generateAISummary(userMessages, aiMessages) {
@@ -49,17 +62,28 @@ class ReflectionService {
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
-    const reflectionPrompt = `Based on the user's chat messages, generate a concise and realistic daily journal entry. Do not invent or exaggerate events. Summarize the main emotions, concerns, and insights discussed during the conversation. Write in a grounded, honest tone — like a real person journaling about their day. Only use the content actually discussed in the messages. Do not make up metaphors or fictional events. The tone should be factual. Keep it brief and to the point.
+    const reflectionPrompt = `You are an empathetic AI assistant helping someone reflect on their day. Based on the conversation below, write a thoughtful, personal journal entry in first person that captures the essence of what they shared and experienced.
+
+Guidelines:
+- Write in first person ("I felt...", "Today I...")
+- Keep it warm, personal, and reflective
+- Focus on emotions, insights, and meaningful moments discussed
+- 2-3 sentences maximum
+- Make it sound like a real person writing in their journal
 
 Conversation with Deite:
 ${conversationContext}
 
-Daily journal entry:`;
+Write a personal journal entry that reflects this person's day and feelings:`;
+
+    // Minimal diagnostics to ensure we're not sending an empty prompt
+    console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
+    console.log('🧪 Reflection prompt preview:', reflectionPrompt.slice(0, 200));
 
     console.log('🌐 Making API call to RunPod for reflection...');
 
-    // Try multiple models for better compatibility
-    const modelOptions = ['llama3.1', 'llama3', 'llama2'];
+    // Use llama3:70b as requested
+    const modelOptions = ['llama3:70b', 'llama3.1:70b', 'llama3:8b', 'llama3'];
     
     for (const model of modelOptions) {
       try {
@@ -93,9 +117,10 @@ Daily journal entry:`;
         const data = await response.json();
         console.log(`✅ RunPod response received for journal generation with ${model}`);
         
-        // Parse response from generate API format
-        if (data.response !== undefined) {
-          const summary = data.response.trim();
+        // Accept multiple possible fields from providers
+        const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
+        if (typeof text === 'string' && text.trim()) {
+          const summary = text.trim();
           console.log('📖 Generated journal summary:', summary);
           return summary;
         } else {
@@ -111,6 +136,14 @@ Daily journal entry:`;
     
     // If all models failed, throw error
     throw new Error('All models failed for reflection generation');
+  }
+
+  createFallbackSummary(userMessages, aiMessages) {
+    const lastUser = userMessages[userMessages.length - 1] || '';
+    const firstUser = userMessages[0] || '';
+    const base = (firstUser !== lastUser) ? `${firstUser} ... ${lastUser}` : lastUser;
+    const trimmed = base.slice(0, 220);
+    return `Today I reflected on my day with Deite. I shared about: “${trimmed}${base.length > 220 ? '...' : ''}”. It was helpful to pause, notice my feelings, and consider what matters next.`;
   }
 
   buildConversationContext(userMessages, aiMessages) {
@@ -132,41 +165,70 @@ Daily journal entry:`;
   async saveReflection(userId, dateId, reflection) {
     try {
       console.log('💾 Saving reflection...');
+      console.log('🔍 SAVE DEBUG: userId:', userId, 'dateId:', dateId, 'reflection length:', reflection?.length);
       
-      // Analyze the reflection content to extract mood and insights
-      const analysis = this.analyzeReflection(reflection);
-      
+      // Simplified reflection data structure
       const reflectionData = {
         summary: reflection,
-        mood: analysis.mood,
-        score: analysis.score,
-        insights: analysis.insights,
+        date: dateId,
+        userId: userId,
+        timestamp: new Date().toISOString(),
         source: 'auto'
       };
       
+      console.log('🔍 SAVE DEBUG: Reflection data:', reflectionData);
+      
+      // Save to Firestore with simplified structure
       const result = await firestoreService.saveDayReflection(userId, dateId, reflectionData);
-      console.log('✅ Reflection saved successfully');
+      console.log('✅ Reflection saved successfully to Firestore');
+      
+      // Also save to localStorage as backup
+      localStorage.setItem(`reflection_${dateId}`, reflection);
+      console.log('✅ Reflection saved to localStorage as backup');
+      
       return result;
     } catch (error) {
-      console.error('Error saving reflection:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error saving reflection:', error);
+      // Fallback to localStorage only
+      localStorage.setItem(`reflection_${dateId}`, reflection);
+      console.log('✅ Reflection saved to localStorage (fallback)');
+      return { success: true };
     }
   }
 
   async getReflection(userId, dateId) {
     try {
-      const result = await firestoreService.getDayReflection(userId, dateId);
+      console.log('📖 GET DEBUG: Getting reflection for userId:', userId, 'dateId:', dateId);
+      
+      // Try new Firestore structure first
+      const result = await firestoreService.getReflectionNew(userId, dateId);
+      console.log('📖 GET DEBUG: New Firestore result:', result);
+      
       if (result.success && result.reflection) {
+        console.log('📖 GET DEBUG: Found in new Firestore structure:', result.reflection);
         return { 
           success: true, 
-          reflection: result.reflection.summary,
-          fullData: result.reflection 
+          reflection: result.reflection
         };
       }
+      
+      // Fallback to localStorage
+      const localReflection = localStorage.getItem(`reflection_${dateId}`);
+      if (localReflection) {
+        console.log('📖 GET DEBUG: Found in localStorage:', localReflection);
+        return { success: true, reflection: localReflection };
+      }
+      
+      console.log('📖 GET DEBUG: No reflection found anywhere');
       return { success: true, reflection: null };
     } catch (error) {
-      console.error('Error getting reflection:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error getting reflection:', error);
+      // Fallback to localStorage only
+      const localReflection = localStorage.getItem(`reflection_${dateId}`);
+      return { 
+        success: true, 
+        reflection: localReflection || null 
+      };
     }
   }
 
