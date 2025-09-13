@@ -1198,33 +1198,81 @@ Return in this JSON format:
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-100 border border-green-200'}`}>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Smile className="w-5 h-5 text-green-500" />
-                  <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
-                    {highlights.peak?.title}
+              {/* Best Mood Day - Unified UI with Green Title */}
+              <div 
+                className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                style={{
+                  backgroundColor: "rgba(30, 35, 50, 0.8)",
+                  border: "1px solid rgba(125, 211, 192, 0.2)",
+                  boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
+                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
+                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                }}
+              >
+                <div className="flex items-center space-x-3 mb-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                    style={{
+                      backgroundColor: "rgba(125, 211, 192, 0.2)",
+                      boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                    }}
+                  >
+                    <Smile className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                  </div>
+                  <h4 className="font-semibold text-green-400 group-hover:text-green-300 transition-colors duration-300">
+                    {highlights.peak?.title || 'Best Mood Day'}
                   </h4>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
-                  {highlights.peak?.description}
+                <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
+                  {highlights.peak?.description || 'Your highest emotional peak this period.'}
                 </p>
-                <p className={`text-xs mt-1 ${isDarkMode ? 'text-green-400' : 'text-green-500'}`}>
-                  {highlights.peak?.date}
+                <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                  {highlights.peak?.date || 'No data available'}
                 </p>
               </div>
 
-              <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-100 border border-red-200'}`}>
-                <div className="flex items-center space-x-2 mb-2">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <h4 className={`font-medium ${isDarkMode ? 'text-red-400' : 'text-red-700'}`}>
-                    {highlights.toughestDay?.title}
+              {/* Challenging Day - Unified UI with Red Title */}
+              <div 
+                className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                style={{
+                  backgroundColor: "rgba(30, 35, 50, 0.8)",
+                  border: "1px solid rgba(125, 211, 192, 0.2)",
+                  boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
+                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
+                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                }}
+              >
+                <div className="flex items-center space-x-3 mb-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                    style={{
+                      backgroundColor: "rgba(125, 211, 192, 0.2)",
+                      boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                  </div>
+                  <h4 className="font-semibold text-red-400 group-hover:text-red-300 transition-colors duration-300">
+                    {highlights.toughestDay?.title || 'Challenging Day'}
                   </h4>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
-                  {highlights.toughestDay?.description}
+                <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
+                  {highlights.toughestDay?.description || 'Your most challenging emotional period.'}
                 </p>
-                <p className={`text-xs mt-1 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`}>
-                  {highlights.toughestDay?.date}
+                <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                  {highlights.toughestDay?.date || 'No data available'}
                 </p>
               </div>
             </div>
