@@ -96,6 +96,8 @@ export default function ChatPage() {
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
+    
+    console.log('🔄 CHAT DEBUG: Set isLoading to true, input should be disabled now');
 
     // Save user message to Firestore immediately
     const user = getCurrentUser();
@@ -295,39 +297,55 @@ export default function ChatPage() {
         console.log('🤖 FORCING AI emotional analysis with RunPod...');
         console.log('🤖 Messages to analyze:', messagesToProcess.map(m => `${m.sender}: ${m.text.slice(0, 50)}...`));
         
-        const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesToProcess);
-        console.log('✅ AI Emotional analysis generated:', emotionalScores);
-        console.log('🎯 Scores breakdown - H:', emotionalScores.happiness, 'E:', emotionalScores.energy, 'A:', emotionalScores.anxiety, 'S:', emotionalScores.stress);
-        
-        const user = getCurrentUser();
-        if (user) {
-          // Save to NEW Firestore structure - moodChart
-          console.log('💾 SAVING AI SCORES TO FIREBASE:', emotionalScores);
-          console.log('💾 User ID:', user.uid, 'Date ID:', selectedDateId);
+        try {
+          const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesToProcess);
+          console.log('✅ AI Emotional analysis generated:', emotionalScores);
+          console.log('🎯 Scores breakdown - H:', emotionalScores.happiness, 'E:', emotionalScores.energy, 'A:', emotionalScores.anxiety, 'S:', emotionalScores.stress);
           
-          await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
-          console.log('💾 ✅ AI Mood chart saved to Firestore NEW structure - DONE!');
-          
-          // Also calculate and save emotional balance
-          const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
-          const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
-          const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
-          const neutral = 100 - positive - negative;
-          
-          await firestoreService.saveEmotionalBalanceNew(user.uid, selectedDateId, {
-            positive: Math.round(positive),
-            negative: Math.round(negative),
-            neutral: Math.round(neutral)
-          });
-          console.log('💾 AI Emotional balance saved to Firestore NEW structure');
-        } else {
-          // Fallback for anonymous users
-          const userId = 'anonymous';
-        await emotionalAnalysisService.saveEmotionalData(userId, selectedDateId, emotionalScores);
-          console.log('💾 Emotional data saved (anonymous)');
+          const user = getCurrentUser();
+          if (user) {
+            // Save to NEW Firestore structure - moodChart
+            console.log('💾 SAVING AI SCORES TO FIREBASE:', emotionalScores);
+            console.log('💾 User ID:', user.uid, 'Date ID:', selectedDateId);
+            
+            try {
+              await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
+              console.log('💾 ✅ AI Mood chart saved to Firestore NEW structure - DONE!');
+            } catch (saveError) {
+              console.error('❌ Error saving mood chart:', saveError);
+            }
+            
+            // Also calculate and save emotional balance
+            try {
+              const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
+              const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+              const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+              const neutral = 100 - positive - negative;
+              
+              await firestoreService.saveEmotionalBalanceNew(user.uid, selectedDateId, {
+                positive: Math.round(positive),
+                negative: Math.round(negative),
+                neutral: Math.round(neutral)
+              });
+              console.log('💾 AI Emotional balance saved to Firestore NEW structure');
+            } catch (balanceError) {
+              console.error('❌ Error saving emotional balance:', balanceError);
+            }
+          } else {
+            // Fallback for anonymous users
+            try {
+              const userId = 'anonymous';
+              await emotionalAnalysisService.saveEmotionalData(userId, selectedDateId, emotionalScores);
+              console.log('💾 Emotional data saved (anonymous)');
+            } catch (anonError) {
+              console.error('❌ Error saving anonymous emotional data:', anonError);
+            }
+          }
+        } catch (analysisError) {
+          console.error('❌ Error in emotional analysis:', analysisError);
         }
       } catch (emotionalError) {
-        console.error('❌ Error generating emotional analysis:', emotionalError);
+        console.error('❌ Error in emotional analysis section:', emotionalError);
       }
 
     } catch (error) {
@@ -345,7 +363,14 @@ export default function ChatPage() {
       setMessages(finalMessages);
       saveMessages(finalMessages);
     } finally {
+      console.log('🔄 CHAT DEBUG: Resetting isLoading to false - input should be enabled now');
       setIsLoading(false);
+      
+      // Safety timeout to ensure input is always re-enabled
+      setTimeout(() => {
+        setIsLoading(false);
+        console.log('🔄 SAFETY: Force-enabled chat input after timeout');
+      }, 1000);
     }
   };
 
