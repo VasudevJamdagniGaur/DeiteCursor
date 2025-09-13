@@ -107,23 +107,54 @@ export default function EmotionalWellbeing() {
       if (result.success && result.moodData && result.moodData.length > 0) {
         console.log('📊 UNIFIED: Processing AI-generated mood data:', result.moodData.length, 'days');
         
-        // Filter out any invalid data and ensure we have real AI scores
-        const validMoodData = result.moodData.filter(day => 
-          day.happiness !== 50 || day.energy !== 50 || day.anxiety !== 25 || day.stress !== 25
-        );
+        // Apply emotion rules and 200% cap to ALL loaded data
+        const processedMoodData = result.moodData.map(day => {
+          let { happiness, energy, anxiety, stress } = day;
+          
+          // Apply 200% cap
+          const total = happiness + energy + anxiety + stress;
+          if (total > 200) {
+            const scaleFactor = 200 / total;
+            happiness = Math.round(happiness * scaleFactor);
+            energy = Math.round(energy * scaleFactor);
+            anxiety = Math.round(anxiety * scaleFactor);
+            stress = Math.round(stress * scaleFactor);
+            console.log(`🔧 CHART: Applied 200% cap to ${day.day}, total was ${total}, scaled to ${happiness + energy + anxiety + stress}`);
+          }
+          
+          // Apply emotion rules
+          // Rule: Happiness decreases if stress/anxiety are high
+          if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
+            happiness = Math.min(40, happiness);
+            console.log(`🔧 CHART: Reduced happiness for ${day.day} due to high stress/anxiety`);
+          }
+          
+          return {
+            ...day,
+            happiness,
+            energy,
+            anxiety,
+            stress
+          };
+        });
+        
+        // Filter for display (show all data, even defaults, but with rules applied)
+        const validMoodData = processedMoodData;
         
         if (validMoodData.length > 0) {
-          console.log('📊 UNIFIED: Found', validMoodData.length, 'days with AI-generated scores');
-          setWeeklyMoodData(result.moodData);
-          setEmotionalData(result.moodData);
+          console.log('📊 UNIFIED: Found', validMoodData.length, 'days with rule-compliant scores');
+          setWeeklyMoodData(processedMoodData); // Use processed data with rules applied
+          setEmotionalData(processedMoodData);
           
-          // Calculate averages for display
-          const avgHappiness = validMoodData.reduce((sum, item) => sum + item.happiness, 0) / validMoodData.length;
-          const avgEnergy = validMoodData.reduce((sum, item) => sum + item.energy, 0) / validMoodData.length;
-          const avgAnxiety = validMoodData.reduce((sum, item) => sum + item.anxiety, 0) / validMoodData.length;
-          const avgStress = validMoodData.reduce((sum, item) => sum + item.stress, 0) / validMoodData.length;
+          // Calculate averages for display using processed data
+          const avgHappiness = processedMoodData.reduce((sum, item) => sum + item.happiness, 0) / processedMoodData.length;
+          const avgEnergy = processedMoodData.reduce((sum, item) => sum + item.energy, 0) / processedMoodData.length;
+          const avgAnxiety = processedMoodData.reduce((sum, item) => sum + item.anxiety, 0) / processedMoodData.length;
+          const avgStress = processedMoodData.reduce((sum, item) => sum + item.stress, 0) / processedMoodData.length;
+          const avgTotal = avgHappiness + avgEnergy + avgAnxiety + avgStress;
           
-          console.log('📊 UNIFIED: AI Mood Averages - H:', Math.round(avgHappiness), 'E:', Math.round(avgEnergy), 'A:', Math.round(avgAnxiety), 'S:', Math.round(avgStress));
+          console.log('📊 UNIFIED: Rule-Applied Averages - H:', Math.round(avgHappiness), 'E:', Math.round(avgEnergy), 'A:', Math.round(avgAnxiety), 'S:', Math.round(avgStress));
+          console.log('📊 UNIFIED: Average total:', Math.round(avgTotal), '/ 200 (cap)');
         } else {
           console.log('📊 UNIFIED: No real AI scores found, showing empty state');
           showEmptyState(selectedPeriod);
@@ -813,16 +844,34 @@ Return in this JSON format:
                           console.log(`🔍 DEBUG: ${key}:`, data);
                         });
                         
-                        // Force create test data for Sept 12
-                        const testScores = {
-                          happiness: 75,
-                          energy: 65,
-                          anxiety: 30,
-                          stress: 40
+                        // Force create RULE-COMPLIANT data for Sept 12
+                        console.log('🔧 Creating rule-compliant test data for Sept 12...');
+                        
+                        // Create scores that follow the 200% cap and emotion rules
+                        let testScores = {
+                          happiness: 60,
+                          energy: 55,
+                          anxiety: 40,
+                          stress: 45
                         };
                         
+                        // Apply 200% cap
+                        const total = testScores.happiness + testScores.energy + testScores.anxiety + testScores.stress;
+                        if (total > 200) {
+                          const scaleFactor = 200 / total;
+                          testScores = {
+                            happiness: Math.round(testScores.happiness * scaleFactor),
+                            energy: Math.round(testScores.energy * scaleFactor),
+                            anxiety: Math.round(testScores.anxiety * scaleFactor),
+                            stress: Math.round(testScores.stress * scaleFactor)
+                          };
+                        }
+                        
+                        console.log('🔧 Rule-compliant scores (total ≤ 200):', testScores);
+                        console.log('🔧 Total:', testScores.happiness + testScores.energy + testScores.anxiety + testScores.stress);
+                        
                         await firestoreService.saveMoodChartNew(user.uid, '2025-09-12', testScores);
-                        console.log('🔍 DEBUG: Test scores saved for Sept 12');
+                        console.log('🔍 DEBUG: Rule-compliant scores saved for Sept 12');
                         
                         // Reload data
                         loadRealEmotionalData();
@@ -833,7 +882,7 @@ Return in this JSON format:
                   }}
                   className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                 >
-                  Debug Sept 12
+                  Debug & Fix Sept 12
                 </button>
               </div>
               
