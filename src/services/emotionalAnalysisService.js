@@ -61,6 +61,7 @@ STRESS (0-100):
 - Should correlate with anxiety when both from same cause
 - Can be high with happiness only if mixed emotions explicitly expressed
 - May reduce if user ends feeling calm/reassured
+- CRITICAL: For serious events (death, financial difficulty, major trauma) → stress MUST be HIGHER than anxiety
 
 ANXIETY (0-100):
 - Reflects worry, uncertainty, fear, nervousness
@@ -68,6 +69,7 @@ ANXIETY (0-100):
 - MUST be ≥50 when grief, trauma, financial struggles present (unless strong emotional control)
 - Can be lower than stress if user acknowledges challenges but feels mentally prepared
 - Sudden worry spikes should raise anxiety more than stress
+- CRITICAL: For serious events (death, financial difficulty, major trauma) → anxiety should be LOWER than stress
 
 ENERGY (0-100):
 - Reflects motivation, vitality, activity level
@@ -158,18 +160,48 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
               console.log('🔧 RULE: High happiness with high stress/anxiety, reducing happiness');
             }
             
-            // Rule: Stress and anxiety correlation (within ±25)
-            const stressAnxietyDiff = Math.abs(stress - anxiety);
-            if (stressAnxietyDiff > 25) {
-              const avg = (stress + anxiety) / 2;
-              if (stress > anxiety) {
-                stress = Math.min(100, Math.round(avg + 12));
-                anxiety = Math.max(0, Math.round(avg - 12));
-              } else {
-                anxiety = Math.min(100, Math.round(avg + 12));
-                stress = Math.max(0, Math.round(avg - 12));
+            // Check for serious life events in conversation
+            const conversationLower = conversationTranscript.toLowerCase();
+            const seriousEvents = [
+              'death', 'died', 'passed away', 'funeral', 'loss of', 'lost someone',
+              'financial difficulty', 'financial crisis', 'bankruptcy', 'debt', 'money problems',
+              'lost job', 'unemployed', 'fired', 'laid off',
+              'divorce', 'breakup', 'relationship ended',
+              'illness', 'cancer', 'hospital', 'surgery',
+              'trauma', 'abuse', 'accident', 'emergency'
+            ];
+            
+            const hasSeriousEvent = seriousEvents.some(event => conversationLower.includes(event));
+            
+            if (hasSeriousEvent) {
+              console.log('🔧 SERIOUS EVENT DETECTED: Adjusting stress > anxiety rule');
+              
+              // For serious events, stress should be higher than anxiety
+              if (anxiety >= stress) {
+                const total = stress + anxiety;
+                stress = Math.min(100, Math.round(total * 0.6)); // 60% of combined
+                anxiety = Math.min(100, Math.round(total * 0.4)); // 40% of combined
+                console.log('🔧 RULE: Serious event - stress set higher than anxiety:', {stress, anxiety});
               }
-              console.log('🔧 RULE: Adjusted stress/anxiety correlation, diff was:', stressAnxietyDiff);
+              
+              // Ensure minimums for serious events
+              stress = Math.max(stress, 60);
+              anxiety = Math.max(anxiety, 50);
+              console.log('🔧 RULE: Applied serious event minimums - stress ≥60, anxiety ≥50');
+            } else {
+              // Normal stress/anxiety correlation (within ±25)
+              const stressAnxietyDiff = Math.abs(stress - anxiety);
+              if (stressAnxietyDiff > 25) {
+                const avg = (stress + anxiety) / 2;
+                if (stress > anxiety) {
+                  stress = Math.min(100, Math.round(avg + 12));
+                  anxiety = Math.max(0, Math.round(avg - 12));
+                } else {
+                  anxiety = Math.min(100, Math.round(avg + 12));
+                  stress = Math.max(0, Math.round(avg - 12));
+                }
+                console.log('🔧 RULE: Adjusted normal stress/anxiety correlation, diff was:', stressAnxietyDiff);
+              }
             }
             
             const validatedScores = {

@@ -1474,38 +1474,113 @@ Return in this JSON format:
                 ))
               ) : (
                 <>
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Sun className="w-5 h-5 text-blue-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                  {/* Continue Chatting */}
+                  <div 
+                    className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    style={{
+                      backgroundColor: "rgba(30, 35, 50, 0.8)",
+                      border: "1px solid rgba(125, 211, 192, 0.2)",
+                      boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
+                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
+                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                    }}
+                    onClick={() => navigate('/chat')}
+                  >
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                        style={{
+                          backgroundColor: "rgba(125, 211, 192, 0.2)",
+                          boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                        }}
+                      >
+                        <Sun className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                      </div>
+                      <h4 className="font-semibold text-gray-100 group-hover:text-white transition-colors duration-300">
                         Continue Chatting
                       </h4>
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                    <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed">
                       Keep engaging with Deite to build more comprehensive emotional insights and patterns.
                     </p>
                   </div>
 
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Star className="w-5 h-5 text-purple-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                  {/* Reflect Daily */}
+                  <div 
+                    className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    style={{
+                      backgroundColor: "rgba(30, 35, 50, 0.8)",
+                      border: "1px solid rgba(125, 211, 192, 0.2)",
+                      boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
+                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
+                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                    }}
+                    onClick={() => navigate('/chat')}
+                  >
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                        style={{
+                          backgroundColor: "rgba(125, 211, 192, 0.2)",
+                          boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                        }}
+                      >
+                        <Star className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                      </div>
+                      <h4 className="font-semibold text-gray-100 group-hover:text-white transition-colors duration-300">
                         Reflect Daily
                       </h4>
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                    <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed">
                       Regular conversations help create more accurate emotional tracking and better insights.
                     </p>
                   </div>
 
-                  <div className={`p-4 rounded-2xl ${isDarkMode ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50 border border-teal-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Brain className="w-5 h-5 text-teal-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
+                  {/* Build Patterns */}
+                  <div 
+                    className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    style={{
+                      backgroundColor: "rgba(30, 35, 50, 0.8)",
+                      border: "1px solid rgba(125, 211, 192, 0.2)",
+                      boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
+                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
+                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                    }}
+                    onClick={() => navigate('/chat')}
+                  >
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                        style={{
+                          backgroundColor: "rgba(125, 211, 192, 0.2)",
+                          boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                        }}
+                      >
+                        <Brain className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                      </div>
+                      <h4 className="font-semibold text-gray-100 group-hover:text-white transition-colors duration-300">
                         Build Patterns
                       </h4>
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-teal-300' : 'text-teal-600'}`}>
+                    <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed">
                       Share more details about your experiences to unlock personalized insights.
                     </p>
                   </div>
