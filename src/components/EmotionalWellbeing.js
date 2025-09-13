@@ -62,6 +62,9 @@ export default function EmotionalWellbeing() {
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedDateDetails, setSelectedDateDetails] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [emotionExplanations, setEmotionExplanations] = useState(null);
 
   useEffect(() => {
     loadRealEmotionalData();
@@ -511,6 +514,110 @@ export default function EmotionalWellbeing() {
     return null;
   };
 
+  const handleDateClick = async (dateData) => {
+    console.log('📊 Date clicked for detailed analysis:', dateData);
+    setSelectedDateDetails(dateData);
+    
+    try {
+      // Generate AI explanations for why each emotion has its score
+      const explanations = await generateEmotionExplanations(dateData);
+      setEmotionExplanations(explanations);
+      setShowDetailsModal(true);
+    } catch (error) {
+      console.error('❌ Error generating emotion explanations:', error);
+      // Show modal with basic info even if AI fails
+      setEmotionExplanations({
+        happiness: `Your happiness level was ${dateData.happiness}% on this day.`,
+        energy: `Your energy level was ${dateData.energy}% on this day.`,
+        anxiety: `Your anxiety level was ${dateData.anxiety}% on this day.`,
+        stress: `Your stress level was ${dateData.stress}% on this day.`
+      });
+      setShowDetailsModal(true);
+    }
+  };
+
+  const generateEmotionExplanations = async (dateData) => {
+    console.log('🤖 Generating AI explanations for emotion scores...');
+    
+    const user = getCurrentUser();
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+
+    // Get chat messages for that specific date
+    const chatResult = await firestoreService.getChatMessagesNew(user.uid, dateData.date);
+    
+    if (!chatResult.success || !chatResult.messages || chatResult.messages.length === 0) {
+      throw new Error('No chat data found for this date');
+    }
+
+    // Create conversation transcript for that day
+    const transcript = chatResult.messages.map(msg => 
+      `${msg.sender === 'user' ? 'User' : 'Deite'}: ${msg.text}`
+    ).join('\n\n');
+
+    const explanationPrompt = `Based on this conversation, explain why each emotion has its specific score. Be specific about what in the conversation led to each score.
+
+CONVERSATION:
+${transcript}
+
+EMOTION SCORES:
+- Happiness: ${dateData.happiness}%
+- Energy: ${dateData.energy}%
+- Anxiety: ${dateData.anxiety}%
+- Stress: ${dateData.stress}%
+
+For each emotion, explain in 1-2 sentences what specific parts of the conversation contributed to that score. Be concrete and reference actual content discussed.
+
+Return in this JSON format:
+{
+  "happiness": "Explanation for ${dateData.happiness}% happiness based on conversation",
+  "energy": "Explanation for ${dateData.energy}% energy based on conversation", 
+  "anxiety": "Explanation for ${dateData.anxiety}% anxiety based on conversation",
+  "stress": "Explanation for ${dateData.stress}% stress based on conversation"
+}`;
+
+    try {
+      const response = await fetch(`https://huccz96dzpalfa-11434.proxy.runpod.net/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:70b',
+          prompt: explanationPrompt,
+          stream: false,
+          options: {
+            temperature: 0.7,
+            max_tokens: 300
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.response) {
+          const jsonMatch = data.response.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const explanations = JSON.parse(jsonMatch[0]);
+            console.log('✅ AI explanations generated:', explanations);
+            return explanations;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error generating AI explanations:', error);
+    }
+
+    // Fallback explanations
+    return {
+      happiness: `Your happiness was ${dateData.happiness}% based on the positive emotions and content discussed in your conversation.`,
+      energy: `Your energy level was ${dateData.energy}% reflecting your motivation and engagement during the chat.`,
+      anxiety: `Your anxiety was ${dateData.anxiety}% based on any worries or concerns you shared.`,
+      stress: `Your stress level was ${dateData.stress}% reflecting any pressure or tension discussed.`
+    };
+  };
+
   const handleAIUpdate = async () => {
     console.log('🤖 Starting AI comprehensive update...');
     setIsUpdating(true);
@@ -773,7 +880,16 @@ export default function EmotionalWellbeing() {
 
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyMoodData}>
+                <LineChart 
+                  data={weeklyMoodData}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload[0]) {
+                      const clickedData = data.activePayload[0].payload;
+                      console.log('📊 CHART CLICK: Date clicked:', clickedData);
+                      handleDateClick(clickedData);
+                    }
+                  }}
+                >
                   <XAxis 
                     dataKey="day" 
                     axisLine={false}
@@ -1440,6 +1556,107 @@ export default function EmotionalWellbeing() {
       <div className="flex-1 overflow-y-auto p-6">
         {renderMoodSurvey()}
       </div>
+
+      {/* Emotion Details Modal */}
+      {showDetailsModal && selectedDateDetails && emotionExplanations && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div
+            className={`rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`}
+            style={{
+              boxShadow: isDarkMode 
+                ? "0 20px 60px rgba(0, 0, 0, 0.5)"
+                : "0 20px 60px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                Emotion Details - {selectedDateDetails.day}
+              </h3>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                <span className={`text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>×</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Happiness */}
+              <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                    <Smile className="w-4 h-4 text-white" />
+                  </div>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                    Happiness: {selectedDateDetails.happiness}%
+                  </h4>
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                  {emotionExplanations.happiness}
+                </p>
+              </div>
+
+              {/* Energy */}
+              <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-white" />
+                  </div>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                    Energy: {selectedDateDetails.energy}%
+                  </h4>
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}`}>
+                  {emotionExplanations.energy}
+                </p>
+              </div>
+
+              {/* Anxiety */}
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 text-white" />
+                  </div>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                    Anxiety: {selectedDateDetails.anxiety}%
+                  </h4>
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                  {emotionExplanations.anxiety}
+                </p>
+              </div>
+
+              {/* Stress */}
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                    <Target className="w-4 h-4 text-white" />
+                  </div>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-red-400' : 'text-red-700'}`}>
+                    Stress: {selectedDateDetails.stress}%
+                  </h4>
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
+                  {emotionExplanations.stress}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:opacity-90 transition-opacity"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
