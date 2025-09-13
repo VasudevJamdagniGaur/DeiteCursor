@@ -44,43 +44,46 @@ class EmotionalAnalysisService {
       };
     }
     
-    const analysisPrompt = `Your task is to analyze a person's daily chat conversation and assign numeric scores (0–100) to four emotional states:
-1. Happiness
-2. Energy  
-3. Anxiety
-4. Stress
+    const analysisPrompt = `Analyze this conversation and score emotions (0-100) following these STRICT RULES:
 
-### Rules for Scoring:
-- 0 = Not present at all.
-- 25 = Mild presence.
-- 50 = Moderate presence.
-- 75 = Strong presence.
-- 100 = Very intense/overwhelming presence.
+EMOTION SCORING RULES (Total sum must not exceed 200%):
 
-### Guidelines:
-- Happiness is shown by positivity, joy, gratitude, humor, optimism, or excitement.
-- Energy is shown by motivation, enthusiasm, activity level, and engagement. Fatigue or low motivation lowers this score.
-- Anxiety is shown by worry, nervousness, overthinking, fear, or uncertainty.
-- Stress is shown by pressure, overwhelm, frustration, deadlines, or tension.
+HAPPINESS (0-100):
+- Reflects positive emotions: joy, satisfaction, relief, excitement, gratitude
+- MUST decrease if stress or anxiety are high
+- Can only be very high if stress and anxiety are low
+- If grief, trauma, financial struggles, negative feelings present → happiness should NOT exceed 50 unless clear acceptance/resolution
+- Short bursts of joy cannot outweigh deeper negative emotions
 
-### Important:
-- Consider the overall **tone of the full chat**, not just isolated words.
-- If multiple emotions appear, balance them. Example: "I was stressed earlier, but felt relaxed later" → stress score should be moderate, not extreme.
-- If emotions are mixed, distribute appropriately (e.g., both high stress and some happiness can coexist).
-- Always return a JSON object with integer scores only.
+STRESS (0-100):
+- Reflects pressure, overwhelm, emotional burden
+- MUST be ≥50 if grief, trauma, financial difficulties mentioned (unless clearly resolved)
+- Should correlate with anxiety when both from same cause
+- Can be high with happiness only if mixed emotions explicitly expressed
+- May reduce if user ends feeling calm/reassured
 
-Daily Conversation Transcript:
+ANXIETY (0-100):
+- Reflects worry, uncertainty, fear, nervousness
+- Should move in same direction as stress (within ±25 difference) unless explicitly separated
+- MUST be ≥50 when grief, trauma, financial struggles present (unless strong emotional control)
+- Can be lower than stress if user acknowledges challenges but feels mentally prepared
+- Sudden worry spikes should raise anxiety more than stress
+
+ENERGY (0-100):
+- Reflects motivation, vitality, activity level
+- INDEPENDENT of happiness, stress, anxiety
+- High stress can coexist with high energy (tense but active)
+- Low energy can coexist with happiness (peaceful but tired) or high stress (burnout)
+- Rises with momentum/productivity/excitement, falls with fatigue/burnout/hopelessness
+
+CRITICAL CONSTRAINT: The sum of all four scores MUST NOT exceed 200.
+If total > 200, proportionally reduce all scores to fit within 200.
+
+CONVERSATION:
 ${conversationTranscript}
 
-Analyze this conversation and rate the user's happiness, stress, anxiety, and energy on a scale of 0–100, where 0 means none and 100 means very high.
-
-Return ONLY a JSON object with integer scores:
-{
-  "happiness": 0-100,
-  "energy": 0-100,
-  "anxiety": 0-100,
-  "stress": 0-100
-}`;
+Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
+{"happiness": 0-100, "energy": 0-100, "anxiety": 0-100, "stress": 0-100}`;
 
     try {
       console.log('🌐 Making API call for emotional analysis...');
@@ -123,15 +126,62 @@ Return ONLY a JSON object with integer scores:
           if (jsonMatch) {
             const scores = JSON.parse(jsonMatch[0]);
             
-            // Validate and clamp scores to 0-100
+            // Validate and apply emotion rules with 200% cap
+            let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 50));
+            let energy = Math.max(0, Math.min(100, parseInt(scores.energy) || 50));
+            let anxiety = Math.max(0, Math.min(100, parseInt(scores.anxiety) || 25));
+            let stress = Math.max(0, Math.min(100, parseInt(scores.stress) || 25));
+            
+            console.log('🔍 Raw AI scores:', {happiness, energy, anxiety, stress});
+            
+            // Apply 200% total cap constraint
+            const total = happiness + energy + anxiety + stress;
+            if (total > 200) {
+              const scaleFactor = 200 / total;
+              happiness = Math.round(happiness * scaleFactor);
+              energy = Math.round(energy * scaleFactor);
+              anxiety = Math.round(anxiety * scaleFactor);
+              stress = Math.round(stress * scaleFactor);
+              console.log('🔧 RULE: Total was', total, 'scaled down by factor', scaleFactor.toFixed(2));
+            }
+            
+            // Apply specific emotion rules
+            // Rule: Happiness decreases if stress/anxiety are high
+            if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
+              happiness = Math.min(40, happiness);
+              console.log('🔧 RULE: High stress/anxiety detected, reducing happiness');
+            }
+            
+            // Rule: Happiness can only be very high if stress/anxiety are low
+            if (happiness >= 70 && (stress > 40 || anxiety > 40)) {
+              happiness = Math.min(60, happiness);
+              console.log('🔧 RULE: High happiness with high stress/anxiety, reducing happiness');
+            }
+            
+            // Rule: Stress and anxiety correlation (within ±25)
+            const stressAnxietyDiff = Math.abs(stress - anxiety);
+            if (stressAnxietyDiff > 25) {
+              const avg = (stress + anxiety) / 2;
+              if (stress > anxiety) {
+                stress = Math.min(100, Math.round(avg + 12));
+                anxiety = Math.max(0, Math.round(avg - 12));
+              } else {
+                anxiety = Math.min(100, Math.round(avg + 12));
+                stress = Math.max(0, Math.round(avg - 12));
+              }
+              console.log('🔧 RULE: Adjusted stress/anxiety correlation, diff was:', stressAnxietyDiff);
+            }
+            
             const validatedScores = {
-              happiness: Math.max(0, Math.min(100, parseInt(scores.happiness) || 50)),
-              energy: Math.max(0, Math.min(100, parseInt(scores.energy) || 50)),
-              anxiety: Math.max(0, Math.min(100, parseInt(scores.anxiety) || 25)),
-              stress: Math.max(0, Math.min(100, parseInt(scores.stress) || 25))
+              happiness: happiness,
+              energy: energy,
+              anxiety: anxiety,
+              stress: stress
             };
             
-            console.log('✅ AI Emotional scores validated:', validatedScores);
+            const finalTotal = happiness + energy + anxiety + stress;
+            console.log('✅ AI Emotional scores with rules applied:', validatedScores);
+            console.log('✅ Final total:', finalTotal, '/ 200 (cap)');
             return validatedScores;
           }
         } catch (parseError) {
