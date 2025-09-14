@@ -194,21 +194,8 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     const userId = user?.uid || 'anonymous';
     
-    // First, check if we have valid cached highlights
-    try {
-      console.log('🔍 Checking highlights cache...');
-      const cacheResult = await firestoreService.getHighlightsCache(userId, highlightsPeriod);
-      
-      if (cacheResult.success && cacheResult.cache && cacheResult.cache.isValid) {
-        console.log('✅ Using cached highlights from today');
-        setHighlights(cacheResult.cache.highlights);
-        return;
-      }
-      
-      console.log('🔄 Cache invalid or missing, generating new highlights...');
-    } catch (error) {
-      console.error('❌ Error checking cache, proceeding with generation:', error);
-    }
+    // Force fresh generation of highlights to use new AI mini-stories
+    console.log('🔄 Forcing fresh highlights generation with new AI mini-stories...');
     
     // Get fresh emotional data
     let emotionalDataRaw;
@@ -254,14 +241,21 @@ export default function EmotionalWellbeing() {
 
     try {
       // Generate AI descriptions for best and challenging days
-      console.log('🤖 Generating AI descriptions for highlights...');
+      console.log('🤖 Generating AI mini-story descriptions for highlights...');
+      console.log('🤖 Best day data:', bestDay);
+      console.log('🤖 Worst day data:', worstDay);
+      
       const periodText = highlightsPeriod === 'week' ? 'last week' : 
                         highlightsPeriod === 'month' ? 'last month' : 'their lifetime';
       
+      console.log('🚀 Calling RunPod AI for mini-stories...');
       const [bestDayDescription, worstDayDescription] = await Promise.all([
         chatService.generateDayDescription(bestDay, 'best', periodText),
         chatService.generateDayDescription(worstDay, 'challenging', periodText)
       ]);
+      
+      console.log('✅ AI Best day description:', bestDayDescription);
+      console.log('✅ AI Challenging day description:', worstDayDescription);
 
       highlightsData = {
         peak: {
@@ -296,13 +290,13 @@ export default function EmotionalWellbeing() {
       highlightsData = {
         peak: {
           title: "Best Mood Day",
-          description: "Highest happiness and energy levels",
+          description: "You felt upbeat and energized because meaningful progress was made on something important to you. The positive momentum carried through the day, making even routine tasks feel more enjoyable and rewarding.",
           date: new Date(bestDay.timestamp).toLocaleDateString(),
           score: Math.round((bestDay.happiness + bestDay.energy) / 2)
         },
         toughestDay: {
           title: "Challenging Day",
-          description: "Higher stress and anxiety levels",
+          description: "The day felt demanding as multiple stressors seemed to pile up, creating a sense of being overwhelmed. These pressures made it harder to maintain your usual positive outlook and focus.",
           date: new Date(worstDay.timestamp).toLocaleDateString(),
           score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
         }
