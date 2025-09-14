@@ -558,10 +558,10 @@ export default function EmotionalWellbeing() {
       console.error('❌ Error generating emotion explanations:', error);
       // Show modal with basic info even if AI fails
       setEmotionExplanations({
-        happiness: `Your happiness level was ${dateData.happiness}% on this day.`,
-        energy: `Your energy level was ${dateData.energy}% on this day.`,
-        anxiety: `Your anxiety level was ${dateData.anxiety}% on this day.`,
-        stress: `Your stress level was ${dateData.stress}% on this day.`
+        happiness: `You felt happy because of positive interactions and topics discussed.`,
+        energy: `Your energy was steady since you were engaged in meaningful conversation.`,
+        anxiety: `You had some concerns about various topics that came up.`,
+        stress: `You felt mild stress due to daily responsibilities mentioned.`
       });
       setShowDetailsModal(true);
     }
@@ -587,7 +587,7 @@ export default function EmotionalWellbeing() {
       `${msg.sender === 'user' ? 'User' : 'Deite'}: ${msg.text}`
     ).join('\n\n');
 
-    const explanationPrompt = `Based on this conversation, explain why each emotion has its specific score. Be specific about what in the conversation led to each score.
+    const explanationPrompt = `Based on this conversation, explain why the user felt each emotion at that specific level. Give one concise, contextual reason per emotion.
 
 CONVERSATION:
 ${transcript}
@@ -598,18 +598,24 @@ EMOTION SCORES:
 - Anxiety: ${dateData.anxiety}%
 - Stress: ${dateData.stress}%
 
-For each emotion, explain in 1-2 sentences what specific parts of the conversation contributed to that score. Be concrete and reference actual content discussed.
+For each emotion, provide ONE short sentence explaining WHY the user felt that way based on what they discussed. Be specific and contextual, not generic.
+
+Examples:
+- "You felt happy because you achieved a goal you were working towards."
+- "Your energy was steady since you were motivated but dealing with challenges."
+- "You had some worries about upcoming deadlines that were mentioned."
+- "You felt mild stress due to work responsibilities you discussed."
 
 Return in this JSON format:
 {
-  "happiness": "Explanation for ${dateData.happiness}% happiness based on conversation",
-  "energy": "Explanation for ${dateData.energy}% energy based on conversation", 
-  "anxiety": "Explanation for ${dateData.anxiety}% anxiety based on conversation",
-  "stress": "Explanation for ${dateData.stress}% stress based on conversation"
+  "happiness": "You felt happy because [specific reason from conversation]",
+  "energy": "Your energy was [level description] since [specific reason from conversation]",
+  "anxiety": "You had [anxiety level description] about [specific concern from conversation]",
+  "stress": "You felt [stress level description] due to [specific stressor from conversation]"
 }`;
 
     try {
-      const response = await fetch(`https://huccz96dzpalfa-11434.proxy.runpod.net/api/generate`, {
+      const response = await fetch(`https://ymsolp6klwq35e-11434.proxy.runpod.net/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -642,10 +648,10 @@ Return in this JSON format:
 
     // Fallback explanations
     return {
-      happiness: `Your happiness was ${dateData.happiness}% based on the positive emotions and content discussed in your conversation.`,
-      energy: `Your energy level was ${dateData.energy}% reflecting your motivation and engagement during the chat.`,
-      anxiety: `Your anxiety was ${dateData.anxiety}% based on any worries or concerns you shared.`,
-      stress: `Your stress level was ${dateData.stress}% reflecting any pressure or tension discussed.`
+      happiness: `You felt happy because of the positive topics and achievements discussed in your conversation.`,
+      energy: `Your energy was moderate since you were engaged but dealing with various challenges.`,
+      anxiety: `You had some concerns about topics that came up during the chat.`,
+      stress: `You felt mild stress due to responsibilities and pressures mentioned.`
     };
   };
 
