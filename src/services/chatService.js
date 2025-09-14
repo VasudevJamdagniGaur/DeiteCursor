@@ -1,6 +1,6 @@
 class ChatService {
   constructor() {
-    this.baseURL = 'https://huccz96dzpalfa-11434.proxy.runpod.net/';
+    this.baseURL = 'https://ymsolp6klwq35e-11434.proxy.runpod.net/';
   }
 
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {
@@ -391,15 +391,35 @@ class ChatService {
       
       let prompt;
       if (dayType === 'best') {
-        prompt = `On ${date}, this person had their best mood day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what likely made this such a positive day based on these emotional levels. Be warm and encouraging.`;
+        prompt = `On ${date}, this person had their best mood day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. Create a mini-story explaining what made this day great. Write 2-3 sentences that tell what likely happened and how it made them feel throughout the day.
+
+Format like this example:
+"You felt upbeat and motivated because you finally completed an important task you'd been putting off. High energy and happiness carried through the day, making even small activities feel rewarding."
+
+Focus on:
+- A specific achievement, breakthrough, or positive event
+- How that led to sustained good feelings
+- The ripple effect on the rest of the day
+
+Write a realistic scenario based on the emotion levels.`;
       } else {
-        prompt = `On ${date}, this person had their most challenging day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. In 1-2 sentences, explain what might have made this day difficult based on these emotional levels. Be empathetic and supportive.`;
+        prompt = `On ${date}, this person had their most challenging day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. Create a mini-story explaining what made this day difficult. Write 2-3 sentences that tell what likely happened and how it affected them throughout the day.
+
+Format like this example:
+"The day felt tough as stress from upcoming deadlines combined with anxious thoughts about the outcome. These worries overshadowed your mood, making it harder to stay positive and focused."
+
+Focus on:
+- A specific stressor, challenge, or difficult situation
+- How that created ongoing emotional impact
+- The effect on their overall mood and day
+
+Write a realistic scenario based on the emotion levels.`;
       }
 
       const messages = [
         {
           role: 'system',
-          content: 'You are an empathetic emotional wellness assistant. Provide brief, insightful explanations about emotional patterns. Keep responses to 1-2 sentences maximum and focus on the emotional data provided.'
+          content: 'You are an empathetic emotional wellness assistant. Create brief, story-like explanations that connect specific events to emotional patterns. Write 2-3 sentences that tell what likely happened and how it affected their day. Be realistic and personal, avoiding generic emotion descriptions.'
         },
         {
           role: 'user',
@@ -407,15 +427,28 @@ class ChatService {
         }
       ];
 
-      const response = await fetch(`${this.baseURL}/api/chat`, {
+      // Convert messages to a single prompt for Ollama generate API
+      const promptText = messages.map(msg => {
+        if (msg.role === 'system') return msg.content;
+        if (msg.role === 'user') return `User: ${msg.content}`;
+        return msg.content;
+      }).join('\n\n');
+
+      console.log('🚀 Calling RunPod with prompt:', promptText.substring(0, 200) + '...');
+
+      const response = await fetch(`${this.baseURL}api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3.1:70b',
-          messages: messages,
-          stream: false
+          model: 'llama3:70b',
+          prompt: promptText,
+          stream: false,
+          options: {
+            temperature: 0.7,
+            max_tokens: 200
+          }
         })
       });
 
@@ -424,20 +457,21 @@ class ChatService {
       }
 
       const data = await response.json();
+      console.log('✅ RunPod response:', data);
       
-      if (data.message && data.message.content) {
-        return data.message.content.trim();
+      if (data.response) {
+        return data.response.trim();
       }
 
       throw new Error('Invalid response format');
 
     } catch (error) {
       console.error(`❌ Error generating ${dayType} day description:`, error);
-      // Return fallback descriptions
+      // Return fallback mini-story descriptions
       if (dayType === 'best') {
-        return "Your high energy and happiness levels created an optimal emotional state for a fulfilling day.";
+        return "You felt upbeat and motivated because you accomplished meaningful tasks that brought you satisfaction. High energy and happiness carried through the day, making even routine activities feel rewarding and enjoyable.";
       } else {
-        return "Elevated stress and anxiety levels made this a more challenging day to navigate.";
+        return "The day felt challenging as stress from various responsibilities combined with some anxious thoughts about the future. These pressures made it harder to maintain your usual positive outlook and focus throughout the day.";
       }
     }
   }
