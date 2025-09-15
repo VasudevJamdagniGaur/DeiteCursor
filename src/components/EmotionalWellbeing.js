@@ -180,8 +180,9 @@ export default function EmotionalWellbeing() {
     console.log('📊 Balance data:', balanceDataRaw);
 
     if (balanceDataRaw.length === 0) {
-      console.log('📝 No balance data found, setting empty balance');
-      setMoodBalance([]);
+      console.log('📝 No balance data found, creating empty time series');
+      // Still create time series with default values
+      processBalanceData([]);
       return;
     }
 
@@ -318,30 +319,46 @@ export default function EmotionalWellbeing() {
   const processBalanceData = (data) => {
     console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod} days`);
     
-    // Calculate averages for the selected period
-    const validData = data.filter(item => item.happiness !== undefined);
-    
-    if (validData.length > 0) {
-      const avgHappiness = validData.reduce((sum, day) => sum + day.happiness, 0) / validData.length;
-      const avgEnergy = validData.reduce((sum, day) => sum + day.energy, 0) / validData.length;
-      const avgAnxiety = validData.reduce((sum, day) => sum + day.anxiety, 0) / validData.length;
-      const avgStress = validData.reduce((sum, day) => sum + day.stress, 0) / validData.length;
-
-      // Calculate balance based on averages
-      const positiveScore = Math.round((avgHappiness + avgEnergy) / 2);
-      const negativeScore = Math.round((avgAnxiety + avgStress) / 2);
-      const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
-
-      setMoodBalance([
-        { name: 'Positive', value: positiveScore, color: '#7DD3C0' },
-        { name: 'Neutral', value: neutralScore, color: '#D4AF37' },
-        { name: 'Negative', value: negativeScore, color: '#9BB5FF' }
-      ]);
-
-      console.log('✅ Balance data processed successfully');
-    } else {
-      setMoodBalance([]);
+    // Create date range for the balance period
+    const dateRange = [];
+    for (let i = balancePeriod - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      dateRange.push(date.toISOString().split('T')[0]);
     }
+
+    // Map balance data to date range with daily calculations
+    const balanceData = dateRange.map(dateStr => {
+      const dayData = data.find(item => item.date === dateStr);
+      const date = new Date(dateStr);
+      
+      if (dayData && dayData.happiness !== undefined) {
+        // Calculate balance for this specific day
+        const positiveScore = Math.round((dayData.happiness + dayData.energy) / 2);
+        const negativeScore = Math.round((dayData.anxiety + dayData.stress) / 2);
+        const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
+        
+        return {
+          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          date: dateStr,
+          positive: positiveScore,
+          neutral: neutralScore,
+          negative: negativeScore
+        };
+      } else {
+        // Default balanced state for days with no data
+        return {
+          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          date: dateStr,
+          positive: 40,
+          neutral: 35,
+          negative: 25
+        };
+      }
+    });
+
+    setMoodBalance(balanceData);
+    console.log('✅ Balance data processed successfully as time series');
   };
 
   const processRealEmotionalData = (data) => {
@@ -414,8 +431,15 @@ export default function EmotionalWellbeing() {
     }));
     setWeeklyMoodData(emptyWeeklyData);
 
-    // Set empty mood balance
-    setMoodBalance([]);
+    // Set empty mood balance with default time series
+    const emptyBalanceData = dateRange.map(date => ({
+      day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: date.toISOString().split('T')[0],
+      positive: 0,
+      neutral: 0,
+      negative: 0
+    }));
+    setMoodBalance(emptyBalanceData);
 
     // Set empty top emotions
     setTopEmotions([]);
@@ -609,7 +633,7 @@ Return in this JSON format:
 }`;
 
     try {
-      const response = await fetch(`https://ymsolp6klwq35e-11434.proxy.runpod.net/api/generate`, {
+      const response = await fetch(`https://chv7ipbz92p8pu-11434.proxy.runpod.net/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1035,12 +1059,17 @@ Return in this JSON format:
             </div>
           </div>
 
-          {/* 2. Emotional Balance - Pie Chart */}
+          {/* 2. Emotional Balance - Line Chart */}
           {moodBalance.length > 0 && (
             <div
               className={`rounded-3xl p-6 backdrop-blur-lg transition-all duration-300 ${
                 isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
               }`}
+              style={{
+                boxShadow: isDarkMode 
+                  ? "inset 0 0 20px rgba(212, 175, 55, 0.1), 0 8px 32px rgba(212, 175, 55, 0.05)"
+                  : "inset 0 0 20px rgba(134, 169, 107, 0.1), 0 8px 32px rgba(134, 169, 107, 0.05)",
+              }}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
@@ -1054,7 +1083,7 @@ Return in this JSON format:
                     <Target className="w-5 h-5" style={{ color: "#D4AF37" }} />
                   </div>
                   <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    Emotional Balance
+                    Emotional Balance - {balancePeriod} Day{balancePeriod > 1 ? 's' : ''} Overview
                   </h3>
                 </div>
 
@@ -1099,42 +1128,84 @@ Return in this JSON format:
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
-                <div className="w-48 h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={moodBalance}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {moodBalance.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={moodBalance}>
+                    <XAxis 
+                      dataKey="day" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
+                      label={{ value: '%', angle: 0, position: 'insideLeft' }}
+                      domain={[0, 100]}
+                    />
+                    <Tooltip 
+                      content={<CustomTooltip />}
+                      cursor={{ stroke: isDarkMode ? '#374151' : '#D1D5DB', strokeWidth: 1 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="positive"
+                      stroke="#7DD3C0"
+                      strokeWidth={3}
+                      dot={{ fill: '#7DD3C0', strokeWidth: 2, r: 4 }}
+                      activeDot={{ 
+                        r: 8, 
+                        stroke: '#7DD3C0', 
+                        strokeWidth: 3, 
+                        fill: '#7DD3C0',
+                        style: { filter: 'drop-shadow(0 0 8px rgba(125, 211, 192, 0.6))' }
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="neutral"
+                      stroke="#D4AF37"
+                      strokeWidth={3}
+                      dot={{ fill: '#D4AF37', strokeWidth: 2, r: 4 }}
+                      activeDot={{ 
+                        r: 8, 
+                        stroke: '#D4AF37', 
+                        strokeWidth: 3, 
+                        fill: '#D4AF37',
+                        style: { filter: 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.6))' }
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="negative"
+                      stroke="#9BB5FF"
+                      strokeWidth={3}
+                      dot={{ fill: '#9BB5FF', strokeWidth: 2, r: 4 }}
+                      activeDot={{ 
+                        r: 8, 
+                        stroke: '#9BB5FF', 
+                        strokeWidth: 3, 
+                        fill: '#9BB5FF',
+                        style: { filter: 'drop-shadow(0 0 8px rgba(155, 181, 255, 0.6))' }
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
 
-                <div className="space-y-3">
-                  {moodBalance.map((item, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      ></div>
-                      <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {item.name}
-                      </span>
-                      <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                        {item.value}%
-                      </span>
-                    </div>
-                  ))}
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-[#7DD3C0]"></div>
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Positive</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-[#D4AF37]"></div>
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Neutral</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-[#9BB5FF]"></div>
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Negative</span>
                 </div>
               </div>
             </div>
