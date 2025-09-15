@@ -3,7 +3,7 @@ import { getDateIdDaysAgo, getDateId } from '../utils/dateUtils';
 
 class PatternAnalysisService {
   constructor() {
-    this.baseURL = 'https://huccz96dzpalfa-11434.proxy.runpod.net/';
+    this.baseURL = 'https://chv7ipbz92p8pu-11434.proxy.runpod.net/';
     this.minDaysRequired = 3; // Minimum days needed for meaningful analysis
     this.minMessagesRequired = 8; // Minimum total messages needed
   }
