@@ -65,31 +65,234 @@ export default function EmotionalWellbeing() {
   const [selectedDateDetails, setSelectedDateDetails] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [emotionExplanations, setEmotionExplanations] = useState(null);
+  const [isLoadingFresh, setIsLoadingFresh] = useState(false);
+  const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
 
-  useEffect(() => {
-    loadRealEmotionalData();
-  }, [selectedPeriod]);
+  // Cache keys for different data types
+  const getCacheKey = (type, period, userId) => `emotional_wellbeing_${type}_${period}_${userId}`;
 
+  // Load cached data instantly, then fetch fresh data
   useEffect(() => {
-    loadBalanceData();
-  }, [balancePeriod]);
-
-  useEffect(() => {
-    loadRealEmotionalData();
-    loadBalanceData();
-    loadPatternAnalysis();
-    loadHighlightsData();
+    const user = getCurrentUser();
+    if (user) {
+      // Load cached data instantly
+      loadCachedData(user.uid);
+      // Then fetch fresh data in background
+      loadFreshData();
+    }
   }, []);
 
   useEffect(() => {
-    loadPatternAnalysis();
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedEmotionalData(user.uid, selectedPeriod);
+      loadFreshEmotionalData();
+    }
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedBalanceData(user.uid, balancePeriod);
+      loadFreshBalanceData();
+    }
+  }, [balancePeriod]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedPatternData(user.uid, patternPeriod);
+      loadFreshPatternAnalysis();
+    }
   }, [patternPeriod]);
 
   useEffect(() => {
-    loadHighlightsData();
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedHighlightsData(user.uid, highlightsPeriod);
+      loadFreshHighlightsData();
+    }
   }, [highlightsPeriod]);
 
-  const loadRealEmotionalData = async () => {
+  // Cache management functions
+  const saveToCache = (key, data) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+      localStorage.setItem(key, JSON.stringify(cacheData));
+      console.log(`💾 Cached data for key: ${key}`);
+    } catch (error) {
+      console.error('❌ Error saving to cache:', error);
+    }
+  };
+
+  const loadFromCache = (key, maxAgeMinutes = 60) => {
+    try {
+      const cached = localStorage.getItem(key);
+      if (!cached) return null;
+
+      const cacheData = JSON.parse(cached);
+      const cacheAge = new Date() - new Date(cacheData.timestamp);
+      const maxAge = maxAgeMinutes * 60 * 1000; // Convert to milliseconds
+
+      if (cacheAge > maxAge) {
+        console.log(`⏰ Cache expired for key: ${key} (${Math.round(cacheAge / 60000)} minutes old)`);
+        return null;
+      }
+
+      console.log(`✅ Using cached data for key: ${key} (${Math.round(cacheAge / 60000)} minutes old)`);
+      return cacheData.data;
+    } catch (error) {
+      console.error('❌ Error loading from cache:', error);
+      return null;
+    }
+  };
+
+  // Instant cache loading functions
+  const loadCachedData = (userId) => {
+    console.log('⚡ Loading all cached data instantly...');
+    
+    // Load cached emotional data
+    loadCachedEmotionalData(userId, selectedPeriod);
+    
+    // Load cached balance data
+    loadCachedBalanceData(userId, balancePeriod);
+    
+    // Load cached pattern data
+    loadCachedPatternData(userId, patternPeriod);
+    
+    // Load cached highlights data
+    loadCachedHighlightsData(userId, highlightsPeriod);
+  };
+
+  const loadCachedEmotionalData = (userId, period) => {
+    const cacheKey = getCacheKey('emotional', period, userId);
+    const cachedData = loadFromCache(cacheKey, 30); // 30 minutes cache
+    
+    if (cachedData) {
+      console.log('⚡ Setting cached emotional data instantly');
+      setWeeklyMoodData(cachedData.weeklyMoodData || []);
+      setEmotionalData(cachedData.emotionalData || []);
+      setLastCacheUpdate(cachedData.timestamp);
+    }
+  };
+
+  const loadCachedBalanceData = (userId, period) => {
+    const cacheKey = getCacheKey('balance', period, userId);
+    const cachedData = loadFromCache(cacheKey, 30); // 30 minutes cache
+    
+    if (cachedData) {
+      console.log('⚡ Setting cached balance data instantly');
+      setMoodBalance(cachedData.moodBalance || []);
+      setTopEmotions(cachedData.topEmotions || []);
+    }
+  };
+
+  const loadCachedPatternData = (userId, period) => {
+    const cacheKey = getCacheKey('pattern', period, userId);
+    const cachedData = loadFromCache(cacheKey, 60); // 60 minutes cache
+    
+    if (cachedData) {
+      console.log('⚡ Setting cached pattern data instantly');
+      setPatternAnalysis(cachedData.patternAnalysis);
+      setTriggers(cachedData.triggers || {});
+      setHasEnoughData(cachedData.hasEnoughData !== false);
+    }
+  };
+
+  const loadCachedHighlightsData = (userId, period) => {
+    const cacheKey = getCacheKey('highlights', period, userId);
+    const cachedData = loadFromCache(cacheKey, 45); // 45 minutes cache
+    
+    if (cachedData) {
+      console.log('⚡ Setting cached highlights data instantly');
+      setHighlights(cachedData.highlights || {});
+    }
+  };
+
+  // Fresh data loading functions (background)
+  const loadFreshData = async () => {
+    console.log('🔄 Loading fresh data in background...');
+    setIsLoadingFresh(true);
+    
+    try {
+      await Promise.all([
+        loadFreshEmotionalData(),
+        loadFreshBalanceData(),
+        loadFreshPatternAnalysis(),
+        loadFreshHighlightsData()
+      ]);
+    } catch (error) {
+      console.error('❌ Error loading fresh data:', error);
+    } finally {
+      setIsLoadingFresh(false);
+    }
+  };
+
+  const loadFreshEmotionalData = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const freshData = await loadRealEmotionalDataInternal();
+    if (freshData) {
+      const cacheKey = getCacheKey('emotional', selectedPeriod, user.uid);
+      saveToCache(cacheKey, {
+        weeklyMoodData: freshData.weeklyMoodData,
+        emotionalData: freshData.emotionalData,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const loadFreshBalanceData = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const freshData = await loadBalanceDataInternal();
+    if (freshData) {
+      const cacheKey = getCacheKey('balance', balancePeriod, user.uid);
+      saveToCache(cacheKey, {
+        moodBalance: freshData.moodBalance,
+        topEmotions: freshData.topEmotions,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const loadFreshPatternAnalysis = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const freshData = await loadPatternAnalysisInternal();
+    if (freshData) {
+      const cacheKey = getCacheKey('pattern', patternPeriod, user.uid);
+      saveToCache(cacheKey, {
+        patternAnalysis: freshData.patternAnalysis,
+        triggers: freshData.triggers,
+        hasEnoughData: freshData.hasEnoughData,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const loadFreshHighlightsData = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const freshData = await loadHighlightsDataInternal();
+    if (freshData) {
+      const cacheKey = getCacheKey('highlights', highlightsPeriod, user.uid);
+      saveToCache(cacheKey, {
+        highlights: freshData.highlights,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const loadRealEmotionalDataInternal = async () => {
     console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod} days from NEW Firebase structure...`);
     
     const user = getCurrentUser();
@@ -155,6 +358,12 @@ export default function EmotionalWellbeing() {
           
           console.log('📊 UNIFIED: Rule-Applied Averages - H:', Math.round(avgHappiness), 'E:', Math.round(avgEnergy), 'A:', Math.round(avgAnxiety), 'S:', Math.round(avgStress));
           console.log('📊 UNIFIED: Average total:', Math.round(avgTotal), '/ 200 (cap)');
+          
+          // Return data for caching
+          return {
+            weeklyMoodData: processedMoodData,
+            emotionalData: processedMoodData
+          };
         } else {
           console.log('📊 UNIFIED: No real AI scores found, showing empty state');
           showEmptyState(selectedPeriod);
@@ -167,9 +376,11 @@ export default function EmotionalWellbeing() {
       console.error('❌ UNIFIED: Error loading AI mood data:', error);
       showEmptyState(selectedPeriod);
     }
+    
+    return null;
   };
 
-  const loadBalanceData = () => {
+  const loadBalanceDataInternal = () => {
     console.log(`⚖️ Loading balance data for ${balancePeriod} days...`);
     
     const user = getCurrentUser();
@@ -179,17 +390,23 @@ export default function EmotionalWellbeing() {
     const balanceDataRaw = emotionalAnalysisService.getEmotionalData(userId, balancePeriod);
     console.log('📊 Balance data:', balanceDataRaw);
 
+    let balanceData;
     if (balanceDataRaw.length === 0) {
       console.log('📝 No balance data found, creating empty time series');
       // Still create time series with default values
-      processBalanceData([]);
-      return;
+      balanceData = processBalanceDataInternal([]);
+    } else {
+      balanceData = processBalanceDataInternal(balanceDataRaw);
     }
-
-    processBalanceData(balanceDataRaw);
+    
+    // Set state and return data for caching
+    setMoodBalance(balanceData.moodBalance);
+    setTopEmotions(balanceData.topEmotions);
+    
+    return balanceData;
   };
 
-  const loadHighlightsData = async () => {
+  const loadHighlightsDataInternal = async () => {
     console.log(`🏆 Loading highlights data for ${highlightsPeriod}...`);
     
     const user = getCurrentUser();
@@ -213,20 +430,21 @@ export default function EmotionalWellbeing() {
     if (emotionalDataRaw.length === 0) {
       console.log('📝 No emotional data found for highlights');
       setHighlights({});
-      return;
+      return { highlights: {} };
     }
 
-    await processHighlightsData(emotionalDataRaw, userId);
+    const highlightsData = await processHighlightsDataInternal(emotionalDataRaw, userId);
+    setHighlights(highlightsData);
+    return { highlights: highlightsData };
   };
 
-  const processHighlightsData = async (data, userId) => {
+  const processHighlightsDataInternal = async (data, userId) => {
     console.log(`🔄 Processing highlights data: ${data.length} entries for ${highlightsPeriod}`);
     
     // Filter valid data for highlights
     const validData = data.filter(item => item.happiness !== undefined);
     if (validData.length === 0) {
-      setHighlights({});
-      return;
+      return {};
     }
 
     // Generate highlights based on real data
@@ -273,8 +491,6 @@ export default function EmotionalWellbeing() {
         }
       };
 
-      setHighlights(highlightsData);
-      
       // Save to cache for future use
       try {
         console.log('💾 Saving highlights to cache...');
@@ -302,8 +518,6 @@ export default function EmotionalWellbeing() {
           score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
         }
       };
-
-      setHighlights(highlightsData);
       
       // Still save fallback to cache
       try {
@@ -314,9 +528,10 @@ export default function EmotionalWellbeing() {
     }
 
     console.log('✅ Highlights data processed successfully');
+    return highlightsData;
   };
 
-  const processBalanceData = (data) => {
+  const processBalanceDataInternal = (data) => {
     console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod} days`);
     
     // Create date range for the balance period
@@ -328,7 +543,7 @@ export default function EmotionalWellbeing() {
     }
 
     // Map balance data to date range with daily calculations
-    const balanceData = dateRange.map(dateStr => {
+    const moodBalance = dateRange.map(dateStr => {
       const dayData = data.find(item => item.date === dateStr);
       const date = new Date(dateStr);
       
@@ -357,8 +572,37 @@ export default function EmotionalWellbeing() {
       }
     });
 
-    setMoodBalance(balanceData);
+    // Calculate top emotions from available data
+    let topEmotions = [];
+    if (data.length > 0) {
+      const validData = data.filter(item => item.happiness !== undefined);
+      if (validData.length > 0) {
+        const avgHappiness = validData.reduce((sum, item) => sum + item.happiness, 0) / validData.length;
+        const avgEnergy = validData.reduce((sum, item) => sum + item.energy, 0) / validData.length;
+        const avgAnxiety = validData.reduce((sum, item) => sum + item.anxiety, 0) / validData.length;
+        const avgStress = validData.reduce((sum, item) => sum + item.stress, 0) / validData.length;
+
+        topEmotions = [
+          { name: 'Happiness', value: Math.round(avgHappiness), color: '#10B981' },
+          { name: 'Energy', value: Math.round(avgEnergy), color: '#F59E0B' },
+          { name: 'Anxiety', value: Math.round(avgAnxiety), color: '#EF4444' },
+          { name: 'Stress', value: Math.round(avgStress), color: '#8B5CF6' }
+        ].sort((a, b) => b.value - a.value);
+      }
+    }
+
+    if (topEmotions.length === 0) {
+      // Default emotions
+      topEmotions = [
+        { name: 'Happiness', value: 50, color: '#10B981' },
+        { name: 'Energy', value: 50, color: '#F59E0B' },
+        { name: 'Anxiety', value: 25, color: '#EF4444' },
+        { name: 'Stress', value: 25, color: '#8B5CF6' }
+      ];
+    }
+
     console.log('✅ Balance data processed successfully as time series');
+    return { moodBalance, topEmotions };
   };
 
   const processRealEmotionalData = (data) => {
@@ -479,7 +723,7 @@ export default function EmotionalWellbeing() {
     console.log('✅ Empty state set successfully');
   };
 
-  const loadPatternAnalysis = async () => {
+  const loadPatternAnalysisInternal = async () => {
     console.log(`🔍 Loading pattern analysis for ${patternPeriod} days...`);
     setPatternLoading(true);
     
@@ -493,24 +737,40 @@ export default function EmotionalWellbeing() {
       setPatternAnalysis(analysis);
       setHasEnoughData(analysis.hasEnoughData);
       
+      let triggers;
       if (analysis.success && analysis.hasEnoughData) {
+        triggers = analysis.triggers;
         setTriggers(analysis.triggers);
       } else {
         // Set empty state or "not enough data" message
-        setTriggers({
+        triggers = {
           stress: [],
           joy: [],
           distraction: []
-        });
+        };
+        setTriggers(triggers);
       }
+      
+      return {
+        patternAnalysis: analysis,
+        triggers: triggers,
+        hasEnoughData: analysis.hasEnoughData
+      };
     } catch (error) {
       console.error('❌ Error loading pattern analysis:', error);
-      setTriggers({
+      const defaultTriggers = {
         stress: [],
         joy: [],
         distraction: []
-      });
+      };
+      setTriggers(defaultTriggers);
       setHasEnoughData(false);
+      
+      return {
+        patternAnalysis: null,
+        triggers: defaultTriggers,
+        hasEnoughData: false
+      };
     } finally {
       setPatternLoading(false);
     }
@@ -898,7 +1158,7 @@ Return in this JSON format:
                         console.log('🔍 DEBUG: Rule-compliant scores saved for Sept 12');
                         
                         // Reload data
-                        loadRealEmotionalData();
+                        loadFreshEmotionalData();
                       } catch (error) {
                         console.error('🔍 DEBUG: Error:', error);
                       }
@@ -1773,9 +2033,21 @@ Return in this JSON format:
             <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Emotional Wellbeing
             </h1>
-            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Track your emotional journey
-            </p>
+            <div className="flex items-center space-x-2">
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Track your emotional journey
+              </p>
+              {lastCacheUpdate && !isLoadingFresh && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700'}`}>
+                  Cached
+                </span>
+              )}
+              {isLoadingFresh && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                  Syncing
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1788,9 +2060,9 @@ Return in this JSON format:
               : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
           }`}
         >
-          <RefreshCw className={`w-4 h-4 ${isUpdating ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
           <span className="text-sm font-medium">
-            {isUpdating ? 'Updating...' : 'AI Update'}
+            {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'AI Update'}
           </span>
         </button>
       </div>
