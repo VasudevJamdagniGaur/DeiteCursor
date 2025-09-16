@@ -381,13 +381,15 @@ export default function EmotionalWellbeing() {
   };
 
   const loadBalanceDataInternal = () => {
-    console.log(`⚖️ Loading balance data for ${balancePeriod} days...`);
+    console.log(`⚖️ Loading balance data for ${balancePeriod === 365 ? 'lifetime' : balancePeriod + ' days'}...`);
     
     const user = getCurrentUser();
     const userId = user?.uid || 'anonymous';
     
     // Get emotional data for the balance period
-    const balanceDataRaw = emotionalAnalysisService.getEmotionalData(userId, balancePeriod);
+    const balanceDataRaw = balancePeriod === 365 
+      ? emotionalAnalysisService.getAllEmotionalData(userId)
+      : emotionalAnalysisService.getEmotionalData(userId, balancePeriod);
     console.log('📊 Balance data:', balanceDataRaw);
 
     let balanceData;
@@ -532,14 +534,35 @@ export default function EmotionalWellbeing() {
   };
 
   const processBalanceDataInternal = (data) => {
-    console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod} days`);
+    console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod === 365 ? 'lifetime' : balancePeriod + ' days'}`);
     
     // Create date range for the balance period
     const dateRange = [];
-    for (let i = balancePeriod - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      dateRange.push(date.toISOString().split('T')[0]);
+    if (balancePeriod === 365) {
+      // For lifetime, use all available dates from the data
+      if (data.length > 0) {
+        const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const startDate = new Date(sortedData[0].date);
+        const endDate = new Date();
+        
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          dateRange.push(d.toISOString().split('T')[0]);
+        }
+      } else {
+        // If no data, show last 30 days as fallback
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          dateRange.push(date.toISOString().split('T')[0]);
+        }
+      }
+    } else {
+      // For specific day periods
+      for (let i = balancePeriod - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dateRange.push(date.toISOString().split('T')[0]);
+      }
     }
 
     // Map balance data to date range with daily calculations
@@ -1343,24 +1366,12 @@ Return in this JSON format:
                     <Target className="w-5 h-5" style={{ color: "#D4AF37" }} />
                   </div>
                   <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    Emotional Balance - {balancePeriod} Day{balancePeriod > 1 ? 's' : ''} Overview
+                    Emotional Balance - {balancePeriod === 365 ? 'Lifetime' : `${balancePeriod} Day${balancePeriod > 1 ? 's' : ''}`} Overview
                   </h3>
                 </div>
 
                 {/* Balance Period Toggle */}
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => setBalancePeriod(1)}
-                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
-                      balancePeriod === 1
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                        : isDarkMode
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    1 Day
-                  </button>
                   <button
                     onClick={() => setBalancePeriod(7)}
                     className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
@@ -1384,6 +1395,18 @@ Return in this JSON format:
                     }`}
                   >
                     30 Days
+                  </button>
+                  <button
+                    onClick={() => setBalancePeriod(365)}
+                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                      balancePeriod === 365
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                        : isDarkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Lifetime
                   </button>
                 </div>
               </div>
