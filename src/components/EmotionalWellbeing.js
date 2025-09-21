@@ -188,6 +188,9 @@ export default function EmotionalWellbeing() {
       console.log('⚡ Setting cached balance data instantly');
       setMoodBalance(cachedData.moodBalance || []);
       setTopEmotions(cachedData.topEmotions || []);
+    } else {
+      // If no cached data, trigger fresh data load
+      console.log('⚡ No cached balance data, will load fresh data');
     }
   };
 
@@ -400,32 +403,88 @@ export default function EmotionalWellbeing() {
     return null;
   };
 
-  const loadBalanceDataInternal = () => {
+  const loadBalanceDataInternal = async () => {
     console.log(`⚖️ Loading balance data for ${balancePeriod === 365 ? 'lifetime' : balancePeriod + ' days'}...`);
     
     const user = getCurrentUser();
-    const userId = user?.uid || 'anonymous';
-    
-    // Get emotional data for the balance period
-    const balanceDataRaw = balancePeriod === 365 
-      ? emotionalAnalysisService.getAllEmotionalData(userId)
-      : emotionalAnalysisService.getEmotionalData(userId, balancePeriod);
-    console.log('📊 Balance data:', balanceDataRaw);
-
-    let balanceData;
-    if (balanceDataRaw.length === 0) {
-      console.log('📝 No balance data found, creating empty time series');
-      // Still create time series with default values
-      balanceData = processBalanceDataInternal([]);
-    } else {
-      balanceData = processBalanceDataInternal(balanceDataRaw);
+    if (!user) {
+      console.log('⚖️ No user logged in for balance data');
+      return { moodBalance: [], topEmotions: [] };
     }
-    
-    // Set state and return data for caching
-    setMoodBalance(balanceData.moodBalance);
-    setTopEmotions(balanceData.topEmotions);
-    
-    return balanceData;
+
+    try {
+      // Use the same data source as the mood chart for consistency
+      let result;
+      if (balancePeriod === 365) {
+        // For lifetime, get all available mood data
+        const emotionalDataRaw = emotionalAnalysisService.getAllEmotionalData(user.uid);
+        if (emotionalDataRaw.length > 0) {
+          const sortedData = [...emotionalDataRaw].sort((a, b) => new Date(a.date) - new Date(b.date));
+          const startDate = new Date(sortedData[0].date);
+          const endDate = new Date();
+          const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+          
+          console.log(`⚖️ LIFETIME: Getting ${daysDiff} days of balance data from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+          result = await firestoreService.getMoodChartDataNew(user.uid, daysDiff);
+        } else {
+          result = await firestoreService.getMoodChartDataNew(user.uid, 30);
+        }
+      } else {
+        result = await firestoreService.getMoodChartDataNew(user.uid, balancePeriod);
+      }
+
+      console.log('⚖️ Balance chart data result:', result);
+
+      let balanceData;
+      if (result.success && result.moodData && result.moodData.length > 0) {
+        console.log('⚖️ Processing balance data from Firebase:', result.moodData.length, 'days');
+        
+        // Apply emotion rules and 200% cap to balance data
+        const processedMoodData = result.moodData.map(day => {
+          let { happiness, energy, anxiety, stress } = day;
+          
+          // Apply 200% cap
+          const total = happiness + energy + anxiety + stress;
+          if (total > 200) {
+            const scaleFactor = 200 / total;
+            happiness = Math.round(happiness * scaleFactor);
+            energy = Math.round(energy * scaleFactor);
+            anxiety = Math.round(anxiety * scaleFactor);
+            stress = Math.round(stress * scaleFactor);
+          }
+          
+          // Apply emotion rules
+          if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
+            happiness = Math.min(40, happiness);
+          }
+          
+          return {
+            ...day,
+            happiness,
+            energy,
+            anxiety,
+            stress
+          };
+        });
+        
+        balanceData = processBalanceDataInternal(processedMoodData);
+      } else {
+        console.log('⚖️ No balance data found, creating empty time series');
+        balanceData = processBalanceDataInternal([]);
+      }
+      
+      // Set state and return data for caching
+      setMoodBalance(balanceData.moodBalance);
+      setTopEmotions(balanceData.topEmotions);
+      
+      return balanceData;
+    } catch (error) {
+      console.error('❌ Error loading balance data:', error);
+      const emptyBalanceData = processBalanceDataInternal([]);
+      setMoodBalance(emptyBalanceData.moodBalance);
+      setTopEmotions(emptyBalanceData.topEmotions);
+      return emptyBalanceData;
+    }
   };
 
   const loadHighlightsDataInternal = async () => {
@@ -548,25 +607,52 @@ export default function EmotionalWellbeing() {
   const processBalanceDataInternal = (data) => {
     console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod === 365 ? 'lifetime' : balancePeriod + ' days'}`);
     
-    // Create date range for the balance period
+    // If we have data, use it directly (it's already from Firebase with proper date range)
+    if (data.length > 0) {
+      console.log('🔄 Using Firebase data directly for balance chart');
+      
+      const moodBalance = data.map(dayData => {
+        const date = new Date(dayData.date);
+        
+        // Calculate balance for this specific day
+        const positiveScore = Math.round((dayData.happiness + dayData.energy) / 2);
+        const negativeScore = Math.round((dayData.anxiety + dayData.stress) / 2);
+        const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
+        
+        return {
+          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          date: dayData.date,
+          positive: positiveScore,
+          neutral: neutralScore,
+          negative: negativeScore
+        };
+      });
+      
+      // Calculate top emotions from available data
+      const avgHappiness = data.reduce((sum, item) => sum + item.happiness, 0) / data.length;
+      const avgEnergy = data.reduce((sum, item) => sum + item.energy, 0) / data.length;
+      const avgAnxiety = data.reduce((sum, item) => sum + item.anxiety, 0) / data.length;
+      const avgStress = data.reduce((sum, item) => sum + item.stress, 0) / data.length;
+
+      const topEmotions = [
+        { name: 'Happiness', value: Math.round(avgHappiness), color: '#10B981' },
+        { name: 'Energy', value: Math.round(avgEnergy), color: '#F59E0B' },
+        { name: 'Anxiety', value: Math.round(avgAnxiety), color: '#EF4444' },
+        { name: 'Stress', value: Math.round(avgStress), color: '#8B5CF6' }
+      ].sort((a, b) => b.value - a.value);
+
+      console.log('✅ Balance data processed successfully from Firebase data');
+      return { moodBalance, topEmotions };
+    }
+    
+    // Fallback: Create date range for the balance period when no data
     const dateRange = [];
     if (balancePeriod === 365) {
-      // For lifetime, use all available dates from the data
-      if (data.length > 0) {
-        const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
-        const startDate = new Date(sortedData[0].date);
-        const endDate = new Date();
-        
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-          dateRange.push(d.toISOString().split('T')[0]);
-        }
-      } else {
-        // If no data, show last 30 days as fallback
-        for (let i = 29; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          dateRange.push(date.toISOString().split('T')[0]);
-        }
+      // For lifetime with no data, show last 30 days as fallback
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dateRange.push(date.toISOString().split('T')[0]);
       }
     } else {
       // For specific day periods
@@ -577,66 +663,29 @@ export default function EmotionalWellbeing() {
       }
     }
 
-    // Map balance data to date range with daily calculations
+    // Map balance data to date range with default values
     const moodBalance = dateRange.map(dateStr => {
-      const dayData = data.find(item => item.date === dateStr);
       const date = new Date(dateStr);
       
-      if (dayData && dayData.happiness !== undefined) {
-        // Calculate balance for this specific day
-        const positiveScore = Math.round((dayData.happiness + dayData.energy) / 2);
-        const negativeScore = Math.round((dayData.anxiety + dayData.stress) / 2);
-        const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
-        
-        return {
-          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          date: dateStr,
-          positive: positiveScore,
-          neutral: neutralScore,
-          negative: negativeScore
-        };
-      } else {
-        // Default balanced state for days with no data
-        return {
-          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          date: dateStr,
-          positive: 40,
-          neutral: 35,
-          negative: 25
-        };
-      }
+      // Default balanced state for days with no data
+      return {
+        day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        date: dateStr,
+        positive: 40,
+        neutral: 35,
+        negative: 25
+      };
     });
 
-    // Calculate top emotions from available data
-    let topEmotions = [];
-    if (data.length > 0) {
-      const validData = data.filter(item => item.happiness !== undefined);
-      if (validData.length > 0) {
-        const avgHappiness = validData.reduce((sum, item) => sum + item.happiness, 0) / validData.length;
-        const avgEnergy = validData.reduce((sum, item) => sum + item.energy, 0) / validData.length;
-        const avgAnxiety = validData.reduce((sum, item) => sum + item.anxiety, 0) / validData.length;
-        const avgStress = validData.reduce((sum, item) => sum + item.stress, 0) / validData.length;
+    // Default emotions when no data
+    const topEmotions = [
+      { name: 'Happiness', value: 50, color: '#10B981' },
+      { name: 'Energy', value: 50, color: '#F59E0B' },
+      { name: 'Anxiety', value: 25, color: '#EF4444' },
+      { name: 'Stress', value: 25, color: '#8B5CF6' }
+    ];
 
-        topEmotions = [
-          { name: 'Happiness', value: Math.round(avgHappiness), color: '#10B981' },
-          { name: 'Energy', value: Math.round(avgEnergy), color: '#F59E0B' },
-          { name: 'Anxiety', value: Math.round(avgAnxiety), color: '#EF4444' },
-          { name: 'Stress', value: Math.round(avgStress), color: '#8B5CF6' }
-        ].sort((a, b) => b.value - a.value);
-      }
-    }
-
-    if (topEmotions.length === 0) {
-      // Default emotions
-      topEmotions = [
-        { name: 'Happiness', value: 50, color: '#10B981' },
-        { name: 'Energy', value: 50, color: '#F59E0B' },
-        { name: 'Anxiety', value: 25, color: '#EF4444' },
-        { name: 'Stress', value: 25, color: '#8B5CF6' }
-      ];
-    }
-
-    console.log('✅ Balance data processed successfully as time series');
+    console.log('✅ Balance data processed successfully with default values');
     return { moodBalance, topEmotions };
   };
 
