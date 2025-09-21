@@ -293,7 +293,7 @@ export default function EmotionalWellbeing() {
   };
 
   const loadRealEmotionalDataInternal = async () => {
-    console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod} days from NEW Firebase structure...`);
+    console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod === 365 ? 'lifetime' : selectedPeriod + ' days'} from NEW Firebase structure...`);
     
     const user = getCurrentUser();
     if (!user) {
@@ -304,7 +304,27 @@ export default function EmotionalWellbeing() {
 
     try {
       // Get AI-generated mood data from new Firebase structure
-      const result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+      let result;
+      if (selectedPeriod === 365) {
+        // For lifetime, we need to get all available mood data
+        // First get all emotional data to find the date range
+        const emotionalDataRaw = emotionalAnalysisService.getAllEmotionalData(user.uid);
+        if (emotionalDataRaw.length > 0) {
+          // Find the earliest date with data
+          const sortedData = [...emotionalDataRaw].sort((a, b) => new Date(a.date) - new Date(b.date));
+          const startDate = new Date(sortedData[0].date);
+          const endDate = new Date();
+          const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+          
+          console.log(`📊 LIFETIME: Getting ${daysDiff} days of data from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+          result = await firestoreService.getMoodChartDataNew(user.uid, daysDiff);
+        } else {
+          // No data available, use default period
+          result = await firestoreService.getMoodChartDataNew(user.uid, 30);
+        }
+      } else {
+        result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+      }
       console.log('📊 UNIFIED: Mood chart data result:', result);
 
       if (result.success && result.moodData && result.moodData.length > 0) {
@@ -677,11 +697,13 @@ export default function EmotionalWellbeing() {
   };
 
   const showEmptyState = (days) => {
-    console.log(`📭 Showing empty state for ${days} days - no chat data available`);
+    const displayPeriod = days === 365 ? 'lifetime' : `${days} days`;
+    console.log(`📭 Showing empty state for ${displayPeriod} - no chat data available`);
     
     // Create empty date range for display
     const dateRange = [];
-    for (let i = days - 1; i >= 0; i--) {
+    const actualDays = days === 365 ? 30 : days; // For lifetime with no data, show 30 days
+    for (let i = actualDays - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       dateRange.push(date);
@@ -916,7 +938,7 @@ Return in this JSON format:
 }`;
 
     try {
-      const response = await fetch(`https://akl4kcr0r58foi-11434.proxy.runpod.net/api/generate`, {
+      const response = await fetch(`https://h802ca5wwmjbfx-11434.proxy.runpod.net/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
