@@ -491,44 +491,112 @@ export default function EmotionalWellbeing() {
     console.log(`🏆 Loading highlights data for last 3 months...`);
     
     const user = getCurrentUser();
-    const userId = user?.uid || 'anonymous';
-    
-    // Force fresh generation of highlights to use new AI mini-stories
-    console.log('🔄 Forcing fresh highlights generation with new AI mini-stories...');
-    
-    // Get fresh emotional data for last 3 months (90 days)
-    const emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 90);
-    
-    console.log('📈 Raw highlights data:', emotionalDataRaw);
-
-    if (emotionalDataRaw.length === 0) {
-      console.log('📝 No emotional data found for highlights');
+    if (!user) {
+      console.log('🏆 No user logged in for highlights');
       setHighlights({});
       return { highlights: {} };
     }
 
-    const highlightsData = await processHighlightsDataInternal(emotionalDataRaw, userId);
-    setHighlights(highlightsData);
-    return { highlights: highlightsData };
+    try {
+      // Use the same Firebase data source as other charts for consistency
+      console.log('🔄 Loading highlights data from Firebase...');
+      const result = await firestoreService.getMoodChartDataNew(user.uid, 90);
+      console.log('🏆 Highlights Firebase data result:', result);
+
+      if (result.success && result.moodData && result.moodData.length > 0) {
+        console.log('🏆 Processing highlights data from Firebase:', result.moodData.length, 'days');
+        
+        // Apply emotion rules and 200% cap to highlights data
+        const processedMoodData = result.moodData.map(day => {
+          let { happiness, energy, anxiety, stress } = day;
+          
+          // Apply 200% cap
+          const total = happiness + energy + anxiety + stress;
+          if (total > 200) {
+            const scaleFactor = 200 / total;
+            happiness = Math.round(happiness * scaleFactor);
+            energy = Math.round(energy * scaleFactor);
+            anxiety = Math.round(anxiety * scaleFactor);
+            stress = Math.round(stress * scaleFactor);
+          }
+          
+          // Apply emotion rules
+          if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
+            happiness = Math.min(40, happiness);
+          }
+          
+          return {
+            ...day,
+            happiness,
+            energy,
+            anxiety,
+            stress
+          };
+        });
+        
+        const highlightsData = await processHighlightsDataInternal(processedMoodData, user.uid);
+        setHighlights(highlightsData);
+        return { highlights: highlightsData };
+      } else {
+        console.log('📝 No highlights data found in Firebase');
+        setHighlights({});
+        return { highlights: {} };
+      }
+    } catch (error) {
+      console.error('❌ Error loading highlights data:', error);
+      setHighlights({});
+      return { highlights: {} };
+    }
   };
 
   const processHighlightsDataInternal = async (data, userId) => {
     console.log(`🔄 Processing highlights data: ${data.length} entries for last 3 months`);
     
-    // Filter valid data for highlights
-    const validData = data.filter(item => item.happiness !== undefined);
+    // Filter valid data for highlights (must have actual emotional scores, not defaults)
+    const validData = data.filter(item => 
+      item.happiness !== undefined && 
+      item.happiness > 0 && 
+      item.energy > 0 && 
+      item.anxiety > 0 && 
+      item.stress > 0
+    );
+    
+    console.log(`🔄 Valid highlights data: ${validData.length} entries (filtered from ${data.length})`);
+    
     if (validData.length === 0) {
-      return {};
+      console.log('📝 No valid emotional data found for highlights');
+      // Return empty highlights but with a message
+      return {
+        peak: {
+          title: "Best Mood Day",
+          description: "No emotional data available for the last 3 months. Start chatting with Deite to track your emotional journey!",
+          date: "No data",
+          score: 0
+        },
+        toughestDay: {
+          title: "Challenging Day", 
+          description: "No emotional data available for the last 3 months. Your emotional patterns will appear after chatting.",
+          date: "No data",
+          score: 0
+        }
+      };
     }
 
     // Generate highlights based on real data
-    const bestDay = validData.reduce((best, current) => 
-      (current.happiness + current.energy) > (best.happiness + best.energy) ? current : best
-    );
+    const bestDay = validData.reduce((best, current) => {
+      const currentScore = (current.happiness + current.energy) / 2;
+      const bestScore = (best.happiness + best.energy) / 2;
+      return currentScore > bestScore ? current : best;
+    });
 
-    const worstDay = validData.reduce((worst, current) => 
-      (current.anxiety + current.stress) > (worst.anxiety + worst.stress) ? current : worst
-    );
+    const worstDay = validData.reduce((worst, current) => {
+      const currentScore = (current.anxiety + current.stress) / 2;
+      const worstScore = (worst.anxiety + worst.stress) / 2;
+      return currentScore > worstScore ? current : worst;
+    });
+
+    console.log('🏆 Best day found:', bestDay);
+    console.log('🏆 Worst day found:', worstDay);
 
     let highlightsData;
 
@@ -553,13 +621,13 @@ export default function EmotionalWellbeing() {
         peak: {
           title: "Best Mood Day",
           description: bestDayDescription,
-          date: new Date(bestDay.timestamp).toLocaleDateString(),
+          date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
           score: Math.round((bestDay.happiness + bestDay.energy) / 2)
         },
         toughestDay: {
           title: "Challenging Day",
           description: worstDayDescription,
-          date: new Date(worstDay.timestamp).toLocaleDateString(),
+          date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
           score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
         }
       };
@@ -577,18 +645,21 @@ export default function EmotionalWellbeing() {
       console.error('❌ Error generating AI descriptions for highlights, using fallbacks:', error);
       
       // Fallback to original descriptions if AI generation fails
+      const bestScore = Math.round((bestDay.happiness + bestDay.energy) / 2);
+      const worstScore = Math.round((worstDay.anxiety + worstDay.stress) / 2);
+      
       highlightsData = {
         peak: {
           title: "Best Mood Day",
-          description: "You felt upbeat and energized because meaningful progress was made on something important to you. The positive momentum carried through the day, making even routine tasks feel more enjoyable and rewarding.",
-          date: new Date(bestDay.timestamp).toLocaleDateString(),
-          score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+          description: `You had your highest emotional peak with ${bestScore}% positive energy. This was likely due to meaningful progress, positive interactions, or achieving something important to you.`,
+          date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
+          score: bestScore
         },
         toughestDay: {
           title: "Challenging Day",
-          description: "The day felt demanding as multiple stressors seemed to pile up, creating a sense of being overwhelmed. These pressures made it harder to maintain your usual positive outlook and focus.",
-          date: new Date(worstDay.timestamp).toLocaleDateString(),
-          score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+          description: `You experienced your most challenging day with ${worstScore}% stress and anxiety. This was likely due to multiple pressures, difficult decisions, or overwhelming circumstances.`,
+          date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
+          score: worstScore
         }
       };
       
@@ -601,6 +672,7 @@ export default function EmotionalWellbeing() {
     }
 
     console.log('✅ Highlights data processed successfully');
+    console.log('🏆 Final highlights data:', highlightsData);
     return highlightsData;
   };
 
