@@ -57,7 +57,7 @@ export default function EmotionalWellbeing() {
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
   const [patternPeriod, setPatternPeriod] = useState(7); // 7 or 30 days for pattern analysis
-  const [highlightsPeriod, setHighlightsPeriod] = useState('week'); // 'week', 'month', or 'lifetime'
+  const [highlightsPeriod] = useState('3months'); // Always show last 3 months
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
@@ -204,7 +204,7 @@ export default function EmotionalWellbeing() {
   };
 
   const loadCachedHighlightsData = (userId, period) => {
-    const cacheKey = getCacheKey('highlights', period, userId);
+    const cacheKey = getCacheKey('highlights', '3months', userId);
     const cachedData = loadFromCache(cacheKey, 45); // 45 minutes cache
     
     if (cachedData) {
@@ -284,7 +284,7 @@ export default function EmotionalWellbeing() {
 
     const freshData = await loadHighlightsDataInternal();
     if (freshData) {
-      const cacheKey = getCacheKey('highlights', highlightsPeriod, user.uid);
+      const cacheKey = getCacheKey('highlights', '3months', user.uid);
       saveToCache(cacheKey, {
         highlights: freshData.highlights,
         timestamp: new Date().toISOString()
@@ -429,7 +429,7 @@ export default function EmotionalWellbeing() {
   };
 
   const loadHighlightsDataInternal = async () => {
-    console.log(`🏆 Loading highlights data for ${highlightsPeriod}...`);
+    console.log(`🏆 Loading highlights data for last 3 months...`);
     
     const user = getCurrentUser();
     const userId = user?.uid || 'anonymous';
@@ -437,15 +437,8 @@ export default function EmotionalWellbeing() {
     // Force fresh generation of highlights to use new AI mini-stories
     console.log('🔄 Forcing fresh highlights generation with new AI mini-stories...');
     
-    // Get fresh emotional data
-    let emotionalDataRaw;
-    if (highlightsPeriod === 'week') {
-      emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 7);
-    } else if (highlightsPeriod === 'month') {
-      emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 30);
-    } else { // lifetime
-      emotionalDataRaw = emotionalAnalysisService.getAllEmotionalData(userId);
-    }
+    // Get fresh emotional data for last 3 months (90 days)
+    const emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 90);
     
     console.log('📈 Raw highlights data:', emotionalDataRaw);
 
@@ -461,7 +454,7 @@ export default function EmotionalWellbeing() {
   };
 
   const processHighlightsDataInternal = async (data, userId) => {
-    console.log(`🔄 Processing highlights data: ${data.length} entries for ${highlightsPeriod}`);
+    console.log(`🔄 Processing highlights data: ${data.length} entries for last 3 months`);
     
     // Filter valid data for highlights
     const validData = data.filter(item => item.happiness !== undefined);
@@ -486,8 +479,7 @@ export default function EmotionalWellbeing() {
       console.log('🤖 Best day data:', bestDay);
       console.log('🤖 Worst day data:', worstDay);
       
-      const periodText = highlightsPeriod === 'week' ? 'last week' : 
-                        highlightsPeriod === 'month' ? 'last month' : 'their lifetime';
+      const periodText = 'the last 3 months';
       
       console.log('🚀 Calling RunPod AI for mini-stories...');
       const [bestDayDescription, worstDayDescription] = await Promise.all([
@@ -516,7 +508,7 @@ export default function EmotionalWellbeing() {
       // Save to cache for future use
       try {
         console.log('💾 Saving highlights to cache...');
-        await firestoreService.saveHighlightsCache(userId, highlightsPeriod, highlightsData);
+        await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
         console.log('✅ Highlights cached successfully');
       } catch (cacheError) {
         console.error('❌ Error caching highlights (non-critical):', cacheError);
@@ -543,7 +535,7 @@ export default function EmotionalWellbeing() {
       
       // Still save fallback to cache
       try {
-        await firestoreService.saveHighlightsCache(userId, highlightsPeriod, highlightsData);
+        await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
       } catch (cacheError) {
         console.error('❌ Error caching fallback highlights:', cacheError);
       }
@@ -1040,7 +1032,7 @@ Return in this JSON format:
 
         // Cache the updated highlights
         try {
-          await firestoreService.saveHighlightsCache(userId, highlightsPeriod, updatedHighlights);
+          await firestoreService.saveHighlightsCache(userId, '3months', updatedHighlights);
         } catch (cacheError) {
           console.error('❌ Error caching updated highlights:', cacheError);
         }
@@ -1522,8 +1514,7 @@ Return in this JSON format:
               isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
             }`}
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 mb-6">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center"
                 style={{
@@ -1533,43 +1524,13 @@ Return in this JSON format:
               >
                 <Award className="w-5 h-5" style={{ color: "#E6B3BA" }} />
               </div>
-              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                Highlights
-              </h3>
-            </div>
-
-              {/* Highlights Period Toggle */}
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setHighlightsPeriod('week')}
-                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
-                    highlightsPeriod === 'week'
-                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
-                  }`}
-                >
-                  Last Week
-                </button>
-                <button
-                  onClick={() => setHighlightsPeriod('month')}
-                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
-                    highlightsPeriod === 'month'
-                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
-                  }`}
-                >
-                  Last Month
-                </button>
-                <button
-                  onClick={() => setHighlightsPeriod('lifetime')}
-                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
-                    highlightsPeriod === 'lifetime'
-                      ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'
-                  }`}
-                >
-                  Lifetime
-                </button>
+              <div>
+                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Highlights
+                </h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Last 3 months emotional journey
+                </p>
               </div>
             </div>
 
