@@ -76,7 +76,7 @@ export default function EmotionalWellbeing() {
   const [triggers, setTriggers] = useState({});
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
-  const [patternPeriod, setPatternPeriod] = useState(7); // 7 or 30 days for pattern analysis
+  const [patternPeriod] = useState(7); // Fixed to 7 days for pattern analysis
   const [highlightsPeriod] = useState('3months'); // Always show last 3 months
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
@@ -1776,53 +1776,19 @@ Return in this JSON format:
               isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
             }`}
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(177, 156, 217, 0.2) 0%, rgba(125, 211, 192, 0.2) 100%)",
-                    border: "1px solid rgba(177, 156, 217, 0.3)",
-                  }}
-                >
-                  <Lightbulb className="w-5 h-5" style={{ color: "#B19CD9" }} />
-                </div>
-                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Triggers & Patterns
-                </h3>
+            <div className="flex items-center space-x-3 mb-6">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, rgba(177, 156, 217, 0.2) 0%, rgba(125, 211, 192, 0.2) 100%)",
+                  border: "1px solid rgba(177, 156, 217, 0.3)",
+                }}
+              >
+                <Lightbulb className="w-5 h-5" style={{ color: "#B19CD9" }} />
               </div>
-
-              {/* Period Toggle for Pattern Analysis */}
-              <div className={`flex rounded-lg p-1 ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                <button
-                  onClick={() => setPatternPeriod(7)}
-                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
-                    patternPeriod === 7
-                      ? isDarkMode 
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-purple-500 text-white shadow-md'
-                      : isDarkMode 
-                        ? 'text-gray-300 hover:text-white'
-                        : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  Week
-                </button>
-                <button
-                  onClick={() => setPatternPeriod(30)}
-                  className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
-                    patternPeriod === 30
-                      ? isDarkMode 
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'bg-purple-500 text-white shadow-md'
-                      : isDarkMode 
-                        ? 'text-gray-300 hover:text-white'
-                        : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  Month
-                </button>
-              </div>
+              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                Triggers & Patterns
+              </h3>
             </div>
 
             {/* Loading State */}
@@ -1831,7 +1797,7 @@ Return in this JSON format:
                 <div className="flex items-center space-x-3">
                   <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-500 border-t-transparent"></div>
                   <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Analyzing your {patternPeriod === 7 ? 'weekly' : 'monthly'} patterns...
+                    Analyzing your patterns...
                   </span>
                 </div>
               </div>
