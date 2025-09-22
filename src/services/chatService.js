@@ -338,7 +338,7 @@ class ChatService {
       if (healthResponse.ok) {
         // Try to get available models
         try {
-          const modelsResponse = await fetch(`${this.baseURL}/api/tags`, {
+          const modelsResponse = await fetch(`${this.baseURL}api/tags`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -551,14 +551,21 @@ Provide analysis in this exact JSON format:
         }
       ];
 
-      const response = await fetch(`${this.baseURL}/api/chat`, {
+      // Convert messages to a single prompt for Ollama generate API
+      const promptText = messages.map(msg => {
+        if (msg.role === 'system') return msg.content;
+        if (msg.role === 'user') return `User: ${msg.content}`;
+        return msg.content;
+      }).join('\n\n');
+
+      const response = await fetch(`${this.baseURL}api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3.1:70b',
-          messages: messages,
+          model: 'llama3:70b',
+          prompt: promptText,
           stream: false,
           options: {
             temperature: 0.7,
@@ -573,7 +580,18 @@ Provide analysis in this exact JSON format:
 
       const data = await response.json();
       
-      if (data.message && data.message.content) {
+      if (data.response) {
+        const responseText = data.response.trim();
+        
+        // Parse JSON response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const analysis = JSON.parse(jsonMatch[0]);
+          return analysis;
+        }
+        
+        throw new Error('Invalid JSON format in response');
+      } else if (data.message && data.message.content) {
         const responseText = data.message.content.trim();
         
         // Parse JSON response

@@ -177,19 +177,14 @@ IMPORTANT:
 - Be specific, not generic`;
 
     try {
-      const response = await fetch(`${this.baseURL}/api/chat`, {
+      const response = await fetch(`${this.baseURL}api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'llama3:70b',
-          messages: [
-            {
-              role: 'user',
-              content: analysisPrompt
-            }
-          ],
+          prompt: analysisPrompt,
           stream: false,
           options: {
             temperature: 0.3, // Lower temperature for more consistent analysis
@@ -204,7 +199,11 @@ IMPORTANT:
 
       const data = await response.json();
       
-      if (data.message && data.message.content) {
+      if (data.response) {
+        const analysisResult = this.parseAnalysisResult(data.response);
+        console.log('✅ AI analysis completed:', analysisResult);
+        return analysisResult;
+      } else if (data.message && data.message.content) {
         const analysisResult = this.parseAnalysisResult(data.message.content);
         console.log('✅ AI analysis completed:', analysisResult);
         return analysisResult;
