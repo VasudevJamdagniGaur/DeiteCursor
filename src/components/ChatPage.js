@@ -31,39 +31,30 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Cleanup effect to ensure input is always enabled
   useEffect(() => {
-    // Load existing messages or set welcome message
-    const loadMessages = () => {
-      const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
-      if (storedMessages) {
-        try {
-          const parsedMessages = JSON.parse(storedMessages);
-          const messagesWithDates = parsedMessages.map(msg => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }));
-          setMessages(messagesWithDates);
-        } catch (error) {
-          console.error('Error parsing stored messages:', error);
-          setWelcomeMessage();
-        }
-      } else {
-        setWelcomeMessage();
+    const cleanup = () => {
+      setIsLoading(false);
+      if (inputRef.current) {
+        inputRef.current.focus();
       }
     };
 
-    const setWelcomeMessage = () => {
-      const welcomeMessage = {
-        id: 'welcome',
-        text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
-        sender: 'ai',
-        timestamp: new Date()
-      };
-      setMessages([welcomeMessage]);
-    };
+    // Cleanup on component unmount
+    return cleanup;
+  }, []);
 
-    loadMessages();
-  }, [selectedDateId]);
+  // Safety effect to ensure loading state doesn't get stuck
+  useEffect(() => {
+    if (isLoading) {
+      const safetyTimeout = setTimeout(() => {
+        console.log('🔄 SAFETY: Force-disabling loading state after 30 seconds');
+        setIsLoading(false);
+      }, 30000); // 30 second safety timeout
+
+      return () => clearTimeout(safetyTimeout);
+    }
+  }, [isLoading]);
 
   const saveMessages = (newMessages) => {
     localStorage.setItem(`chatMessages_${selectedDateId}`, JSON.stringify(newMessages));
@@ -75,6 +66,19 @@ export default function ChatPage() {
     console.log('🎯 CHAT PAGE DEBUG: handleSendMessage called');
     console.log('🎯 CHAT PAGE DEBUG: inputMessage:', inputMessage);
     console.log('🎯 CHAT PAGE DEBUG: isLoading:', isLoading);
+    
+    // Force reset loading state if it seems stuck
+    if (isLoading) {
+      console.log('🔄 CHAT DEBUG: Loading state detected, checking if stuck...');
+      const currentTime = Date.now();
+      const lastLoadingTime = window.lastLoadingTime || 0;
+      
+      if (currentTime - lastLoadingTime > 10000) { // If loading for more than 10 seconds
+        console.log('🔄 CHAT DEBUG: Loading state appears stuck, force-resetting...');
+        setIsLoading(false);
+        return;
+      }
+    }
     
     if (!inputMessage.trim() || isLoading) {
       console.log('🎯 CHAT PAGE DEBUG: Returning early - empty message or loading');
@@ -96,6 +100,7 @@ export default function ChatPage() {
     setMessages(newMessages);
     setInputMessage('');
     setIsLoading(true);
+    window.lastLoadingTime = Date.now(); // Track when loading started
     
     console.log('🔄 CHAT DEBUG: Set isLoading to true, input should be disabled now');
 
@@ -191,13 +196,20 @@ export default function ChatPage() {
         throw new Error('Invalid AI response format');
       }
 
-      // Wait for typewriter effect to finish
+      // Wait for typewriter effect to finish with timeout
       const waitForTypewriter = () => {
         return new Promise((resolve) => {
+          let timeoutCount = 0;
+          const maxTimeouts = 50; // 5 seconds max wait
+          
           const checkQueue = () => {
             if (typewriterQueue.length === 0 && !isTyping) {
               resolve();
+            } else if (timeoutCount >= maxTimeouts) {
+              console.log('⚠️ Typewriter timeout - proceeding anyway');
+              resolve();
             } else {
+              timeoutCount++;
               setTimeout(checkQueue, 100);
             }
           };
@@ -366,13 +378,72 @@ export default function ChatPage() {
       console.log('🔄 CHAT DEBUG: Resetting isLoading to false - input should be enabled now');
       setIsLoading(false);
       
+      // Focus the input field to ensure it's ready for the next message
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
+      
       // Safety timeout to ensure input is always re-enabled
       setTimeout(() => {
         setIsLoading(false);
         console.log('🔄 SAFETY: Force-enabled chat input after timeout');
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
       }, 1000);
     }
   };
+
+  // Keyboard event handler for Enter key
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!isLoading && inputMessage.trim()) {
+          handleSendMessage(e);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isLoading, inputMessage, handleSendMessage]);
+
+  useEffect(() => {
+    // Load existing messages or set welcome message
+    const loadMessages = () => {
+      const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
+      if (storedMessages) {
+        try {
+          const parsedMessages = JSON.parse(storedMessages);
+          const messagesWithDates = parsedMessages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(messagesWithDates);
+        } catch (error) {
+          console.error('Error parsing stored messages:', error);
+          setWelcomeMessage();
+        }
+      } else {
+        setWelcomeMessage();
+      }
+    };
+
+    const setWelcomeMessage = () => {
+      const welcomeMessage = {
+        id: 'welcome',
+        text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages([welcomeMessage]);
+    };
+
+    loadMessages();
+  }, [selectedDateId]);
 
   const handleBack = () => {
     navigate('/dashboard');
