@@ -2368,7 +2368,7 @@ Return in this JSON format:
         >
           <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
           <span className="text-sm font-medium">
-            {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'AI Update'}
+            {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'Refresh'}
           </span>
         </button>
       </div>
