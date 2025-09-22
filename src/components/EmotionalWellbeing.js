@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import emotionalAnalysisService from '../services/emotionalAnalysisService';
 import patternAnalysisService from '../services/patternAnalysisService';
+import habitAnalysisService from '../services/habitAnalysisService';
 import { getCurrentUser } from '../services/authService';
 import chatService from '../services/chatService';
 import firestoreService from '../services/firestoreService';
@@ -47,6 +48,25 @@ import {
 export default function EmotionalWellbeing() {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
+
+  // Add CSS animation styles
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
   const [activeSection, setActiveSection] = useState('mood-survey');
   const [emotionalData, setEmotionalData] = useState([]);
   const [weeklyMoodData, setWeeklyMoodData] = useState([]);
@@ -60,6 +80,7 @@ export default function EmotionalWellbeing() {
   const [highlightsPeriod] = useState('3months'); // Always show last 3 months
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
+  const [habitAnalysis, setHabitAnalysis] = useState(null);
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedDateDetails, setSelectedDateDetails] = useState(null);
@@ -103,6 +124,7 @@ export default function EmotionalWellbeing() {
     if (user) {
       loadCachedPatternData(user.uid, patternPeriod);
       loadFreshPatternAnalysis();
+      loadHabitAnalysis();
     }
   }, [patternPeriod]);
 
@@ -278,6 +300,18 @@ export default function EmotionalWellbeing() {
         hasEnoughData: freshData.hasEnoughData,
         timestamp: new Date().toISOString()
       });
+    }
+  };
+
+  const loadHabitAnalysis = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    try {
+      const analysis = await habitAnalysisService.getHabitAnalysis(user.uid, true);
+      setHabitAnalysis(analysis);
+    } catch (error) {
+      console.error('Error loading habit analysis:', error);
     }
   };
 
@@ -1963,21 +1997,200 @@ Return in this JSON format:
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* AI Recommendations */}
-              {hasEnoughData && patternAnalysis && patternAnalysis.recommendations && patternAnalysis.recommendations.length > 0 ? (
-                patternAnalysis.recommendations.slice(0, 3).map((recommendation, index) => (
-                  <div key={index} className={`p-4 rounded-2xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Award className="w-5 h-5 text-green-500" />
-                      <h4 className={`font-medium ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
-                        AI Recommendation
+              {/* Success State - Requirements Met */}
+              {habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
+                <>
+                  {/* Success Banner */}
+                  <div className="col-span-full mb-4">
+                    <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center animate-bounce">
+                          <span className="text-white text-lg">🎉</span>
+                        </div>
+                        <div>
+                          <h5 className={`font-bold ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                            Unlocked Habits! 🎯
+                          </h5>
+                          <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                            Great job staying consistent — here are your personalized habits!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+              
+              {/* AI-Generated Habits */}
+              {habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
+                habitAnalysis.habits.map((habit, index) => (
+                  <div 
+                    key={index} 
+                    className={`group p-6 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer transform hover:shadow-lg ${
+                      isDarkMode 
+                        ? 'bg-green-500/10 border border-green-500/20 hover:bg-green-500/15 hover:shadow-green-500/20' 
+                        : 'bg-green-50 border border-green-200 hover:bg-green-100 hover:shadow-green-200'
+                    }`}
+                    style={{
+                      animationDelay: `${index * 0.1}s`,
+                      animation: 'fadeInUp 0.6s ease-out forwards'
+                    }}
+                  >
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${
+                        isDarkMode ? 'bg-green-500/20' : 'bg-green-100'
+                      }`}>
+                        <Target className="w-5 h-5 text-green-500" />
+                      </div>
+                      <h4 className={`font-bold text-lg ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                        {habit.title}
                       </h4>
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
-                      {recommendation}
+                    <p className={`text-sm mb-4 leading-relaxed ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                      {habit.description}
                     </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`text-xs px-3 py-1 rounded-full font-medium ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
+                        {habit.frequency}
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                        {habit.category?.replace('_', ' ').toUpperCase()}
+                      </div>
+                    </div>
+                    <div className={`text-xs p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/30 text-green-300' : 'bg-gray-50 text-green-600'}`}>
+                      <strong>Why this helps:</strong> {habit.why}
+                    </div>
                   </div>
                 ))
+              ) : habitAnalysis && !habitAnalysis.success ? (
+                <div 
+                  className={`col-span-full p-8 rounded-2xl backdrop-blur-lg transition-all duration-300 ${
+                    isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse"
+                      style={{
+                        background: "linear-gradient(135deg, rgba(125, 211, 192, 0.2) 0%, rgba(212, 175, 55, 0.2) 100%)",
+                        border: "1px solid rgba(125, 211, 192, 0.3)",
+                        boxShadow: "0 0 20px rgba(125, 211, 192, 0.1)",
+                      }}
+                    >
+                      <Brain className="w-6 h-6" style={{ color: "#7DD3C0" }} />
+                    </div>
+                    <div>
+                      <h4 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                        Building Your Personalized Habits 🎯
+                      </h4>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Almost there! Just a few more conversations to unlock your insights
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Section */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className={`font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                        Progress to Unlock Habits
+                      </h5>
+                      <div className={`text-sm font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                        {habitAnalysis.totalMessages || 0} / 50 messages
+                      </div>
+                    </div>
+                    
+                    {/* Circular Progress Ring */}
+                    <div className="flex items-center space-x-6">
+                      <div className={`relative w-20 h-20 ${((habitAnalysis.totalMessages || 0) / 50) >= 0.8 ? 'animate-pulse' : ''}`}>
+                        <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+                          <path
+                            className={`${isDarkMode ? 'text-gray-700' : 'text-gray-200'}`}
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          <path
+                            className={`text-green-500 ${((habitAnalysis.totalMessages || 0) / 50) >= 0.8 ? 'drop-shadow-lg' : ''}`}
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="none"
+                            strokeLinecap="round"
+                            strokeDasharray={`${((habitAnalysis.totalMessages || 0) / 50) * 100}, 100`}
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            style={{
+                              filter: ((habitAnalysis.totalMessages || 0) / 50) >= 0.8 ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.5))' : 'none'
+                            }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                            {Math.round(((habitAnalysis.totalMessages || 0) / 50) * 100)}%
+                          </span>
+                        </div>
+                        {((habitAnalysis.totalMessages || 0) / 50) >= 0.9 && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-6 h-6 rounded-full bg-green-500 animate-ping opacity-75"></div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                          {habitAnalysis.totalMessages || 0} / 50 messages
+                        </div>
+                        <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {50 - (habitAnalysis.totalMessages || 0)} more to go!
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Requirements Checklist */}
+                  <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-gray-700/30' : 'bg-gray-50'}`}>
+                    <h6 className={`font-semibold mb-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      Requirements Checklist
+                    </h6>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          (habitAnalysis.totalMessages || 0) >= 50 ? 'bg-green-500' : 'bg-gray-400'
+                        }`}>
+                          {(habitAnalysis.totalMessages || 0) >= 50 ? (
+                            <span className="text-white text-xs">✓</span>
+                          ) : (
+                            <span className="text-white text-xs">○</span>
+                          )}
+                        </div>
+                        <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          50 messages {habitAnalysis.totalMessages >= 50 ? '(Complete!)' : `(${habitAnalysis.totalMessages || 0}/50)`}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          (habitAnalysis.totalDays || 0) >= 30 ? 'bg-green-500' : 'bg-gray-400'
+                        }`}>
+                          {(habitAnalysis.totalDays || 0) >= 30 ? (
+                            <span className="text-white text-xs">✓</span>
+                          ) : (
+                            <span className="text-white text-xs">○</span>
+                          )}
+                        </div>
+                        <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          30 days of conversations {habitAnalysis.totalDays >= 30 ? '(Complete!)' : `(${habitAnalysis.totalDays || 0}/30)`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Encouragement Message */}
+                  <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                    <p className={`text-sm text-center ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                      💬 Keep chatting with Deite to unlock your personalized habits and insights!
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <>
                   {/* Continue Chatting */}
