@@ -82,7 +82,7 @@ Write a personal journal entry that reflects this person's day and feelings:`;
 
     console.log('🌐 Making API call to RunPod for reflection...');
 
-    // Use llama3:70b as requested
+    // Use consistent model names
     const modelOptions = ['llama3:70b', 'llama3.1:70b', 'llama3:8b', 'llama3'];
     
     for (const model of modelOptions) {
