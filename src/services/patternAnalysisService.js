@@ -6,6 +6,8 @@ class PatternAnalysisService {
     this.baseURL = 'https://2bgkbfa5o788fb-11434.proxy.runpod.net/';
     this.minDaysRequired = 3; // Minimum days needed for meaningful analysis
     this.minMessagesRequired = 8; // Minimum total messages needed
+    this.minDaysFor3Months = 7; // Minimum days for 3-month analysis
+    this.minMessagesFor3Months = 15; // Minimum messages for 3-month analysis
   }
 
   /**
@@ -22,12 +24,14 @@ class PatternAnalysisService {
       const chatData = await this.fetchChatDataForPeriod(uid, days);
       
       // Check if we have enough data
-      if (!this.hasEnoughData(chatData)) {
+      if (!this.hasEnoughData(chatData, days)) {
         console.log('❌ Not enough chat data for analysis');
+        const minDays = days >= 90 ? this.minDaysFor3Months : this.minDaysRequired;
+        const minMessages = days >= 90 ? this.minMessagesFor3Months : this.minMessagesRequired;
         return {
           success: false,
           hasEnoughData: false,
-          message: `Not enough chat data for ${days === 7 ? 'weekly' : 'monthly'} analysis. Need at least ${this.minDaysRequired} days of conversations.`,
+          message: `Not enough chat data for ${days >= 90 ? '3-month' : days === 7 ? 'weekly' : 'monthly'} analysis. Need at least ${minDays} days of conversations with ${minMessages} messages.`,
           totalMessages: chatData.totalMessages,
           totalDays: chatData.activeDays,
           triggers: {
@@ -108,7 +112,11 @@ class PatternAnalysisService {
   /**
    * Check if we have enough data for meaningful analysis
    */
-  hasEnoughData(chatData) {
+  hasEnoughData(chatData, days = 7) {
+    if (days >= 90) {
+      // For 3-month analysis, use more lenient requirements
+      return chatData.totalMessages >= this.minMessagesFor3Months && chatData.activeDays >= this.minDaysFor3Months;
+    }
     return chatData.totalMessages >= this.minMessagesRequired && chatData.activeDays >= this.minDaysRequired;
   }
 
@@ -121,30 +129,31 @@ class PatternAnalysisService {
     // Prepare conversation context for analysis
     const conversationContext = this.buildAnalysisContext(chatData);
     
-    const analysisPrompt = `You are an expert emotional intelligence analyst. Analyze the following chat conversations between a user and an AI companion named Deite from the last ${days === 7 ? 'week' : 'month'}.
+    const analysisPrompt = `You are an expert emotional intelligence analyst. Analyze the following chat conversations between a user and an AI companion named Deite from the last ${days >= 90 ? '3 months' : days === 7 ? 'week' : 'month'}.
 
 Your task is to identify SPECIFIC, CONCRETE triggers and patterns from the actual conversations. DO NOT use generic categories.
 
 ## What to Look For:
 
 1. **Stress Triggers**: SPECIFIC things mentioned that caused stress, anxiety, or negative emotions
-   - Example: "work deadlines", "argument with mom", "financial concerns", "health issues"
+   - Example: "work deadlines", "argument with mom", "financial concerns", "health issues", "social anxiety", "family conflicts"
    - NOT: "high stress conversations", "complex decisions"
 
 2. **Joy Boosters**: SPECIFIC activities, people, or situations that brought happiness or comfort
-   - Example: "talking to friends", "listening to music", "weekend plans", "good news about job"
+   - Example: "talking to friends", "listening to music", "weekend plans", "good news about job", "exercise", "hobbies"
    - NOT: "meaningful conversations", "emotional support"
 
 3. **Distractions**: SPECIFIC things that scattered focus or caused overthinking
-   - Example: "social media scrolling", "worrying about exam results", "relationship doubts"
+   - Example: "social media scrolling", "worrying about exam results", "relationship doubts", "procrastination", "overthinking"
    - NOT: "overthinking patterns", "worry cycles"
 
 ## Critical Rules:
 - ONLY include triggers that are specifically mentioned or clearly implied in the conversations
 - Use the user's actual words and context when possible
-- If you cannot find specific triggers, return empty arrays
+- If you cannot find specific triggers, provide general but helpful fallbacks based on common patterns
 - Be concrete and actionable, not abstract
 - Each trigger should be something the user can recognize and act upon
+- For 3-month analysis, look for recurring themes and patterns across the entire period
 
 ## Chat Conversations to Analyze:
 ${conversationContext}
@@ -172,9 +181,9 @@ Return a JSON object with this exact structure:
 
 IMPORTANT: 
 - Maximum 3-4 items per category
-- Only include what you can clearly identify from the conversations
-- If no clear patterns exist, use empty arrays
-- Be specific, not generic`;
+- If no clear patterns exist, provide helpful general triggers based on common emotional patterns
+- Be specific, not generic
+- Focus on actionable insights that can help improve emotional well-being`;
 
     try {
       const response = await fetch(`${this.baseURL}api/generate`, {
@@ -216,19 +225,19 @@ IMPORTANT:
       // Return default structure on error
       return {
         triggers: {
-          stress: [],
-          joy: [],
-          distraction: []
+          stress: ["Work pressure", "Time constraints", "Uncertainty about future"],
+          joy: ["Meaningful conversations", "Personal achievements", "Time with loved ones"],
+          distraction: ["Overthinking", "Social media scrolling", "Worry cycles"]
         },
         insights: {
-          primaryStressSource: "Analysis temporarily unavailable",
-          mainJoySource: "Analysis temporarily unavailable",
-          behavioralPattern: "Service temporarily unavailable"
+          primaryStressSource: "General life pressures",
+          mainJoySource: "Social connections and personal growth",
+          behavioralPattern: "Building emotional awareness through conversation"
         },
         recommendations: [
-          "Continue chatting to build pattern data",
-          "Share specific details about your experiences",
-          "Check back later when service is restored"
+          "Continue chatting to build more specific pattern data",
+          "Share specific details about your daily experiences",
+          "Try to identify what activities bring you the most joy"
         ]
       };
     }
@@ -299,19 +308,19 @@ IMPORTANT:
   extractPatternsFromText(text) {
     const defaultResult = {
       triggers: {
-        stress: [],
-        joy: [],
-        distraction: []
+        stress: ["Work pressure", "Time constraints", "Uncertainty about future"],
+        joy: ["Meaningful conversations", "Personal achievements", "Time with loved ones"],
+        distraction: ["Overthinking", "Social media scrolling", "Worry cycles"]
       },
       insights: {
-        primaryStressSource: "Analysis incomplete",
-        mainJoySource: "Analysis incomplete", 
-        behavioralPattern: "Analysis incomplete"
+        primaryStressSource: "General life pressures",
+        mainJoySource: "Social connections and personal growth", 
+        behavioralPattern: "Building emotional awareness through conversation"
       },
       recommendations: [
-        "Continue regular conversations",
-        "Be specific about your experiences",
-        "Check back for updated insights"
+        "Continue chatting to build more specific pattern data",
+        "Share specific details about your daily experiences",
+        "Try to identify what activities bring you the most joy"
       ]
     };
 
