@@ -1085,7 +1085,7 @@ Return in this JSON format:
 }`;
 
     try {
-      const response = await fetch(`https://2bgkbfa5o788fb-11434.proxy.runpod.net/api/generate`, {
+      const response = await fetch(`https://uku63xhk0nopot-11434.proxy.runpod.net/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
