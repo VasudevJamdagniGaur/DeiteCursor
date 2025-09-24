@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import emotionalAnalysisService from '../services/emotionalAnalysisService';
@@ -31,6 +31,43 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('EmotionalWellbeing Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-6">
+          <div className="text-center">
+            <h2 className="text-xl font-bold mb-4">Something went wrong</h2>
+            <p className="text-gray-400 mb-4">The Emotional Wellbeing section encountered an error.</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 export default function EmotionalWellbeing() {
   const navigate = useNavigate();
@@ -87,7 +124,7 @@ export default function EmotionalWellbeing() {
       // Then fetch fresh data in background
       loadFreshData();
     }
-  }, []);
+  }, [loadCachedData, loadFreshData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -95,7 +132,7 @@ export default function EmotionalWellbeing() {
       loadCachedEmotionalData(user.uid, selectedPeriod);
       loadFreshEmotionalData();
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, loadCachedEmotionalData, loadFreshEmotionalData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -103,7 +140,7 @@ export default function EmotionalWellbeing() {
       loadCachedBalanceData(user.uid, balancePeriod);
       loadFreshBalanceData();
     }
-  }, [balancePeriod]);
+  }, [balancePeriod, loadCachedBalanceData, loadFreshBalanceData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -112,7 +149,7 @@ export default function EmotionalWellbeing() {
       loadFreshPatternAnalysis();
       loadHabitAnalysis();
     }
-  }, [patternPeriod]);
+  }, [patternPeriod, loadCachedPatternData, loadFreshPatternAnalysis]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -120,7 +157,7 @@ export default function EmotionalWellbeing() {
       loadCachedHighlightsData(user.uid, highlightsPeriod);
       loadFreshHighlightsData();
     }
-  }, [highlightsPeriod]);
+  }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
 
   // Cache management functions
   const saveToCache = (key, data) => {
@@ -160,7 +197,7 @@ export default function EmotionalWellbeing() {
   };
 
   // Instant cache loading functions
-  const loadCachedData = (userId) => {
+  const loadCachedData = useCallback((userId) => {
     console.log('⚡ Loading all cached data instantly...');
     
     // Load cached emotional data
@@ -174,9 +211,9 @@ export default function EmotionalWellbeing() {
     
     // Load cached highlights data
     loadCachedHighlightsData(userId, highlightsPeriod);
-  };
+  }, [selectedPeriod, balancePeriod, patternPeriod, highlightsPeriod]);
 
-  const loadCachedEmotionalData = (userId, period) => {
+  const loadCachedEmotionalData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('emotional', period, userId);
     const cachedData = loadFromCache(cacheKey, 30); // 30 minutes cache
     
@@ -186,9 +223,9 @@ export default function EmotionalWellbeing() {
       setEmotionalData(cachedData.emotionalData || []);
       setLastCacheUpdate(cachedData.timestamp);
     }
-  };
+  }, []);
 
-  const loadCachedBalanceData = (userId, period) => {
+  const loadCachedBalanceData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('balance', period, userId);
     const cachedData = loadFromCache(cacheKey, 30); // 30 minutes cache
     
@@ -200,9 +237,9 @@ export default function EmotionalWellbeing() {
       // If no cached data, trigger fresh data load
       console.log('⚡ No cached balance data, will load fresh data');
     }
-  };
+  }, []);
 
-  const loadCachedPatternData = (userId, period) => {
+  const loadCachedPatternData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('pattern', period, userId);
     const cachedData = loadFromCache(cacheKey, 60); // 60 minutes cache
     
@@ -212,9 +249,9 @@ export default function EmotionalWellbeing() {
       setTriggers(cachedData.triggers || {});
       setHasEnoughData(cachedData.hasEnoughData !== false);
     }
-  };
+  }, []);
 
-  const loadCachedHighlightsData = (userId, period) => {
+  const loadCachedHighlightsData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('highlights', '3months', userId);
     const cachedData = loadFromCache(cacheKey, 45); // 45 minutes cache
     
@@ -222,10 +259,10 @@ export default function EmotionalWellbeing() {
       console.log('⚡ Setting cached highlights data instantly');
       setHighlights(cachedData.highlights || {});
     }
-  };
+  }, []);
 
   // Fresh data loading functions (background)
-  const loadFreshData = async () => {
+  const loadFreshData = useCallback(async () => {
     console.log('🔄 Loading fresh data in background...');
     setIsLoadingFresh(true);
     
@@ -241,9 +278,9 @@ export default function EmotionalWellbeing() {
     } finally {
       setIsLoadingFresh(false);
     }
-  };
+  }, []);
 
-  const loadFreshEmotionalData = async () => {
+  const loadFreshEmotionalData = useCallback(async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -256,9 +293,9 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  };
+  }, [selectedPeriod]);
 
-  const loadFreshBalanceData = async () => {
+  const loadFreshBalanceData = useCallback(async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -271,9 +308,9 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  };
+  }, [balancePeriod]);
 
-  const loadFreshPatternAnalysis = async () => {
+  const loadFreshPatternAnalysis = useCallback(async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -287,7 +324,7 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  };
+  }, [patternPeriod]);
 
   const loadHabitAnalysis = async () => {
     const user = getCurrentUser();
@@ -301,7 +338,7 @@ export default function EmotionalWellbeing() {
     }
   };
 
-  const loadFreshHighlightsData = async () => {
+  const loadFreshHighlightsData = useCallback(async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -313,7 +350,7 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  };
+  }, []);
 
   const loadRealEmotionalDataInternal = async () => {
     console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod === 365 ? 'lifetime' : selectedPeriod + ' days'} from NEW Firebase structure...`);
@@ -2213,14 +2250,15 @@ Return in this JSON format:
   );
 
   return (
-    <div
-      className="min-h-screen flex flex-col relative overflow-hidden"
-      style={{
-        background: isDarkMode 
-          ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
-          : "#FAFAF8",
-      }}
-    >
+    <ErrorBoundary>
+      <div
+        className="min-h-screen flex flex-col relative overflow-hidden"
+        style={{
+          background: isDarkMode 
+            ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+            : "#FAFAF8",
+        }}
+      >
       {/* Header */}
       <div className={`sticky top-0 z-20 flex items-center justify-between p-3 sm:p-6 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
@@ -2395,6 +2433,7 @@ Return in this JSON format:
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
