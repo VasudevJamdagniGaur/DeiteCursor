@@ -431,7 +431,7 @@ export default function ProfilePage() {
           className="backdrop-blur-lg border rounded-2xl p-6 space-y-4"
           style={{
             backgroundColor: "rgba(28, 31, 46, 0.3)",
-            border: "1px solid rgba(155, 181, 255, 0.18)",
+            border: "1px solid rgba(34, 197, 94, 0.18)",
           }}
         >
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -443,7 +443,7 @@ export default function ProfilePage() {
           </p>
 
           <button
-            onClick={() => window.open('tel:+919536138120', '_self')}
+            onClick={() => window.open('tel:9536138120', '_self')}
             className="w-full p-4 rounded-xl text-left hover:opacity-80 transition-all duration-300 border border-gray-600"
             style={{
               backgroundColor: "rgba(11, 14, 20, 0.4)",
@@ -453,7 +453,7 @@ export default function ProfilePage() {
               <Phone className="w-5 h-5 text-green-400" />
               <div>
                 <p className="font-medium text-white">Call Founders</p>
-                <p className="text-sm text-gray-400">+91 9536138120</p>
+                <p className="text-sm text-gray-400">Call us at +91 9536138120</p>
               </div>
             </div>
           </button>
@@ -469,7 +469,7 @@ export default function ProfilePage() {
               <MessageCircle className="w-5 h-5 text-green-400" />
               <div>
                 <p className="font-medium text-white">WhatsApp Message</p>
-                <p className="text-sm text-gray-400">Send a message via WhatsApp</p>
+                <p className="text-sm text-gray-400">Send us a message on WhatsApp</p>
               </div>
             </div>
           </button>
