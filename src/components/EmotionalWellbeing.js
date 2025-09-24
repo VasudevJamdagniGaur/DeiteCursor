@@ -1301,72 +1301,13 @@ Return in this JSON format:
                 <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                   Mood Chart - {selectedPeriod === 365 ? 'Lifetime' : `${selectedPeriod} Day`} Summary
                 </h3>
-                <button
-                  onClick={async () => {
-                    console.log('🔍 DEBUG: Checking September 12th data...');
-                    const user = getCurrentUser();
-                    if (user) {
-                      // Check Firebase for Sept 12
-                      try {
-                        const result = await firestoreService.getMoodChartDataNew(user.uid, 7);
-                        console.log('🔍 DEBUG: Firebase mood data:', result);
-                        
-                        // Check localStorage for Sept 12
-                        const localKeys = Object.keys(localStorage).filter(k => k.includes('2025-09-12'));
-                        console.log('🔍 DEBUG: localStorage keys for Sept 12:', localKeys);
-                        
-                        localKeys.forEach(key => {
-                          const data = localStorage.getItem(key);
-                          console.log(`🔍 DEBUG: ${key}:`, data);
-                        });
-                        
-                        // Force create RULE-COMPLIANT data for Sept 12
-                        console.log('🔧 Creating rule-compliant test data for Sept 12...');
-                        
-                        // Create scores that follow the 200% cap and emotion rules
-                        let testScores = {
-                          happiness: 60,
-                          energy: 55,
-                          anxiety: 40,
-                          stress: 45
-                        };
-                        
-                        // Apply 200% cap
-                        const total = testScores.happiness + testScores.energy + testScores.anxiety + testScores.stress;
-                        if (total > 200) {
-                          const scaleFactor = 200 / total;
-                          testScores = {
-                            happiness: Math.round(testScores.happiness * scaleFactor),
-                            energy: Math.round(testScores.energy * scaleFactor),
-                            anxiety: Math.round(testScores.anxiety * scaleFactor),
-                            stress: Math.round(testScores.stress * scaleFactor)
-                          };
-                        }
-                        
-                        console.log('🔧 Rule-compliant scores (total ≤ 200):', testScores);
-                        console.log('🔧 Total:', testScores.happiness + testScores.energy + testScores.anxiety + testScores.stress);
-                        
-                        await firestoreService.saveMoodChartNew(user.uid, '2025-09-12', testScores);
-                        console.log('🔍 DEBUG: Rule-compliant scores saved for Sept 12');
-                        
-                        // Reload data
-                        loadFreshEmotionalData();
-                      } catch (error) {
-                        console.error('🔍 DEBUG: Error:', error);
-                      }
-                    }
-                  }}
-                  className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                >
-                  Debug & Fix Sept 12
-                </button>
               </div>
               
               {/* Period Toggle - moved inside line graph container */}
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 <button
                   onClick={() => setSelectedPeriod(7)}
-                  className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 ${
                     selectedPeriod === 7
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -1378,7 +1319,7 @@ Return in this JSON format:
                 </button>
                 <button
                   onClick={() => setSelectedPeriod(15)}
-                  className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 ${
                     selectedPeriod === 15
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -1390,7 +1331,7 @@ Return in this JSON format:
                 </button>
                 <button
                   onClick={() => setSelectedPeriod(365)}
-                  className={`px-4 py-2 rounded-full text-sm transition-all duration-300 ${
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 ${
                     selectedPeriod === 365
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -1403,7 +1344,7 @@ Return in this JSON format:
               </div>
             </div>
 
-            <div className="h-64 w-full">
+            <div className="h-48 sm:h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart 
                   data={weeklyMoodData}
@@ -1540,10 +1481,10 @@ Return in this JSON format:
                 </div>
 
                 {/* Balance Period Toggle */}
-                <div className="flex space-x-2">
+                <div className="flex space-x-1 sm:space-x-2">
                   <button
                     onClick={() => setBalancePeriod(7)}
-                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm transition-all duration-300 ${
                       balancePeriod === 7
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                         : isDarkMode
@@ -1555,7 +1496,7 @@ Return in this JSON format:
                   </button>
                   <button
                     onClick={() => setBalancePeriod(30)}
-                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm transition-all duration-300 ${
                       balancePeriod === 30
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                         : isDarkMode
@@ -1567,7 +1508,7 @@ Return in this JSON format:
                   </button>
                   <button
                     onClick={() => setBalancePeriod(365)}
-                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm transition-all duration-300 ${
                       balancePeriod === 365
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                         : isDarkMode
@@ -1580,7 +1521,7 @@ Return in this JSON format:
                 </div>
               </div>
 
-              <div className="h-64 w-full">
+              <div className="h-48 sm:h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={moodBalance}>
                     <XAxis 
@@ -1689,10 +1630,10 @@ Return in this JSON format:
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Best Mood Day - Unified UI with Green Title */}
               <div 
-                className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
                 style={{
                   backgroundColor: "rgba(30, 35, 50, 0.8)",
                   border: "1px solid rgba(125, 211, 192, 0.2)",
@@ -1731,7 +1672,7 @@ Return in this JSON format:
 
               {/* Challenging Day - Unified UI with Red Title */}
               <div 
-                className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
                 style={{
                   backgroundColor: "rgba(30, 35, 50, 0.8)",
                   border: "1px solid rgba(125, 211, 192, 0.2)",
@@ -1962,7 +1903,7 @@ Return in this JSON format:
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {/* Success State - Requirements Met */}
               {habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
                 <>
@@ -1992,7 +1933,7 @@ Return in this JSON format:
                 habitAnalysis.habits.map((habit, index) => (
                   <div 
                     key={index} 
-                    className={`group p-6 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer transform hover:shadow-lg ${
+                    className={`group p-4 sm:p-6 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer transform hover:shadow-lg ${
                       isDarkMode 
                         ? 'bg-green-500/10 border border-green-500/20 hover:bg-green-500/15 hover:shadow-green-500/20' 
                         : 'bg-green-50 border border-green-200 hover:bg-green-100 hover:shadow-green-200'
@@ -2161,7 +2102,7 @@ Return in this JSON format:
                 <>
                   {/* Continue Chatting */}
                   <div 
-                    className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
                     style={{
                       backgroundColor: "rgba(30, 35, 50, 0.8)",
                       border: "1px solid rgba(125, 211, 192, 0.2)",
@@ -2198,7 +2139,7 @@ Return in this JSON format:
 
                   {/* Reflect Daily */}
                   <div 
-                    className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
                     style={{
                       backgroundColor: "rgba(30, 35, 50, 0.8)",
                       border: "1px solid rgba(125, 211, 192, 0.2)",
@@ -2235,7 +2176,7 @@ Return in this JSON format:
 
                   {/* Build Patterns */}
                   <div 
-                    className="group p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
                     style={{
                       backgroundColor: "rgba(30, 35, 50, 0.8)",
                       border: "1px solid rgba(125, 211, 192, 0.2)",
@@ -2295,7 +2236,7 @@ Return in this JSON format:
       }}
     >
       {/* Header */}
-      <div className={`sticky top-0 z-20 flex items-center justify-between p-6 border-b backdrop-blur-lg ${
+      <div className={`sticky top-0 z-20 flex items-center justify-between p-3 sm:p-6 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
       }`}
         style={{
@@ -2306,7 +2247,7 @@ Return in this JSON format:
       >
         <button
           onClick={handleBack}
-          className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity ${
+          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity ${
             isDarkMode ? 'backdrop-blur-md' : 'bg-white'
           }`}
           style={isDarkMode ? {
@@ -2317,12 +2258,12 @@ Return in this JSON format:
             boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
           }}
         >
-          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
         </button>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
@@ -2333,13 +2274,13 @@ Return in this JSON format:
               boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
             }}
           >
-            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
+            <Heart className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div>
-            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h1 className={`text-base sm:text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Emotional Wellbeing
             </h1>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Track your emotional journey
               </p>
@@ -2360,29 +2301,29 @@ Return in this JSON format:
         <button
           onClick={handleAIUpdate}
           disabled={isUpdating}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+          className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all duration-200 ${
             isUpdating 
               ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed' 
               : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
           }`}
         >
-          <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
-          <span className="text-sm font-medium">
+          <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
+          <span className="text-xs sm:text-sm font-medium">
             {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'Refresh'}
           </span>
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {renderMoodSurvey()}
       </div>
 
       {/* Emotion Details Modal */}
       {showDetailsModal && selectedDateDetails && emotionExplanations && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div
-            className={`rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto ${
+            className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] sm:max-h-[80vh] overflow-y-auto ${
               isDarkMode ? 'bg-gray-800' : 'bg-white'
             }`}
             style={{
@@ -2391,23 +2332,23 @@ Return in this JSON format:
                 : "0 20px 60px rgba(0, 0, 0, 0.15)",
             }}
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className={`text-lg sm:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                 Emotion Details - {selectedDateDetails.day}
               </h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                   isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                 }`}
               >
-                <span className={`text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>×</span>
+                <span className={`text-lg sm:text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>×</span>
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* Happiness */}
-              <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
+              <div className="p-3 sm:p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
                     <Smile className="w-4 h-4 text-white" />
@@ -2422,7 +2363,7 @@ Return in this JSON format:
               </div>
 
               {/* Energy */}
-              <div className="p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
+              <div className="p-3 sm:p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center">
                     <Zap className="w-4 h-4 text-white" />
@@ -2437,7 +2378,7 @@ Return in this JSON format:
               </div>
 
               {/* Anxiety */}
-              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+              <div className="p-3 sm:p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                     <AlertTriangle className="w-4 h-4 text-white" />
@@ -2452,7 +2393,7 @@ Return in this JSON format:
               </div>
 
               {/* Stress */}
-              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+              <div className="p-3 sm:p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
                     <Target className="w-4 h-4 text-white" />
