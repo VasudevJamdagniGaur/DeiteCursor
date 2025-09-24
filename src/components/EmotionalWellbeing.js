@@ -2284,11 +2284,6 @@ Return in this JSON format:
               <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Track your emotional journey
               </p>
-              {lastCacheUpdate && !isLoadingFresh && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700'}`}>
-                  Cached
-                </span>
-              )}
             </div>
           </div>
         </div>
