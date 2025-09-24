@@ -2289,11 +2289,6 @@ Return in this JSON format:
                   Cached
                 </span>
               )}
-              {isLoadingFresh && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                  Syncing
-                </span>
-              )}
             </div>
           </div>
         </div>
