@@ -12,22 +12,14 @@ import {
   ArrowLeft, 
   Heart, 
   Star, 
-  TrendingUp, 
-  Calendar, 
-  Smile, 
-  Frown, 
-  Meh,
+  Smile,
   BarChart3,
   Target,
   Lightbulb,
   Award,
   AlertTriangle,
   Zap,
-  Coffee,
-  Music,
-  Users,
   BookOpen,
-  Moon,
   Sun,
   RefreshCw
 } from "lucide-react";
@@ -36,12 +28,7 @@ import {
   Line, 
   XAxis, 
   YAxis, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  BarChart, 
-  Bar,
+  ResponsiveContainer,
   Tooltip
 } from 'recharts';
 
@@ -67,11 +54,9 @@ export default function EmotionalWellbeing() {
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
   }, []);
-  const [activeSection, setActiveSection] = useState('mood-survey');
   const [emotionalData, setEmotionalData] = useState([]);
   const [weeklyMoodData, setWeeklyMoodData] = useState([]);
   const [moodBalance, setMoodBalance] = useState([]);
-  const [topEmotions, setTopEmotions] = useState([]);
   const [highlights, setHighlights] = useState({});
   const [triggers, setTriggers] = useState({});
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
@@ -87,7 +72,6 @@ export default function EmotionalWellbeing() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [emotionExplanations, setEmotionExplanations] = useState(null);
   const [isLoadingFresh, setIsLoadingFresh] = useState(false);
-  const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
 
   // Cache keys for different data types
   const getCacheKey = (type, period, userId) => `emotional_wellbeing_${type}_${period}_${userId}`;
