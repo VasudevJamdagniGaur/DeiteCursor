@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   LogOut,
   Shield,
-  Settings
+  Settings,
+  Phone,
+  MessageCircle
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -419,6 +421,55 @@ export default function ProfilePage() {
               <div>
                 <p className="font-medium text-white">Sign Out</p>
                 <p className="text-sm text-gray-400">Sign out of your account</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Helpdesk Section */}
+        <div
+          className="backdrop-blur-lg border rounded-2xl p-6 space-y-4"
+          style={{
+            backgroundColor: "rgba(28, 31, 46, 0.3)",
+            border: "1px solid rgba(155, 181, 255, 0.18)",
+          }}
+        >
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-green-400" />
+            Helpdesk
+          </h3>
+          <p className="text-gray-300 text-sm mb-4">
+            Contact our founders for support and assistance
+          </p>
+
+          <button
+            onClick={() => window.open('tel:+919536138120', '_self')}
+            className="w-full p-4 rounded-xl text-left hover:opacity-80 transition-all duration-300 border border-gray-600"
+            style={{
+              backgroundColor: "rgba(11, 14, 20, 0.4)",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Phone className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="font-medium text-white">Call Founders</p>
+                <p className="text-sm text-gray-400">+91 9536138120</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => window.open('https://wa.me/919536138120', '_blank')}
+            className="w-full p-4 rounded-xl text-left hover:opacity-80 transition-all duration-300 border border-gray-600"
+            style={{
+              backgroundColor: "rgba(11, 14, 20, 0.4)",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <MessageCircle className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="font-medium text-white">WhatsApp Message</p>
+                <p className="text-sm text-gray-400">Send a message via WhatsApp</p>
               </div>
             </div>
           </button>
