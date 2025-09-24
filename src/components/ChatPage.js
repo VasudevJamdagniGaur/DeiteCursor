@@ -517,20 +517,7 @@ export default function ChatPage() {
             <Brain className="w-5 h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
-              <div className="w-2 h-2 rounded-full bg-green-500" title="Connected and ready" />
-            </div>
-            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Your emotional companion
-            </p>
-            <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              Chat for: {new Date(selectedDateString).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-              })}
-            </p>
+            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
           </div>
         </div>
 
