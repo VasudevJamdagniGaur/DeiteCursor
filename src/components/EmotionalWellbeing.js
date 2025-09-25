@@ -115,50 +115,6 @@ export default function EmotionalWellbeing() {
   // Cache keys for different data types
   const getCacheKey = (type, period, userId) => `emotional_wellbeing_${type}_${period}_${userId}`;
 
-  // Load cached data instantly, then fetch fresh data
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      // Load cached data instantly
-      loadCachedData(user.uid);
-      // Then fetch fresh data in background
-      loadFreshData();
-    }
-  }, [loadCachedData, loadFreshData]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedEmotionalData(user.uid, selectedPeriod);
-      loadFreshEmotionalData();
-    }
-  }, [selectedPeriod, loadCachedEmotionalData, loadFreshEmotionalData]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedBalanceData(user.uid, balancePeriod);
-      loadFreshBalanceData();
-    }
-  }, [balancePeriod, loadCachedBalanceData, loadFreshBalanceData]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedPatternData(user.uid, patternPeriod);
-      loadFreshPatternAnalysis();
-      loadHabitAnalysis();
-    }
-  }, [patternPeriod, loadCachedPatternData, loadFreshPatternAnalysis]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedHighlightsData(user.uid, highlightsPeriod);
-      loadFreshHighlightsData();
-    }
-  }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
-
   // Cache management functions
   const saveToCache = (key, data) => {
     try {
@@ -168,51 +124,32 @@ export default function EmotionalWellbeing() {
         version: '1.0'
       };
       localStorage.setItem(key, JSON.stringify(cacheData));
-      console.log(`💾 Cached data for key: ${key}`);
     } catch (error) {
-      console.error('❌ Error saving to cache:', error);
+      console.error('Error saving to cache:', error);
     }
   };
 
-  const loadFromCache = (key, maxAgeMinutes = 60) => {
+  const loadFromCache = (key, maxAgeMinutes = 30) => {
     try {
       const cached = localStorage.getItem(key);
       if (!cached) return null;
 
       const cacheData = JSON.parse(cached);
-      const cacheAge = new Date() - new Date(cacheData.timestamp);
-      const maxAge = maxAgeMinutes * 60 * 1000; // Convert to milliseconds
-
-      if (cacheAge > maxAge) {
-        console.log(`⏰ Cache expired for key: ${key} (${Math.round(cacheAge / 60000)} minutes old)`);
+      const ageMinutes = (Date.now() - new Date(cacheData.timestamp).getTime()) / (1000 * 60);
+      
+      if (ageMinutes > maxAgeMinutes) {
+        localStorage.removeItem(key);
         return null;
       }
 
-      console.log(`✅ Using cached data for key: ${key} (${Math.round(cacheAge / 60000)} minutes old)`);
       return cacheData.data;
     } catch (error) {
-      console.error('❌ Error loading from cache:', error);
+      console.error('Error loading from cache:', error);
       return null;
     }
   };
 
-  // Instant cache loading functions
-  const loadCachedData = useCallback((userId) => {
-    console.log('⚡ Loading all cached data instantly...');
-    
-    // Load cached emotional data
-    loadCachedEmotionalData(userId, selectedPeriod);
-    
-    // Load cached balance data
-    loadCachedBalanceData(userId, balancePeriod);
-    
-    // Load cached pattern data
-    loadCachedPatternData(userId, patternPeriod);
-    
-    // Load cached highlights data
-    loadCachedHighlightsData(userId, highlightsPeriod);
-  }, [selectedPeriod, balancePeriod, patternPeriod, highlightsPeriod]);
-
+  // Data loading functions
   const loadCachedEmotionalData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('emotional', period, userId);
     const cachedData = loadFromCache(cacheKey, 30); // 30 minutes cache
@@ -260,6 +197,67 @@ export default function EmotionalWellbeing() {
       setHighlights(cachedData.highlights || {});
     }
   }, []);
+
+  const loadCachedData = useCallback((userId) => {
+    console.log('⚡ Loading all cached data instantly...');
+    
+    // Load cached emotional data
+    loadCachedEmotionalData(userId, selectedPeriod);
+    
+    // Load cached balance data
+    loadCachedBalanceData(userId, balancePeriod);
+    
+    // Load cached pattern data
+    loadCachedPatternData(userId, patternPeriod);
+    
+    // Load cached highlights data
+    loadCachedHighlightsData(userId, highlightsPeriod);
+  }, [selectedPeriod, balancePeriod, patternPeriod, highlightsPeriod, loadCachedEmotionalData, loadCachedBalanceData, loadCachedPatternData, loadCachedHighlightsData]);
+
+  // Load cached data instantly, then fetch fresh data
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      // Load cached data instantly
+      loadCachedData(user.uid);
+      // Then fetch fresh data in background
+      loadFreshData();
+    }
+  }, [loadCachedData, loadFreshData]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedEmotionalData(user.uid, selectedPeriod);
+      loadFreshEmotionalData();
+    }
+  }, [selectedPeriod, loadCachedEmotionalData, loadFreshEmotionalData]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedBalanceData(user.uid, balancePeriod);
+      loadFreshBalanceData();
+    }
+  }, [balancePeriod, loadCachedBalanceData, loadFreshBalanceData]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedPatternData(user.uid, patternPeriod);
+      loadFreshPatternAnalysis();
+      loadHabitAnalysis();
+    }
+  }, [patternPeriod, loadCachedPatternData, loadFreshPatternAnalysis]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedHighlightsData(user.uid, highlightsPeriod);
+      loadFreshHighlightsData();
+    }
+  }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
+
 
   // Fresh data loading functions (background)
   const loadFreshData = useCallback(async () => {
