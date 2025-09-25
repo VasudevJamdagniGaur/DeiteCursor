@@ -73,7 +73,7 @@ export default function EmotionalWellbeing() {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
 
-  // Add CSS animation styles
+  // Add CSS animation styles and mobile utilities
   React.useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -85,6 +85,12 @@ export default function EmotionalWellbeing() {
         to {
           opacity: 1;
           transform: translateY(0);
+        }
+      }
+      
+      @media (max-width: 475px) {
+        .xs\\:block {
+          display: none !important;
         }
       }
     `;
@@ -1260,7 +1266,7 @@ Return in this JSON format:
   };
 
   const renderMoodSurvey = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
 
       {/* Empty State Message */}
       {emotionalData.length === 0 && (
@@ -1296,9 +1302,9 @@ Return in this JSON format:
       {/* Show all sections only if we have data */}
       {emotionalData.length > 0 && (
         <>
-          {/* 1. Mood Chart - Line Chart */}
+          {/* 1. Mood Chart - Line Chart - Mobile Optimized */}
           <div
-            className={`rounded-3xl p-6 backdrop-blur-lg transition-all duration-300 ${
+            className={`rounded-2xl p-4 backdrop-blur-lg transition-all duration-300 ${
               isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
             }`}
             style={{
@@ -1307,7 +1313,7 @@ Return in this JSON format:
                 : "inset 0 0 20px rgba(134, 169, 107, 0.1), 0 8px 32px rgba(134, 169, 107, 0.05)",
             }}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col space-y-4 mb-4">
               <div className="flex items-center space-x-3">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -1323,11 +1329,11 @@ Return in this JSON format:
                 </h3>
               </div>
               
-              {/* Period Toggle - moved inside line graph container */}
-              <div className="flex space-x-1 sm:space-x-2">
+              {/* Period Toggle - Mobile Optimized */}
+              <div className="flex space-x-2 w-full">
                 <button
                   onClick={() => setSelectedPeriod(7)}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 ${
+                  className={`flex-1 px-3 py-2 rounded-full text-sm transition-all duration-300 touch-manipulation ${
                     selectedPeriod === 7
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -1339,7 +1345,7 @@ Return in this JSON format:
                 </button>
                 <button
                   onClick={() => setSelectedPeriod(15)}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 ${
+                  className={`flex-1 px-3 py-2 rounded-full text-sm transition-all duration-300 touch-manipulation ${
                     selectedPeriod === 15
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -1351,7 +1357,7 @@ Return in this JSON format:
                 </button>
                 <button
                   onClick={() => setSelectedPeriod(365)}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 ${
+                  className={`flex-1 px-3 py-2 rounded-full text-sm transition-all duration-300 touch-manipulation ${
                     selectedPeriod === 365
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : isDarkMode
@@ -1364,7 +1370,7 @@ Return in this JSON format:
               </div>
             </div>
 
-            <div className="h-48 sm:h-64 w-full">
+            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart 
                   data={weeklyMoodData}
@@ -1452,7 +1458,7 @@ Return in this JSON format:
               </ResponsiveContainer>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-4 mt-4">
+            <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-[#7DD3C0]"></div>
                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Happiness</span>
@@ -1472,10 +1478,10 @@ Return in this JSON format:
             </div>
           </div>
 
-          {/* 2. Emotional Balance - Line Chart */}
+          {/* 2. Emotional Balance - Line Chart - Mobile Optimized */}
           {moodBalance.length > 0 && (
             <div
-              className={`rounded-3xl p-6 backdrop-blur-lg transition-all duration-300 ${
+              className={`rounded-2xl p-4 backdrop-blur-lg transition-all duration-300 ${
                 isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
               }`}
               style={{
@@ -1484,7 +1490,7 @@ Return in this JSON format:
                   : "inset 0 0 20px rgba(134, 169, 107, 0.1), 0 8px 32px rgba(134, 169, 107, 0.05)",
               }}
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col space-y-4 mb-4">
                 <div className="flex items-center space-x-3">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -1500,11 +1506,11 @@ Return in this JSON format:
                   </h3>
                 </div>
 
-                {/* Balance Period Toggle */}
-                <div className="flex space-x-1 sm:space-x-2">
+                {/* Balance Period Toggle - Mobile Optimized */}
+                <div className="flex space-x-2 w-full">
                   <button
                     onClick={() => setBalancePeriod(7)}
-                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 px-3 py-2 rounded-full text-sm transition-all duration-300 touch-manipulation ${
                       balancePeriod === 7
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                         : isDarkMode
@@ -1516,7 +1522,7 @@ Return in this JSON format:
                   </button>
                   <button
                     onClick={() => setBalancePeriod(30)}
-                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 px-3 py-2 rounded-full text-sm transition-all duration-300 touch-manipulation ${
                       balancePeriod === 30
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                         : isDarkMode
@@ -1528,7 +1534,7 @@ Return in this JSON format:
                   </button>
                   <button
                     onClick={() => setBalancePeriod(365)}
-                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm transition-all duration-300 ${
+                    className={`flex-1 px-3 py-2 rounded-full text-sm transition-all duration-300 touch-manipulation ${
                       balancePeriod === 365
                         ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                         : isDarkMode
@@ -1541,7 +1547,7 @@ Return in this JSON format:
                 </div>
               </div>
 
-              <div className="h-48 sm:h-64 w-full">
+              <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={moodBalance}>
                     <XAxis 
@@ -2256,19 +2262,19 @@ Return in this JSON format:
             : "#FAFAF8",
         }}
       >
-      {/* Header */}
-      <div className={`sticky top-0 z-20 flex items-center justify-between p-3 sm:p-6 border-b backdrop-blur-lg ${
+      {/* Header - Mobile Optimized */}
+      <div className={`sticky top-0 z-20 flex items-center justify-between p-4 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
       }`}
         style={{
           backgroundColor: isDarkMode 
-            ? "rgba(11, 14, 20, 0.9)" 
-            : "rgba(250, 250, 248, 0.9)",
+            ? "rgba(11, 14, 20, 0.95)" 
+            : "rgba(250, 250, 248, 0.95)",
         }}
       >
         <button
           onClick={handleBack}
-          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity touch-manipulation ${
             isDarkMode ? 'backdrop-blur-md' : 'bg-white'
           }`}
           style={isDarkMode ? {
@@ -2279,12 +2285,12 @@ Return in this JSON format:
             boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
           }}
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
+          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
         </button>
 
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="flex items-center space-x-3 flex-1 justify-center">
           <div
-            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
@@ -2295,46 +2301,44 @@ Return in this JSON format:
               boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
             }}
           >
-            <Heart className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
+            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
           </div>
-          <div>
-            <h1 className={`text-base sm:text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <div className="text-center">
+            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Emotional Wellbeing
             </h1>
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Track your emotional journey
-              </p>
-            </div>
+            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Track your emotional journey
+            </p>
           </div>
         </div>
 
         <button
           onClick={handleAIUpdate}
           disabled={isUpdating}
-          className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all duration-200 ${
+          className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation ${
             isUpdating 
               ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed' 
               : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
           }`}
         >
-          <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
-          <span className="text-xs sm:text-sm font-medium">
+          <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium hidden xs:block">
             {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'Refresh'}
           </span>
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+      {/* Content - Mobile Optimized */}
+      <div className="flex-1 overflow-y-auto p-4 pb-6">
         {renderMoodSurvey()}
       </div>
 
-      {/* Emotion Details Modal */}
+      {/* Emotion Details Modal - Mobile Optimized */}
       {showDetailsModal && selectedDateDetails && emotionExplanations && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div
-            className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] sm:max-h-[80vh] overflow-y-auto ${
+            className={`rounded-2xl p-4 max-w-sm w-full max-h-[85vh] overflow-y-auto ${
               isDarkMode ? 'bg-gray-800' : 'bg-white'
             }`}
             style={{
@@ -2343,23 +2347,23 @@ Return in this JSON format:
                 : "0 20px 60px rgba(0, 0, 0, 0.15)",
             }}
           >
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className={`text-lg sm:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                 Emotion Details - {selectedDateDetails.day}
               </h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center touch-manipulation ${
                   isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                 }`}
               >
-                <span className={`text-lg sm:text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>×</span>
+                <span className={`text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>×</span>
               </button>
             </div>
 
-            <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-3">
               {/* Happiness */}
-              <div className="p-3 sm:p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
+              <div className="p-3 rounded-2xl bg-green-500/10 border border-green-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
                     <Smile className="w-4 h-4 text-white" />
@@ -2374,7 +2378,7 @@ Return in this JSON format:
               </div>
 
               {/* Energy */}
-              <div className="p-3 sm:p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
+              <div className="p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center">
                     <Zap className="w-4 h-4 text-white" />
@@ -2389,7 +2393,7 @@ Return in this JSON format:
               </div>
 
               {/* Anxiety */}
-              <div className="p-3 sm:p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+              <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                     <AlertTriangle className="w-4 h-4 text-white" />
@@ -2404,7 +2408,7 @@ Return in this JSON format:
               </div>
 
               {/* Stress */}
-              <div className="p-3 sm:p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+              <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20">
                 <div className="flex items-center space-x-3 mb-2">
                   <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
                     <Target className="w-4 h-4 text-white" />
