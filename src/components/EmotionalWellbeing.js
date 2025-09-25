@@ -215,7 +215,7 @@ export default function EmotionalWellbeing() {
   }, [selectedPeriod, balancePeriod, patternPeriod, highlightsPeriod, loadCachedEmotionalData, loadCachedBalanceData, loadCachedPatternData, loadCachedHighlightsData]);
 
   // Fresh data loading functions (background) - Define individual functions first
-  const loadFreshEmotionalData = useCallback(async () => {
+  const loadFreshEmotionalData = async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -228,9 +228,9 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  }, [selectedPeriod]);
+  };
 
-  const loadFreshBalanceData = useCallback(async () => {
+  const loadFreshBalanceData = async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -243,9 +243,9 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  }, [balancePeriod]);
+  };
 
-  const loadFreshHighlightsData = useCallback(async () => {
+  const loadFreshHighlightsData = async () => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -257,9 +257,25 @@ export default function EmotionalWellbeing() {
         timestamp: new Date().toISOString()
       });
     }
-  }, []);
+  };
 
-  const loadFreshData = useCallback(async () => {
+  const loadFreshPatternAnalysis = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const freshData = await loadPatternAnalysisInternal();
+    if (freshData) {
+      const cacheKey = getCacheKey('pattern', patternPeriod, user.uid);
+      saveToCache(cacheKey, {
+        patternAnalysis: freshData.patternAnalysis,
+        triggers: freshData.triggers,
+        hasEnoughData: freshData.hasEnoughData,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const loadFreshData = async () => {
     console.log('🔄 Loading fresh data in background...');
     setIsLoadingFresh(true);
     
@@ -275,7 +291,7 @@ export default function EmotionalWellbeing() {
     } finally {
       setIsLoadingFresh(false);
     }
-  }, [loadFreshEmotionalData, loadFreshBalanceData, loadFreshPatternAnalysis, loadFreshHighlightsData]);
+  };
 
   // Load cached data instantly, then fetch fresh data
   useEffect(() => {
@@ -286,7 +302,7 @@ export default function EmotionalWellbeing() {
       // Then fetch fresh data in background
       loadFreshData();
     }
-  }, [loadCachedData, loadFreshData]);
+  }, [loadCachedData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -294,7 +310,7 @@ export default function EmotionalWellbeing() {
       loadCachedEmotionalData(user.uid, selectedPeriod);
       loadFreshEmotionalData();
     }
-  }, [selectedPeriod, loadCachedEmotionalData, loadFreshEmotionalData]);
+  }, [selectedPeriod, loadCachedEmotionalData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -302,7 +318,7 @@ export default function EmotionalWellbeing() {
       loadCachedBalanceData(user.uid, balancePeriod);
       loadFreshBalanceData();
     }
-  }, [balancePeriod, loadCachedBalanceData, loadFreshBalanceData]);
+  }, [balancePeriod, loadCachedBalanceData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -311,7 +327,7 @@ export default function EmotionalWellbeing() {
       loadFreshPatternAnalysis();
       loadHabitAnalysis();
     }
-  }, [patternPeriod, loadCachedPatternData, loadFreshPatternAnalysis]);
+  }, [patternPeriod, loadCachedPatternData]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -319,23 +335,7 @@ export default function EmotionalWellbeing() {
       loadCachedHighlightsData(user.uid, highlightsPeriod);
       loadFreshHighlightsData();
     }
-  }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
-
-  const loadFreshPatternAnalysis = useCallback(async () => {
-    const user = getCurrentUser();
-    if (!user) return;
-
-    const freshData = await loadPatternAnalysisInternal();
-    if (freshData) {
-      const cacheKey = getCacheKey('pattern', patternPeriod, user.uid);
-      saveToCache(cacheKey, {
-        patternAnalysis: freshData.patternAnalysis,
-        triggers: freshData.triggers,
-        hasEnoughData: freshData.hasEnoughData,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [patternPeriod]);
+  }, [highlightsPeriod, loadCachedHighlightsData]);
 
   const loadHabitAnalysis = async () => {
     const user = getCurrentUser();
