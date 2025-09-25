@@ -1,0 +1,9 @@
+{
+  "short_name": "Deite",
+  "name": "Deite - Emotional Wellness Companion",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0B0E14",
+  "background_color": "#0B0E14",
+  "orientation": "portrait"
+}
