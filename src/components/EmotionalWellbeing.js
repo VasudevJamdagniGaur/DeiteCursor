@@ -259,25 +259,7 @@ export default function EmotionalWellbeing() {
   }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
 
 
-  // Fresh data loading functions (background)
-  const loadFreshData = useCallback(async () => {
-    console.log('🔄 Loading fresh data in background...');
-    setIsLoadingFresh(true);
-    
-    try {
-      await Promise.all([
-        loadFreshEmotionalData(),
-        loadFreshBalanceData(),
-        loadFreshPatternAnalysis(),
-        loadFreshHighlightsData()
-      ]);
-    } catch (error) {
-      console.error('❌ Error loading fresh data:', error);
-    } finally {
-      setIsLoadingFresh(false);
-    }
-  }, []);
-
+  // Fresh data loading functions (background) - Define individual functions first
   const loadFreshEmotionalData = useCallback(async () => {
     const user = getCurrentUser();
     if (!user) return;
@@ -308,6 +290,38 @@ export default function EmotionalWellbeing() {
     }
   }, [balancePeriod]);
 
+  const loadFreshHighlightsData = useCallback(async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const freshData = await loadHighlightsDataInternal();
+    if (freshData) {
+      const cacheKey = getCacheKey('highlights', '3months', user.uid);
+      saveToCache(cacheKey, {
+        highlights: freshData.highlights,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, []);
+
+  const loadFreshData = useCallback(async () => {
+    console.log('🔄 Loading fresh data in background...');
+    setIsLoadingFresh(true);
+    
+    try {
+      await Promise.all([
+        loadFreshEmotionalData(),
+        loadFreshBalanceData(),
+        loadFreshPatternAnalysis(),
+        loadFreshHighlightsData()
+      ]);
+    } catch (error) {
+      console.error('❌ Error loading fresh data:', error);
+    } finally {
+      setIsLoadingFresh(false);
+    }
+  }, [loadFreshEmotionalData, loadFreshBalanceData, loadFreshPatternAnalysis, loadFreshHighlightsData]);
+
   const loadFreshPatternAnalysis = useCallback(async () => {
     const user = getCurrentUser();
     if (!user) return;
@@ -335,20 +349,6 @@ export default function EmotionalWellbeing() {
       console.error('Error loading habit analysis:', error);
     }
   };
-
-  const loadFreshHighlightsData = useCallback(async () => {
-    const user = getCurrentUser();
-    if (!user) return;
-
-    const freshData = await loadHighlightsDataInternal();
-    if (freshData) {
-      const cacheKey = getCacheKey('highlights', '3months', user.uid);
-      saveToCache(cacheKey, {
-        highlights: freshData.highlights,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, []);
 
   const loadRealEmotionalDataInternal = async () => {
     console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod === 365 ? 'lifetime' : selectedPeriod + ' days'} from NEW Firebase structure...`);
