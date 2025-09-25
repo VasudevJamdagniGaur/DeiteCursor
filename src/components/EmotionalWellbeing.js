@@ -214,51 +214,6 @@ export default function EmotionalWellbeing() {
     loadCachedHighlightsData(userId, highlightsPeriod);
   }, [selectedPeriod, balancePeriod, patternPeriod, highlightsPeriod, loadCachedEmotionalData, loadCachedBalanceData, loadCachedPatternData, loadCachedHighlightsData]);
 
-  // Load cached data instantly, then fetch fresh data
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      // Load cached data instantly
-      loadCachedData(user.uid);
-      // Then fetch fresh data in background
-      loadFreshData();
-    }
-  }, [loadCachedData, loadFreshData]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedEmotionalData(user.uid, selectedPeriod);
-      loadFreshEmotionalData();
-    }
-  }, [selectedPeriod, loadCachedEmotionalData, loadFreshEmotionalData]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedBalanceData(user.uid, balancePeriod);
-      loadFreshBalanceData();
-    }
-  }, [balancePeriod, loadCachedBalanceData, loadFreshBalanceData]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedPatternData(user.uid, patternPeriod);
-      loadFreshPatternAnalysis();
-      loadHabitAnalysis();
-    }
-  }, [patternPeriod, loadCachedPatternData, loadFreshPatternAnalysis]);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      loadCachedHighlightsData(user.uid, highlightsPeriod);
-      loadFreshHighlightsData();
-    }
-  }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
-
-
   // Fresh data loading functions (background) - Define individual functions first
   const loadFreshEmotionalData = useCallback(async () => {
     const user = getCurrentUser();
@@ -321,6 +276,50 @@ export default function EmotionalWellbeing() {
       setIsLoadingFresh(false);
     }
   }, [loadFreshEmotionalData, loadFreshBalanceData, loadFreshPatternAnalysis, loadFreshHighlightsData]);
+
+  // Load cached data instantly, then fetch fresh data
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      // Load cached data instantly
+      loadCachedData(user.uid);
+      // Then fetch fresh data in background
+      loadFreshData();
+    }
+  }, [loadCachedData, loadFreshData]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedEmotionalData(user.uid, selectedPeriod);
+      loadFreshEmotionalData();
+    }
+  }, [selectedPeriod, loadCachedEmotionalData, loadFreshEmotionalData]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedBalanceData(user.uid, balancePeriod);
+      loadFreshBalanceData();
+    }
+  }, [balancePeriod, loadCachedBalanceData, loadFreshBalanceData]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedPatternData(user.uid, patternPeriod);
+      loadFreshPatternAnalysis();
+      loadHabitAnalysis();
+    }
+  }, [patternPeriod, loadCachedPatternData, loadFreshPatternAnalysis]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      loadCachedHighlightsData(user.uid, highlightsPeriod);
+      loadFreshHighlightsData();
+    }
+  }, [highlightsPeriod, loadCachedHighlightsData, loadFreshHighlightsData]);
 
   const loadFreshPatternAnalysis = useCallback(async () => {
     const user = getCurrentUser();
