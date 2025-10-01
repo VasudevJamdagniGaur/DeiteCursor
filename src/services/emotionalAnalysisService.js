@@ -1,6 +1,6 @@
 class EmotionalAnalysisService {
   constructor() {
-    this.baseURL = 'https://uku63xhk0nopot-11434.proxy.runpod.net/';
+    this.baseURL = 'https://hqoin4jvwz6kq1-11434.proxy.runpod.net/';
   }
 
   async analyzeEmotionalScores(messages) {
