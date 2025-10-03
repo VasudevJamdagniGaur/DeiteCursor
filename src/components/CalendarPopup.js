@@ -93,9 +93,9 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect }) => {
       <div
         className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
         style={{
-          backgroundColor: "rgba(28, 31, 46, 0.95)",
-          boxShadow: "inset 0 0 30px rgba(125, 211, 192, 0.12), 0 20px 60px rgba(125, 211, 192, 0.2)",
-          border: "1px solid rgba(125, 211, 192, 0.18)",
+          backgroundColor: "rgba(42, 42, 45, 0.95)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
         {/* Header */}
@@ -159,8 +159,9 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect }) => {
                   style={
                     isSelected(date)
                       ? {
-                          background: "linear-gradient(135deg, rgba(125, 211, 192, 0.9) 0%, rgba(212, 175, 55, 0.9) 50%, rgba(155, 181, 255, 0.9) 100%)",
-                          boxShadow: "0 4px 20px rgba(125, 211, 192, 0.4)",
+                          backgroundColor: "rgba(129, 201, 149, 0.9)",
+                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
                         }
                       : {}
                   }
@@ -180,8 +181,8 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect }) => {
             onClick={() => handleDateClick(new Date())}
             className="px-4 py-2 rounded-xl text-sm font-medium text-white hover:opacity-80 transition-all duration-200"
             style={{
-              background: "linear-gradient(135deg, rgba(125, 211, 192, 0.6) 0%, rgba(212, 175, 55, 0.6) 50%, rgba(155, 181, 255, 0.6) 100%)",
-              border: "1px solid rgba(125, 211, 192, 0.3)",
+              backgroundColor: "rgba(42, 42, 45, 0.8)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
             Go to Today
