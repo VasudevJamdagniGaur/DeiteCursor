@@ -470,18 +470,18 @@ export default function ChatPage() {
     <div
       className="min-h-screen flex flex-col relative overflow-hidden"
       style={{
-        background: isDarkMode 
-          ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+        background: isDarkMode
+          ? "#202124"
           : "#FAFAF8",
       }}
     >
       {/* Header */}
       <div className={`sticky top-0 z-20 flex items-center justify-between p-6 border-b backdrop-blur-lg ${
-        isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
+        isDarkMode ? 'border-gray-600/20' : 'border-gray-200/50'
       }`}
         style={{
-          backgroundColor: isDarkMode 
-            ? "rgba(11, 14, 20, 0.9)" 
+          backgroundColor: isDarkMode
+            ? "rgba(32, 33, 36, 0.9)"
             : "rgba(250, 250, 248, 0.9)",
         }}
       >
@@ -491,14 +491,14 @@ export default function ChatPage() {
             isDarkMode ? 'backdrop-blur-md' : 'bg-white'
           }`}
           style={isDarkMode ? {
-            backgroundColor: "rgba(28, 31, 46, 0.4)",
-            boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.15), 0 8px 32px rgba(125, 211, 192, 0.1)",
-            border: "1px solid rgba(125, 211, 192, 0.2)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           } : {
             boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
           }}
         >
-          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
+          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
         </button>
 
         <div className="flex items-center space-x-3">
@@ -507,14 +507,14 @@ export default function ChatPage() {
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(28, 31, 46, 0.4)",
-              boxShadow: "inset 0 0 20px rgba(212, 175, 55, 0.15), 0 8px 32px rgba(212, 175, 55, 0.1)",
-              border: "1px solid rgba(212, 175, 55, 0.2)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             } : {
               boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
             }}
           >
-            <Brain className="w-5 h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
+            <Brain className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div>
             <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
@@ -527,14 +527,14 @@ export default function ChatPage() {
             isDarkMode ? 'backdrop-blur-md' : 'bg-white'
           }`}
           style={isDarkMode ? {
-            backgroundColor: "rgba(28, 31, 46, 0.4)",
-            boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.15), 0 8px 32px rgba(125, 211, 192, 0.1)",
-            border: "1px solid rgba(125, 211, 192, 0.2)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           } : {
             boxShadow: "0 2px 8px rgba(177, 156, 217, 0.15)",
           }}
         >
-          <User className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#B19CD9" }} strokeWidth={1.5} />
+          <User className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#B19CD9" }} strokeWidth={1.5} />
         </button>
       </div>
 
@@ -550,13 +550,15 @@ export default function ChatPage() {
                 message.sender === 'user' ? 'ml-4' : 'mr-4'
               }`}
               style={{
-                backgroundColor: message.sender === 'user' 
-                  ? "rgba(125, 211, 192, 0.15)" 
-                  : "rgba(28, 31, 46, 0.4)",
+                backgroundColor: message.sender === 'user'
+                  ? "rgba(129, 201, 149, 0.08)"
+                  : "rgba(42, 42, 45, 0.6)",
                 boxShadow: message.sender === 'user'
-                  ? "inset 0 0 20px rgba(125, 211, 192, 0.1), 0 8px 32px rgba(125, 211, 192, 0.05)"
-                  : "inset 0 0 20px rgba(155, 181, 255, 0.1), 0 8px 32px rgba(155, 181, 255, 0.05)",
-                border: `1px solid ${message.sender === 'user' ? 'rgba(125, 211, 192, 0.2)' : 'rgba(155, 181, 255, 0.2)'}`,
+                  ? "0 4px 16px rgba(0, 0, 0, 0.15)"
+                  : "0 4px 16px rgba(0, 0, 0, 0.15)",
+                border: message.sender === 'user'
+                  ? "1px solid rgba(129, 201, 149, 0.15)"
+                  : "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
               <p className="text-white text-sm leading-relaxed">
@@ -589,9 +591,9 @@ export default function ChatPage() {
             disabled={isLoading}
             className="flex-1 px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 text-white placeholder-gray-400 backdrop-blur-md"
             style={{
-              backgroundColor: "rgba(11, 14, 20, 0.6)",
-              border: "1px solid rgba(155, 181, 255, 0.15)",
-              boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.08)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
             }}
           />
           <button
@@ -600,15 +602,15 @@ export default function ChatPage() {
             className="w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
             style={{
               background: inputMessage.trim() && !isLoading
-                ? "linear-gradient(135deg, rgba(125, 211, 192, 0.8) 0%, rgba(212, 175, 55, 0.8) 50%, rgba(155, 181, 255, 0.8) 100%)"
-                : "rgba(28, 31, 46, 0.4)",
-              boxShadow: "inset 0 0 20px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(125, 211, 192, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
+                ? "rgba(42, 42, 45, 0.8)"
+                : "rgba(42, 42, 45, 0.4)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
             <Send 
               className="w-5 h-5" 
-              style={{ color: inputMessage.trim() && !isLoading ? "#0B0E14" : "#7DD3C0" }} 
+              style={{ color: inputMessage.trim() && !isLoading ? "#FFFFFF" : "#8AB4F8" }} 
               strokeWidth={1.5} 
             />
           </button>

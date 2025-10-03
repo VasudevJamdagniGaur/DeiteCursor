@@ -1270,18 +1270,21 @@ Return in this JSON format:
 
       {/* Empty State Message */}
       {emotionalData.length === 0 && (
-        <div className={`rounded-3xl p-8 backdrop-blur-lg transition-all duration-300 text-center ${
-          isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+        <div className={`rounded-xl p-8 backdrop-blur-lg transition-all duration-300 text-center ${
+          isDarkMode ? 'bg-gray-800/40 border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
         }`}>
           <div className="flex flex-col items-center space-y-4">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, rgba(125, 211, 192, 0.2) 0%, rgba(212, 175, 55, 0.2) 100%)",
-                border: "1px solid rgba(125, 211, 192, 0.3)",
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
               }}
             >
-              <Heart className="w-8 h-8" style={{ color: "#7DD3C0" }} />
+              <Heart className="w-8 h-8" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} />
             </div>
             <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               No Emotional Data Yet
@@ -1304,13 +1307,15 @@ Return in this JSON format:
         <>
           {/* 1. Mood Chart - Line Chart - Mobile Optimized */}
           <div
-            className={`rounded-2xl p-4 backdrop-blur-lg transition-all duration-300 ${
-              isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+            className={`rounded-xl p-4 backdrop-blur-lg transition-all duration-300 ${
+              isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
             }`}
-            style={{
-              boxShadow: isDarkMode 
-                ? "inset 0 0 20px rgba(125, 211, 192, 0.1), 0 8px 32px rgba(125, 211, 192, 0.05)"
-                : "inset 0 0 20px rgba(134, 169, 107, 0.1), 0 8px 32px rgba(134, 169, 107, 0.05)",
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            } : {
+              backgroundColor: "rgba(255, 255, 255, 0.6)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             }}
           >
             <div className="flex flex-col space-y-4 mb-4">
@@ -1401,57 +1406,53 @@ Return in this JSON format:
                   <Line
                     type="monotone"
                     dataKey="happiness"
-                    stroke="#7DD3C0"
-                    strokeWidth={3}
-                    dot={{ fill: '#7DD3C0', strokeWidth: 2, r: 4 }}
-                    activeDot={{ 
-                      r: 8, 
-                      stroke: '#7DD3C0', 
-                      strokeWidth: 3, 
-                      fill: '#7DD3C0',
-                      style: { filter: 'drop-shadow(0 0 8px rgba(125, 211, 192, 0.6))' }
+                    stroke="#81C995"
+                    strokeWidth={2}
+                    dot={{ fill: '#81C995', strokeWidth: 2, r: 3 }}
+                    activeDot={{
+                      r: 6,
+                      stroke: '#81C995',
+                      strokeWidth: 2,
+                      fill: '#81C995'
                     }}
                   />
                   <Line
                     type="monotone"
                     dataKey="energy"
-                    stroke="#D4AF37"
-                    strokeWidth={3}
-                    dot={{ fill: '#D4AF37', strokeWidth: 2, r: 4 }}
-                    activeDot={{ 
-                      r: 8, 
-                      stroke: '#D4AF37', 
-                      strokeWidth: 3, 
-                      fill: '#D4AF37',
-                      style: { filter: 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.6))' }
+                    stroke="#FDD663"
+                    strokeWidth={2}
+                    dot={{ fill: '#FDD663', strokeWidth: 2, r: 3 }}
+                    activeDot={{
+                      r: 6,
+                      stroke: '#FDD663',
+                      strokeWidth: 2,
+                      fill: '#FDD663'
                     }}
                   />
                   <Line
                     type="monotone"
                     dataKey="anxiety"
-                    stroke="#9BB5FF"
-                    strokeWidth={3}
-                    dot={{ fill: '#9BB5FF', strokeWidth: 2, r: 4 }}
-                    activeDot={{ 
-                      r: 8, 
-                      stroke: '#9BB5FF', 
-                      strokeWidth: 3, 
-                      fill: '#9BB5FF',
-                      style: { filter: 'drop-shadow(0 0 8px rgba(155, 181, 255, 0.6))' }
+                    stroke="#8AB4F8"
+                    strokeWidth={2}
+                    dot={{ fill: '#8AB4F8', strokeWidth: 2, r: 3 }}
+                    activeDot={{
+                      r: 6,
+                      stroke: '#8AB4F8',
+                      strokeWidth: 2,
+                      fill: '#8AB4F8'
                     }}
                   />
                   <Line
                     type="monotone"
                     dataKey="stress"
-                    stroke="#E6B3BA"
-                    strokeWidth={3}
-                    dot={{ fill: '#E6B3BA', strokeWidth: 2, r: 4 }}
-                    activeDot={{ 
-                      r: 8, 
-                      stroke: '#E6B3BA', 
-                      strokeWidth: 3, 
-                      fill: '#E6B3BA',
-                      style: { filter: 'drop-shadow(0 0 8px rgba(230, 179, 186, 0.6))' }
+                    stroke="#F28B82"
+                    strokeWidth={2}
+                    dot={{ fill: '#F28B82', strokeWidth: 2, r: 3 }}
+                    activeDot={{
+                      r: 6,
+                      stroke: '#F28B82',
+                      strokeWidth: 2,
+                      fill: '#F28B82'
                     }}
                   />
                 </LineChart>
@@ -1460,19 +1461,19 @@ Return in this JSON format:
 
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-[#7DD3C0]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#81C995]"></div>
                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Happiness</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-[#D4AF37]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#FDD663]"></div>
                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Energy</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-[#9BB5FF]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#8AB4F8]"></div>
                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Anxiety</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-[#E6B3BA]"></div>
+                <div className="w-3 h-3 rounded-full bg-[#F28B82]"></div>
                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Stress</span>
               </div>
             </div>
@@ -1481,13 +1482,15 @@ Return in this JSON format:
           {/* 2. Emotional Balance - Line Chart - Mobile Optimized */}
           {moodBalance.length > 0 && (
             <div
-              className={`rounded-2xl p-4 backdrop-blur-lg transition-all duration-300 ${
-                isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+              className={`rounded-xl p-4 backdrop-blur-lg transition-all duration-300 ${
+                isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
               }`}
-              style={{
-                boxShadow: isDarkMode 
-                  ? "inset 0 0 20px rgba(212, 175, 55, 0.1), 0 8px 32px rgba(212, 175, 55, 0.05)"
-                  : "inset 0 0 20px rgba(134, 169, 107, 0.1), 0 8px 32px rgba(134, 169, 107, 0.05)",
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              } : {
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
               }}
             >
               <div className="flex flex-col space-y-4 mb-4">
@@ -1570,43 +1573,40 @@ Return in this JSON format:
                     <Line
                       type="monotone"
                       dataKey="positive"
-                      stroke="#7DD3C0"
-                      strokeWidth={3}
-                      dot={{ fill: '#7DD3C0', strokeWidth: 2, r: 4 }}
-                      activeDot={{ 
-                        r: 8, 
-                        stroke: '#7DD3C0', 
-                        strokeWidth: 3, 
-                        fill: '#7DD3C0',
-                        style: { filter: 'drop-shadow(0 0 8px rgba(125, 211, 192, 0.6))' }
+                      stroke="#81C995"
+                      strokeWidth={2}
+                      dot={{ fill: '#81C995', strokeWidth: 2, r: 3 }}
+                      activeDot={{
+                        r: 6,
+                        stroke: '#81C995',
+                        strokeWidth: 2,
+                        fill: '#81C995'
                       }}
                     />
                     <Line
                       type="monotone"
                       dataKey="neutral"
-                      stroke="#D4AF37"
-                      strokeWidth={3}
-                      dot={{ fill: '#D4AF37', strokeWidth: 2, r: 4 }}
-                      activeDot={{ 
-                        r: 8, 
-                        stroke: '#D4AF37', 
-                        strokeWidth: 3, 
-                        fill: '#D4AF37',
-                        style: { filter: 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.6))' }
+                      stroke="#FDD663"
+                      strokeWidth={2}
+                      dot={{ fill: '#FDD663', strokeWidth: 2, r: 3 }}
+                      activeDot={{
+                        r: 6,
+                        stroke: '#FDD663',
+                        strokeWidth: 2,
+                        fill: '#FDD663'
                       }}
                     />
                     <Line
                       type="monotone"
                       dataKey="negative"
-                      stroke="#9BB5FF"
-                      strokeWidth={3}
-                      dot={{ fill: '#9BB5FF', strokeWidth: 2, r: 4 }}
-                      activeDot={{ 
-                        r: 8, 
-                        stroke: '#9BB5FF', 
-                        strokeWidth: 3, 
-                        fill: '#9BB5FF',
-                        style: { filter: 'drop-shadow(0 0 8px rgba(155, 181, 255, 0.6))' }
+                      stroke="#F28B82"
+                      strokeWidth={2}
+                      dot={{ fill: '#F28B82', strokeWidth: 2, r: 3 }}
+                      activeDot={{
+                        r: 6,
+                        stroke: '#F28B82',
+                        strokeWidth: 2,
+                        fill: '#F28B82'
                       }}
                     />
                   </LineChart>
@@ -1615,15 +1615,15 @@ Return in this JSON format:
 
               <div className="flex flex-wrap justify-center gap-4 mt-4">
                 <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-[#7DD3C0]"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#81C995]"></div>
                   <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Positive</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-[#D4AF37]"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#FDD663]"></div>
                   <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Neutral</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-[#9BB5FF]"></div>
+                  <div className="w-3 h-3 rounded-full bg-[#F28B82]"></div>
                   <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Negative</span>
                 </div>
               </div>
@@ -1632,19 +1632,29 @@ Return in this JSON format:
 
           {/* 3. Highlights */}
           <div
-            className={`rounded-3xl p-6 backdrop-blur-lg transition-all duration-300 ${
-              isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+            className={`rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
+              isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
             }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            } : {
+              backgroundColor: "rgba(255, 255, 255, 0.6)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            }}
           >
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(230, 179, 186, 0.2) 0%, rgba(177, 156, 217, 0.2) 100%)",
-                  border: "1px solid rgba(230, 179, 186, 0.3)",
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                } : {
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
                 }}
               >
-                <Award className="w-5 h-5" style={{ color: "#E6B3BA" }} />
+                <Award className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
               </div>
               <div>
                 <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -1658,20 +1668,14 @@ Return in this JSON format:
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Best Mood Day - Unified UI with Green Title */}
-              <div 
-                className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
-                style={{
-                  backgroundColor: "rgba(30, 35, 50, 0.8)",
-                  border: "1px solid rgba(125, 211, 192, 0.2)",
-                  boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
-                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
-                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+              <div
+                className="group p-4 sm:p-6 rounded-xl transition-all duration-300 cursor-pointer hover:scale-105"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(129, 201, 149, 0.08)",
+                  border: "1px solid rgba(129, 201, 149, 0.15)",
+                } : {
+                  backgroundColor: "rgba(129, 201, 149, 0.08)",
+                  border: "1px solid rgba(129, 201, 149, 0.15)",
                 }}
               >
                 <div className="flex items-center space-x-3 mb-3">
@@ -1697,31 +1701,24 @@ Return in this JSON format:
               </div>
 
               {/* Challenging Day - Unified UI with Red Title */}
-              <div 
-                className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
-                style={{
-                  backgroundColor: "rgba(30, 35, 50, 0.8)",
-                  border: "1px solid rgba(125, 211, 192, 0.2)",
-                  boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
-                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
-                  e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+              <div
+                className="group p-4 sm:p-6 rounded-xl transition-all duration-300 cursor-pointer hover:scale-105"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(242, 139, 130, 0.08)",
+                  border: "1px solid rgba(242, 139, 130, 0.15)",
+                } : {
+                  backgroundColor: "rgba(242, 139, 130, 0.08)",
+                  border: "1px solid rgba(242, 139, 130, 0.15)",
                 }}
               >
                 <div className="flex items-center space-x-3 mb-3">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                     style={{
-                      backgroundColor: "rgba(125, 211, 192, 0.2)",
-                      boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                      backgroundColor: "#F28B82",
                     }}
                   >
-                    <AlertTriangle className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                    <AlertTriangle className="w-4 h-4 text-white" />
                   </div>
                   <h4 className="font-semibold text-red-400 group-hover:text-red-300 transition-colors duration-300">
                     {highlights.toughestDay?.title || 'Challenging Day'}
@@ -1739,19 +1736,29 @@ Return in this JSON format:
 
           {/* 4. Triggers */}
           <div
-            className={`rounded-3xl p-6 backdrop-blur-lg transition-all duration-300 ${
-              isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+            className={`rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
+              isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
             }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            } : {
+              backgroundColor: "rgba(255, 255, 255, 0.6)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            }}
           >
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(177, 156, 217, 0.2) 0%, rgba(125, 211, 192, 0.2) 100%)",
-                  border: "1px solid rgba(177, 156, 217, 0.3)",
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                } : {
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
                 }}
               >
-                <Lightbulb className="w-5 h-5" style={{ color: "#B19CD9" }} />
+                <Lightbulb className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} />
               </div>
               <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                 Triggers & Patterns
@@ -1775,15 +1782,22 @@ Return in this JSON format:
               <>
                 {/* Data Status Banner */}
                 {!hasEnoughData && patternAnalysis && (
-                  <div className={`mb-6 p-4 rounded-lg border ${isDarkMode ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-yellow-50 border-yellow-200'}`}>
+                  <div className={`mb-6 p-4 rounded-lg border`}
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(253, 214, 99, 0.08)",
+                      border: "1px solid rgba(253, 214, 99, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(253, 214, 99, 0.08)",
+                      border: "1px solid rgba(253, 214, 99, 0.15)",
+                    }}>
                     <div className="flex items-center space-x-2">
-                      <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                      <span className={`text-sm font-medium ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                      <AlertTriangle className="w-5 h-5" style={{ color: "#FDD663" }} />
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                         {patternAnalysis.message || `Not enough data for ${patternPeriod === 7 ? 'weekly' : 'monthly'} analysis`}
                       </span>
                     </div>
                     {patternAnalysis.totalMessages !== undefined && (
-                      <p className={`text-xs mt-2 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                      <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                         Current: {patternAnalysis.totalMessages} messages across {patternAnalysis.totalDays} days. Need at least 3 days of conversations.
                       </p>
                     )}
@@ -1792,15 +1806,22 @@ Return in this JSON format:
 
                 {/* Analysis Summary */}
                 {hasEnoughData && patternAnalysis && patternAnalysis.success && (
-                  <div className={`mb-6 p-4 rounded-lg ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                  <div className={`mb-6 p-4 rounded-lg`}
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(129, 201, 149, 0.08)",
+                      border: "1px solid rgba(129, 201, 149, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(129, 201, 149, 0.08)",
+                      border: "1px solid rgba(129, 201, 149, 0.15)",
+                    }}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Brain className="w-5 h-5 text-green-500" />
-                        <span className={`text-sm font-medium ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
+                        <Brain className="w-5 h-5" style={{ color: "#81C995" }} />
+                        <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                           {patternPeriod === 7 ? 'Weekly' : 'Monthly'} Analysis Complete
                         </span>
                       </div>
-                      <span className={`text-xs ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                         {patternAnalysis.totalMessages} messages • {patternAnalysis.totalDays} active days
                       </span>
                     </div>
@@ -1838,8 +1859,15 @@ Return in this JSON format:
                     <div className="space-y-2">
                       {triggers.joy && triggers.joy.length > 0 ? (
                         triggers.joy.map((trigger, index) => (
-                          <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                            <span className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>{trigger}</span>
+                          <div key={index} className={`p-3 rounded-lg`}
+                            style={isDarkMode ? {
+                              backgroundColor: "rgba(129, 201, 149, 0.08)",
+                              border: "1px solid rgba(129, 201, 149, 0.15)",
+                            } : {
+                              backgroundColor: "rgba(129, 201, 149, 0.08)",
+                              border: "1px solid rgba(129, 201, 149, 0.15)",
+                            }}>
+                            <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{trigger}</span>
                           </div>
                         ))
                       ) : (
@@ -1860,8 +1888,15 @@ Return in this JSON format:
                     <div className="space-y-2">
                       {triggers.distraction && triggers.distraction.length > 0 ? (
                         triggers.distraction.map((trigger, index) => (
-                          <div key={index} className={`p-3 rounded-lg ${isDarkMode ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-yellow-50 border border-yellow-200'}`}>
-                            <span className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>{trigger}</span>
+                          <div key={index} className={`p-3 rounded-lg`}
+                            style={isDarkMode ? {
+                              backgroundColor: "rgba(253, 214, 99, 0.08)",
+                              border: "1px solid rgba(253, 214, 99, 0.15)",
+                            } : {
+                              backgroundColor: "rgba(253, 214, 99, 0.08)",
+                              border: "1px solid rgba(253, 214, 99, 0.15)",
+                            }}>
+                            <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{trigger}</span>
                           </div>
                         ))
                       ) : (
@@ -1877,27 +1912,34 @@ Return in this JSON format:
 
                 {/* Insights Section */}
                 {hasEnoughData && patternAnalysis && patternAnalysis.insights && (
-                  <div className={`mt-6 p-4 rounded-lg ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                    <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                      <Target className="w-4 h-4" />
+                  <div className={`mt-6 p-4 rounded-lg`}
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(138, 180, 248, 0.08)",
+                      border: "1px solid rgba(138, 180, 248, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(138, 180, 248, 0.08)",
+                      border: "1px solid rgba(138, 180, 248, 0.15)",
+                    }}>
+                    <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      <Target className="w-4 h-4" style={{ color: "#8AB4F8" }} />
                       <span>Key Insights</span>
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Primary Stress Source</p>
-                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                        <p className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Primary Stress Source</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           {patternAnalysis.insights.primaryStressSource}
                         </p>
                       </div>
                       <div>
-                        <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Main Joy Source</p>
-                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                        <p className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Main Joy Source</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           {patternAnalysis.insights.mainJoySource}
                         </p>
                       </div>
                       <div>
-                        <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>Behavioral Pattern</p>
-                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                        <p className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Behavioral Pattern</p>
+                        <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           {patternAnalysis.insights.behavioralPattern}
                         </p>
                       </div>
@@ -1910,34 +1952,52 @@ Return in this JSON format:
 
           {/* 5. Guidance */}
           <div
-            className={`rounded-3xl p-6 backdrop-blur-lg transition-all duration-300 ${
-              isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
+            className={`rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
+              isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
             }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            } : {
+              backgroundColor: "rgba(255, 255, 255, 0.6)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            }}
           >
             <div className="flex items-center space-x-3 mb-6">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(125, 211, 192, 0.2) 0%, rgba(212, 175, 55, 0.2) 100%)",
-                  border: "1px solid rgba(125, 211, 192, 0.3)",
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                } : {
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
                 }}
               >
-                <BookOpen className="w-5 h-5" style={{ color: "#7DD3C0" }} />
+                <BookOpen className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
               </div>
               <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                 Personalized Guidance
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Success State - Requirements Met */}
               {habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
                 <>
                   {/* Success Banner */}
                   <div className="col-span-full mb-4">
-                    <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                    <div className={`p-4 rounded-xl`}
+                      style={isDarkMode ? {
+                        backgroundColor: "rgba(129, 201, 149, 0.08)",
+                        border: "1px solid rgba(129, 201, 149, 0.15)",
+                      } : {
+                        backgroundColor: "rgba(129, 201, 149, 0.08)",
+                        border: "1px solid rgba(129, 201, 149, 0.15)",
+                      }}>
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center animate-bounce">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center animate-bounce"
+                          style={{ backgroundColor: "#81C995" }}>
                           <span className="text-white text-lg">🎉</span>
                         </div>
                         <div>
@@ -1957,23 +2017,25 @@ Return in this JSON format:
               {/* AI-Generated Habits */}
               {habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
                 habitAnalysis.habits.map((habit, index) => (
-                  <div 
-                    key={index} 
-                    className={`group p-4 sm:p-6 rounded-2xl transition-all duration-300 hover:scale-105 cursor-pointer transform hover:shadow-lg ${
-                      isDarkMode 
-                        ? 'bg-green-500/10 border border-green-500/20 hover:bg-green-500/15 hover:shadow-green-500/20' 
-                        : 'bg-green-50 border border-green-200 hover:bg-green-100 hover:shadow-green-200'
-                    }`}
-                    style={{
+                  <div
+                    key={index}
+                    className={`group p-4 sm:p-6 rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer transform`}
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(129, 201, 149, 0.08)",
+                      border: "1px solid rgba(129, 201, 149, 0.15)",
+                      animationDelay: `${index * 0.1}s`,
+                      animation: 'fadeInUp 0.6s ease-out forwards'
+                    } : {
+                      backgroundColor: "rgba(129, 201, 149, 0.08)",
+                      border: "1px solid rgba(129, 201, 149, 0.15)",
                       animationDelay: `${index * 0.1}s`,
                       animation: 'fadeInUp 0.6s ease-out forwards'
                     }}
                   >
                     <div className="flex items-center space-x-3 mb-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${
-                        isDarkMode ? 'bg-green-500/20' : 'bg-green-100'
-                      }`}>
-                        <Target className="w-5 h-5 text-green-500" />
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                        style={{ backgroundColor: "#81C995" }}>
+                        <Target className="w-5 h-5 text-white" />
                       </div>
                       <h4 className={`font-bold text-lg ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
                         {habit.title}
@@ -2118,8 +2180,15 @@ Return in this JSON format:
                   </div>
 
                   {/* Encouragement Message */}
-                  <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                    <p className={`text-sm text-center ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                  <div className={`mt-4 p-3 rounded-lg`}
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(138, 180, 248, 0.08)",
+                      border: "1px solid rgba(138, 180, 248, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(138, 180, 248, 0.08)",
+                      border: "1px solid rgba(138, 180, 248, 0.15)",
+                    }}>
+                    <p className={`text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                       💬 Keep chatting with Deite to unlock your personalized habits and insights!
                     </p>
                   </div>
@@ -2127,20 +2196,14 @@ Return in this JSON format:
               ) : (
                 <>
                   {/* Continue Chatting */}
-                  <div 
-                    className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
-                    style={{
-                      backgroundColor: "rgba(30, 35, 50, 0.8)",
-                      border: "1px solid rgba(125, 211, 192, 0.2)",
-                      boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
-                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
-                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                  <div
+                    className="group p-4 sm:p-6 rounded-xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(138, 180, 248, 0.08)",
+                      border: "1px solid rgba(138, 180, 248, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(138, 180, 248, 0.08)",
+                      border: "1px solid rgba(138, 180, 248, 0.15)",
                     }}
                     onClick={() => navigate('/chat')}
                   >
@@ -2148,11 +2211,10 @@ Return in this JSON format:
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                         style={{
-                          backgroundColor: "rgba(125, 211, 192, 0.2)",
-                          boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                          backgroundColor: "#8AB4F8",
                         }}
                       >
-                        <Sun className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                        <Sun className="w-4 h-4 text-white" />
                       </div>
                       <h4 className="font-semibold text-gray-100 group-hover:text-white transition-colors duration-300">
                         Continue Chatting
@@ -2164,20 +2226,14 @@ Return in this JSON format:
                   </div>
 
                   {/* Reflect Daily */}
-                  <div 
-                    className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
-                    style={{
-                      backgroundColor: "rgba(30, 35, 50, 0.8)",
-                      border: "1px solid rgba(125, 211, 192, 0.2)",
-                      boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
-                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
-                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                  <div
+                    className="group p-4 sm:p-6 rounded-xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(253, 214, 99, 0.08)",
+                      border: "1px solid rgba(253, 214, 99, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(253, 214, 99, 0.08)",
+                      border: "1px solid rgba(253, 214, 99, 0.15)",
                     }}
                     onClick={() => navigate('/chat')}
                   >
@@ -2185,11 +2241,10 @@ Return in this JSON format:
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                         style={{
-                          backgroundColor: "rgba(125, 211, 192, 0.2)",
-                          boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                          backgroundColor: "#FDD663",
                         }}
                       >
-                        <Star className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                        <Star className="w-4 h-4 text-white" />
                       </div>
                       <h4 className="font-semibold text-gray-100 group-hover:text-white transition-colors duration-300">
                         Reflect Daily
@@ -2201,20 +2256,14 @@ Return in this JSON format:
                   </div>
 
                   {/* Build Patterns */}
-                  <div 
-                    className="group p-4 sm:p-6 rounded-2xl transition-all duration-300 cursor-pointer hover:scale-105"
-                    style={{
-                      backgroundColor: "rgba(30, 35, 50, 0.8)",
-                      border: "1px solid rgba(125, 211, 192, 0.2)",
-                      boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.2)";
-                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.4)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "inset 0 0 20px rgba(125, 211, 192, 0.05), 0 8px 32px rgba(125, 211, 192, 0.08)";
-                      e.currentTarget.style.border = "1px solid rgba(125, 211, 192, 0.2)";
+                  <div
+                    className="group p-4 sm:p-6 rounded-xl transition-all duration-300 cursor-pointer hover:scale-105"
+                    style={isDarkMode ? {
+                      backgroundColor: "rgba(242, 139, 130, 0.08)",
+                      border: "1px solid rgba(242, 139, 130, 0.15)",
+                    } : {
+                      backgroundColor: "rgba(242, 139, 130, 0.08)",
+                      border: "1px solid rgba(242, 139, 130, 0.15)",
                     }}
                     onClick={() => navigate('/chat')}
                   >
@@ -2222,11 +2271,10 @@ Return in this JSON format:
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                         style={{
-                          backgroundColor: "rgba(125, 211, 192, 0.2)",
-                          boxShadow: "0 0 15px rgba(125, 211, 192, 0.3)",
+                          backgroundColor: "#F28B82",
                         }}
                       >
-                        <Brain className="w-4 h-4" style={{ color: "#E8F4F1" }} />
+                        <Brain className="w-4 h-4 text-white" />
                       </div>
                       <h4 className="font-semibold text-gray-100 group-hover:text-white transition-colors duration-300">
                         Build Patterns
@@ -2257,18 +2305,18 @@ Return in this JSON format:
       <div
         className="min-h-screen flex flex-col relative overflow-hidden"
         style={{
-          background: isDarkMode 
-            ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+          background: isDarkMode
+            ? "#202124"
             : "#FAFAF8",
         }}
       >
       {/* Header - Mobile Optimized */}
       <div className={`sticky top-0 z-20 flex items-center justify-between p-4 border-b backdrop-blur-lg ${
-        isDarkMode ? 'border-gray-700/30' : 'border-gray-200/50'
+        isDarkMode ? 'border-gray-600/20' : 'border-gray-200/50'
       }`}
         style={{
-          backgroundColor: isDarkMode 
-            ? "rgba(11, 14, 20, 0.95)" 
+          backgroundColor: isDarkMode
+            ? "rgba(32, 33, 36, 0.95)"
             : "rgba(250, 250, 248, 0.95)",
         }}
       >
@@ -2278,14 +2326,14 @@ Return in this JSON format:
             isDarkMode ? 'backdrop-blur-md' : 'bg-white'
           }`}
           style={isDarkMode ? {
-            backgroundColor: "rgba(28, 31, 46, 0.4)",
-            boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.15), 0 8px 32px rgba(125, 211, 192, 0.1)",
-            border: "1px solid rgba(125, 211, 192, 0.2)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           } : {
             boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
           }}
         >
-          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
+          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
         </button>
 
         <div className="flex items-center space-x-3 flex-1 justify-center">
@@ -2294,14 +2342,14 @@ Return in this JSON format:
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(28, 31, 46, 0.4)",
-              boxShadow: "inset 0 0 20px rgba(212, 175, 55, 0.15), 0 8px 32px rgba(212, 175, 55, 0.1)",
-              border: "1px solid rgba(212, 175, 55, 0.2)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             } : {
               boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
             }}
           >
-            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
+            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div className="text-center">
             <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -2317,10 +2365,14 @@ Return in this JSON format:
           onClick={handleAIUpdate}
           disabled={isUpdating}
           className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation ${
-            isUpdating 
-              ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+            isUpdating
+              ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
+              : 'text-white shadow-lg hover:shadow-xl transform hover:scale-105'
           }`}
+          style={isDarkMode ? {
+            backgroundColor: isUpdating ? "" : "rgba(42, 42, 45, 0.8)",
+            border: isUpdating ? "" : "1px solid rgba(255, 255, 255, 0.08)",
+          } : {}}
         >
           <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
           <span className="text-sm font-medium hidden xs:block">
@@ -2341,10 +2393,11 @@ Return in this JSON format:
             className={`rounded-2xl p-4 max-w-sm w-full max-h-[85vh] overflow-y-auto ${
               isDarkMode ? 'bg-gray-800' : 'bg-white'
             }`}
-            style={{
-              boxShadow: isDarkMode 
-                ? "0 20px 60px rgba(0, 0, 0, 0.5)"
-                : "0 20px 60px rgba(0, 0, 0, 0.15)",
+            style={isDarkMode ? {
+              backgroundColor: "#2A2A2D",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            } : {
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.15)",
             }}
           >
             <div className="flex items-center justify-between mb-4">
@@ -2363,61 +2416,93 @@ Return in this JSON format:
 
             <div className="space-y-3">
               {/* Happiness */}
-              <div className="p-3 rounded-2xl bg-green-500/10 border border-green-500/20">
+              <div className="p-4 rounded-xl"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(129, 201, 149, 0.08)",
+                  border: "1px solid rgba(129, 201, 149, 0.15)",
+                } : {
+                  backgroundColor: "rgba(129, 201, 149, 0.08)",
+                  border: "1px solid rgba(129, 201, 149, 0.15)",
+                }}>
                 <div className="flex items-center space-x-3 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#81C995" }}>
                     <Smile className="w-4 h-4 text-white" />
                   </div>
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-green-400' : 'text-green-700'}`}>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                     Happiness: {selectedDateDetails.happiness}%
                   </h4>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {emotionExplanations.happiness}
                 </p>
               </div>
 
               {/* Energy */}
-              <div className="p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
+              <div className="p-4 rounded-xl"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(253, 214, 99, 0.08)",
+                  border: "1px solid rgba(253, 214, 99, 0.15)",
+                } : {
+                  backgroundColor: "rgba(253, 214, 99, 0.08)",
+                  border: "1px solid rgba(253, 214, 99, 0.15)",
+                }}>
                 <div className="flex items-center space-x-3 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#FDD663" }}>
                     <Zap className="w-4 h-4 text-white" />
                   </div>
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                     Energy: {selectedDateDetails.energy}%
                   </h4>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-600'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {emotionExplanations.energy}
                 </p>
               </div>
 
               {/* Anxiety */}
-              <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+              <div className="p-4 rounded-xl"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(138, 180, 248, 0.08)",
+                  border: "1px solid rgba(138, 180, 248, 0.15)",
+                } : {
+                  backgroundColor: "rgba(138, 180, 248, 0.08)",
+                  border: "1px solid rgba(138, 180, 248, 0.15)",
+                }}>
                 <div className="flex items-center space-x-3 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#8AB4F8" }}>
                     <AlertTriangle className="w-4 h-4 text-white" />
                   </div>
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                     Anxiety: {selectedDateDetails.anxiety}%
                   </h4>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {emotionExplanations.anxiety}
                 </p>
               </div>
 
               {/* Stress */}
-              <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20">
+              <div className="p-4 rounded-xl"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(242, 139, 130, 0.08)",
+                  border: "1px solid rgba(242, 139, 130, 0.15)",
+                } : {
+                  backgroundColor: "rgba(242, 139, 130, 0.08)",
+                  border: "1px solid rgba(242, 139, 130, 0.15)",
+                }}>
                 <div className="flex items-center space-x-3 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#F28B82" }}>
                     <Target className="w-4 h-4 text-white" />
                   </div>
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-red-400' : 'text-red-700'}`}>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                     Stress: {selectedDateDetails.stress}%
                   </h4>
                 </div>
-                <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {emotionExplanations.stress}
                 </p>
               </div>
@@ -2426,7 +2511,14 @@ Return in this JSON format:
             <div className="mt-6 text-center">
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:opacity-90 transition-opacity"
+                className="px-6 py-2 text-white rounded-full hover:opacity-90 transition-opacity"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                } : {
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
+                }}
               >
                 Close
               </button>

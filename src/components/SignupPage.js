@@ -63,13 +63,13 @@ const SignupPage = () => {
     <div
       className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden slide-up"
       style={{
-        background: "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)",
+        background: "#202124",
       }}
     >
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-16 left-12 opacity-8">
-            <svg width="100" height="50" viewBox="0 0 100 50" fill="none" stroke="#7DD3C0" strokeWidth="0.4">
+            <svg width="100" height="50" viewBox="0 0 100 50" fill="none" stroke="#8AB4F8" strokeWidth="0.4">
               <path d="M12 30c0-10 6-16 16-16s16 6 16 30c0 5-3 10-8 13H20c-5-3-8-8-8-13z" />
               <path d="M40 25c0-8 5-12 12-12s12 4 12 25c0 4-2 8-5 10H45c-3-2-5-6-5-10z" />
               <path d="M70 20c0-6 4-10 10-10s10 4 10 20c0 3-1 6-4 8H74c-3-2-4-5-4-8z" />
@@ -77,42 +77,42 @@ const SignupPage = () => {
           </div>
 
           <div className="absolute top-60 right-16 opacity-7">
-            <svg width="120" height="45" viewBox="0 0 120 45" fill="none" stroke="#D4AF37" strokeWidth="0.3">
+            <svg width="120" height="45" viewBox="0 0 120 45" fill="none" stroke="#FDD663" strokeWidth="0.3">
               <path d="M15 27c0-9 5.5-14.5 14.5-14.5s14.5 5.5 14.5 27c0 4.5-2.25 9-7.25 11.25H22.25c-5-2.25-7.25-6.75-7.25-11.25z" />
               <path d="M45 22c0-7 4.5-10.5 10.5-10.5s10.5 3.5 10.5 22c0 3.5-1.75 7-5.25 8.75H50.25c-3.5-1.75-5.25-5.25-5.25-8.75z" />
             </svg>
           </div>
 
           <div className="absolute bottom-32 left-8 opacity-9">
-            <svg width="90" height="35" viewBox="0 0 90 35" fill="none" stroke="#9BB5FF" strokeWidth="0.4">
+            <svg width="90" height="35" viewBox="0 0 90 35" fill="none" stroke="#8AB4F8" strokeWidth="0.4">
               <path d="M10 21c0-8.5 5-13.5 13.5-13.5s13.5 5 13.5 21c0 4.25-2.5 8.5-6.75 11H16.75c-4.25-2.5-6.75-6.75-6.75-11z" />
             </svg>
           </div>
 
           <Heart
             className="absolute top-1/5 left-1/8 w-4 h-4 animate-bounce opacity-12"
-            style={{ color: "#7DD3C0", animationDelay: "0.3s", animationDuration: "4s" }}
+            style={{ color: "#8AB4F8", animationDelay: "0.3s", animationDuration: "4s" }}
           />
           <Heart
             className="absolute top-2/3 right-1/6 w-3 h-3 animate-bounce opacity-15"
-            style={{ color: "#D4AF37", animationDelay: "2s", animationDuration: "3.5s" }}
+            style={{ color: "#FDD663", animationDelay: "2s", animationDuration: "3.5s" }}
           />
           <Heart
             className="absolute bottom-1/4 right-3/4 w-5 h-5 animate-bounce opacity-13"
-            style={{ color: "#9BB5FF", animationDelay: "1.2s", animationDuration: "3.8s" }}
+            style={{ color: "#8AB4F8", animationDelay: "1.2s", animationDuration: "3.8s" }}
           />
 
           <Star
             className="absolute top-1/8 right-1/4 w-3 h-3 animate-pulse opacity-18"
-            style={{ color: "#D4AF37", animationDelay: "0.8s", animationDuration: "2.8s" }}
+            style={{ color: "#FDD663", animationDelay: "0.8s", animationDuration: "2.8s" }}
           />
           <Star
             className="absolute bottom-1/3 left-1/5 w-4 h-4 animate-pulse opacity-14"
-            style={{ color: "#9BB5FF", animationDelay: "2.5s", animationDuration: "3.2s" }}
+            style={{ color: "#8AB4F8", animationDelay: "2.5s", animationDuration: "3.2s" }}
           />
           <Star
             className="absolute top-3/4 left-2/3 w-3 h-3 animate-pulse opacity-16"
-            style={{ color: "#7DD3C0", animationDelay: "1.7s", animationDuration: "2.5s" }}
+            style={{ color: "#8AB4F8", animationDelay: "1.7s", animationDuration: "2.5s" }}
           />
         </div>
 
@@ -122,12 +122,12 @@ const SignupPage = () => {
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center relative overflow-hidden backdrop-blur-lg"
             style={{
-              backgroundColor: "rgba(28, 31, 46, 0.4)",
-              boxShadow: "inset 0 0 25px rgba(125, 211, 192, 0.15), 0 12px 40px rgba(125, 211, 192, 0.1)",
-              border: "1px solid rgba(125, 211, 192, 0.2)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
-            <Brain className="w-10 h-10 relative z-10" style={{ color: "#7DD3C0" }} strokeWidth={1.5} />
+            <Brain className="w-10 h-10 relative z-10" style={{ color: "#8AB4F8" }} strokeWidth={1.5} />
           </div>
         </div>
 
@@ -135,9 +135,9 @@ const SignupPage = () => {
         <div
           className="w-full rounded-2xl p-8 border backdrop-blur-lg relative overflow-hidden"
           style={{
-            backgroundColor: "rgba(28, 31, 46, 0.3)",
-            boxShadow: "inset 0 0 30px rgba(125, 211, 192, 0.12), 0 16px 48px rgba(125, 211, 192, 0.08)",
-            border: "1px solid rgba(125, 211, 192, 0.18)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           }}
         >
           <h1 className="text-2xl font-bold mb-6 text-white">Create Account</h1>
@@ -153,7 +153,7 @@ const SignupPage = () => {
             <div className="relative">
               <User
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: "#7DD3C0" }}
+                style={{ color: "#8AB4F8" }}
               />
               <input
                 type="text"
@@ -164,9 +164,9 @@ const SignupPage = () => {
                 required
                 className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 placeholder-gray-400 backdrop-blur-md text-white"
                 style={{
-                  backgroundColor: "rgba(11, 14, 20, 0.6)",
-                  border: "1px solid rgba(155, 181, 255, 0.15)",
-                  boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.08)",
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                 }}
               />
             </div>
@@ -175,7 +175,7 @@ const SignupPage = () => {
             <div className="relative">
               <Mail
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: "#9BB5FF" }}
+                style={{ color: "#8AB4F8" }}
               />
               <input
                 type="email"
@@ -186,9 +186,9 @@ const SignupPage = () => {
                 required
                 className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 placeholder-gray-400 backdrop-blur-md text-white"
                 style={{
-                  backgroundColor: "rgba(11, 14, 20, 0.6)",
-                  border: "1px solid rgba(155, 181, 255, 0.15)",
-                  boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.08)",
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                 }}
               />
             </div>
@@ -197,7 +197,7 @@ const SignupPage = () => {
             <div className="relative">
               <Lock
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: "#D4AF37" }}
+                style={{ color: "#FDD663" }}
               />
               <input
                 type={showPassword ? "text" : "password"}
@@ -208,9 +208,9 @@ const SignupPage = () => {
                 required
                 className="w-full pl-12 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 placeholder-gray-400 backdrop-blur-md text-white"
                 style={{
-                  backgroundColor: "rgba(11, 14, 20, 0.6)",
-                  border: "1px solid rgba(155, 181, 255, 0.15)",
-                  boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.08)",
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                 }}
               />
               <button
@@ -230,7 +230,7 @@ const SignupPage = () => {
             <div className="relative">
               <Lock
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: "#D4AF37" }}
+                style={{ color: "#FDD663" }}
               />
               <input
                 type={showConfirmPassword ? "text" : "password"}
@@ -241,9 +241,9 @@ const SignupPage = () => {
                 required
                 className="w-full pl-12 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 placeholder-gray-400 backdrop-blur-md text-white"
                 style={{
-                  backgroundColor: "rgba(11, 14, 20, 0.6)",
-                  border: "1px solid rgba(155, 181, 255, 0.15)",
-                  boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.08)",
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                 }}
               />
               <button
@@ -264,11 +264,10 @@ const SignupPage = () => {
               disabled={loading}
               className="w-full py-3 font-semibold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 mt-6 backdrop-blur-lg relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{
-                background:
-                  "linear-gradient(135deg, rgba(125, 211, 192, 0.8) 0%, rgba(212, 175, 55, 0.8) 50%, rgba(155, 181, 255, 0.8) 100%)",
-                boxShadow: "inset 0 0 30px rgba(255, 255, 255, 0.1), 0 16px 48px rgba(125, 211, 192, 0.2)",
-                color: "#0B0E14",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backgroundColor: "rgba(42, 42, 45, 0.8)",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                color: "#FFFFFF",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
               {loading ? 'Creating Account...' : 'Create Account'}
@@ -281,7 +280,7 @@ const SignupPage = () => {
               <Link 
                 to="/login" 
                 className="font-medium underline cursor-pointer hover:opacity-80" 
-                style={{ color: "#7DD3C0" }}
+                style={{ color: "#8AB4F8" }}
               >
                 Sign In
               </Link>
