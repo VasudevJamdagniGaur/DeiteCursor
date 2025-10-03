@@ -144,8 +144,8 @@ export default function ProfilePage() {
     <div
       className="min-h-screen relative overflow-hidden"
       style={{
-        background: isDarkMode 
-          ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+        background: isDarkMode
+          ? "#202124"
           : "#FAFAF8",
       }}
     >
@@ -155,16 +155,16 @@ export default function ProfilePage() {
           <Heart className="w-6 h-6 text-pink-400 animate-pulse" />
         </div>
         <div className="absolute top-16 right-12 opacity-12">
-          <Sparkles className="w-7 h-7 text-purple-400 animate-bounce" style={{ animationDuration: '3s' }} />
+          <Sparkles className="w-7 h-7 animate-bounce" style={{ color: "#8AB4F8", animationDuration: '3s' }} />
         </div>
         <div className="absolute bottom-24 left-16 opacity-11">
-          <Star className="w-5 h-5 text-blue-400 animate-pulse" style={{ animationDelay: '1s' }} />
+          <Star className="w-5 h-5 animate-pulse" style={{ color: "#81C995", animationDelay: '1s' }} />
         </div>
         <div className="absolute top-1/3 right-1/4 opacity-8">
-          <Star className="w-4 h-4 text-yellow-400 animate-bounce" style={{ animationDelay: '2s', animationDuration: '4s' }} />
+          <Star className="w-4 h-4 animate-bounce" style={{ color: "#FDD663", animationDelay: '2s', animationDuration: '4s' }} />
         </div>
         <div className="absolute bottom-1/3 left-1/5 opacity-9">
-          <Heart className="w-5 h-5 text-cyan-400 animate-pulse" style={{ animationDelay: '1.5s' }} />
+          <Heart className="w-5 h-5 animate-pulse" style={{ color: "#F28B82", animationDelay: '1.5s' }} />
         </div>
       </div>
 
@@ -175,12 +175,12 @@ export default function ProfilePage() {
             onClick={handleBack}
             className="w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md hover:opacity-80 transition-opacity"
             style={{
-              backgroundColor: "rgba(28, 31, 46, 0.4)",
-              boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.15), 0 8px 32px rgba(125, 211, 192, 0.1)",
-              border: "1px solid rgba(125, 211, 192, 0.2)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
-            <ArrowLeft className="w-5 h-5" style={{ color: "#7DD3C0" }} strokeWidth={1.5} />
+            <ArrowLeft className="w-5 h-5" style={{ color: "#8AB4F8" }} strokeWidth={1.5} />
           </button>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
             Your Profile
@@ -191,9 +191,9 @@ export default function ProfilePage() {
         <div
           className="backdrop-blur-lg border-2 rounded-2xl p-6"
           style={{
-            backgroundColor: "rgba(28, 31, 46, 0.3)",
-            boxShadow: "inset 0 0 30px rgba(125, 211, 192, 0.12), 0 16px 48px rgba(125, 211, 192, 0.08)",
-            border: "1px solid rgba(125, 211, 192, 0.18)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           }}
         >
           {/* Profile Header */}
@@ -202,8 +202,9 @@ export default function ProfilePage() {
               <div 
                 className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold text-white relative overflow-hidden"
                 style={{
-                  background: "linear-gradient(135deg, rgba(125, 211, 192, 0.8) 0%, rgba(212, 175, 55, 0.8) 50%, rgba(155, 181, 255, 0.8) 100%)",
-                  boxShadow: "0 8px 32px rgba(125, 211, 192, 0.3)",
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
                 }}
               >
                 {getInitials(user.displayName)}
@@ -224,8 +225,8 @@ export default function ProfilePage() {
                 <div
                   className="p-4 rounded-xl"
                   style={{
-                    backgroundColor: "rgba(11, 14, 20, 0.4)",
-                    border: "1px solid rgba(155, 181, 255, 0.15)",
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
                   }}
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -240,8 +241,8 @@ export default function ProfilePage() {
                 <div
                   className="p-4 rounded-xl"
                   style={{
-                    backgroundColor: "rgba(11, 14, 20, 0.4)",
-                    border: "1px solid rgba(155, 181, 255, 0.15)",
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
                   }}
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -256,8 +257,8 @@ export default function ProfilePage() {
                 <div
                   className="p-4 rounded-xl"
                   style={{
-                    backgroundColor: "rgba(11, 14, 20, 0.4)",
-                    border: "1px solid rgba(155, 181, 255, 0.15)",
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
                   }}
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -274,8 +275,8 @@ export default function ProfilePage() {
                 <div
                   className="p-4 rounded-xl"
                   style={{
-                    backgroundColor: "rgba(11, 14, 20, 0.4)",
-                    border: "1px solid rgba(155, 181, 255, 0.15)",
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
                   }}
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -292,8 +293,9 @@ export default function ProfilePage() {
                 onClick={() => setIsEditing(true)}
                 className="w-full mt-6 py-3 px-4 rounded-xl font-semibold text-white hover:opacity-90 transition-all duration-300"
                 style={{
-                  background: "linear-gradient(135deg, rgba(125, 211, 192, 0.8) 0%, rgba(212, 175, 55, 0.8) 50%, rgba(155, 181, 255, 0.8) 100%)",
-                  color: "#0B0E14",
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  color: "#FFFFFF",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
                 }}
               >
                 <Edit3 className="w-4 h-4 inline mr-2" />
@@ -312,8 +314,8 @@ export default function ProfilePage() {
                     onChange={(e) => setEditData({ ...editData, age: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
                     style={{
-                      backgroundColor: "rgba(11, 14, 20, 0.6)",
-                      border: "1px solid rgba(155, 181, 255, 0.15)",
+                      backgroundColor: "rgba(42, 42, 45, 0.6)",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
                     }}
                     placeholder="Enter your age"
                     min="13"
@@ -345,9 +347,9 @@ export default function ProfilePage() {
                               : 'border-gray-600 text-gray-300 hover:border-gray-500'
                           }`}
                           style={{
-                            backgroundColor: editData.gender === option.value 
-                              ? "rgba(125, 211, 192, 0.2)" 
-                              : "rgba(11, 14, 20, 0.4)",
+                            backgroundColor: editData.gender === option.value
+                              ? "rgba(129, 201, 149, 0.2)"
+                              : "rgba(42, 42, 45, 0.6)",
                           }}
                         >
                           {option.label}
@@ -364,8 +366,8 @@ export default function ProfilePage() {
                     onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 h-24 resize-none"
                     style={{
-                      backgroundColor: "rgba(11, 14, 20, 0.6)",
-                      border: "1px solid rgba(155, 181, 255, 0.15)",
+                      backgroundColor: "rgba(42, 42, 45, 0.6)",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
                     }}
                     placeholder="Tell us a bit about yourself..."
                   />
@@ -378,7 +380,8 @@ export default function ProfilePage() {
                   disabled={loading}
                   className="flex-1 py-3 px-4 rounded-xl font-semibold text-white transition-all duration-300 disabled:opacity-50"
                   style={{
-                    background: "linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(16, 185, 129, 0.8) 100%)",
+                    backgroundColor: "rgba(42, 42, 45, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
                   }}
                 >
                   <Save className="w-4 h-4 inline mr-2" />
@@ -400,12 +403,12 @@ export default function ProfilePage() {
         <div
           className="backdrop-blur-lg border rounded-2xl p-6 space-y-4"
           style={{
-            backgroundColor: "rgba(28, 31, 46, 0.3)",
-            border: "1px solid rgba(155, 181, 255, 0.18)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           }}
         >
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-blue-400" />
+            <Settings className="w-5 h-5" style={{ color: "#8AB4F8" }} />
             Account Actions
           </h3>
 
@@ -417,7 +420,7 @@ export default function ProfilePage() {
             }}
           >
             <div className="flex items-center gap-3">
-              <LogOut className="w-5 h-5 text-yellow-400" />
+              <LogOut className="w-5 h-5 text-white" />
               <div>
                 <p className="font-medium text-white">Sign Out</p>
                 <p className="text-sm text-gray-400">Sign out of your account</p>
@@ -430,12 +433,12 @@ export default function ProfilePage() {
         <div
           className="backdrop-blur-lg border rounded-2xl p-6 space-y-4"
           style={{
-            backgroundColor: "rgba(28, 31, 46, 0.3)",
-            border: "1px solid rgba(34, 197, 94, 0.18)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            border: "1px solid rgba(129, 201, 149, 0.15)",
           }}
         >
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-green-400" />
+            <MessageCircle className="w-5 h-5 text-white" />
             Helpdesk
           </h3>
           <p className="text-gray-300 text-sm mb-4">
@@ -450,7 +453,7 @@ export default function ProfilePage() {
             }}
           >
             <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-green-400" />
+              <Phone className="w-5 h-5 text-white" />
               <div>
                 <p className="font-medium text-white">Call Founders</p>
                 <p className="text-sm text-gray-400">Call us at +91 9536138120</p>
@@ -466,7 +469,7 @@ export default function ProfilePage() {
             }}
           >
             <div className="flex items-center gap-3">
-              <MessageCircle className="w-5 h-5 text-green-400" />
+              <MessageCircle className="w-5 h-5 text-white" />
               <div>
                 <p className="font-medium text-white">WhatsApp Message</p>
                 <p className="text-sm text-gray-400">Send us a message on WhatsApp</p>
@@ -479,9 +482,9 @@ export default function ProfilePage() {
         <div
           className="backdrop-blur-lg border-2 rounded-2xl p-6"
           style={{
-            backgroundColor: "rgba(28, 31, 46, 0.3)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            boxShadow: "0 0 20px rgba(239, 68, 68, 0.1)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            border: "1px solid rgba(242, 139, 130, 0.15)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
           }}
         >
           <div className="text-center">
@@ -489,8 +492,9 @@ export default function ProfilePage() {
               <div 
                 className="w-16 h-16 rounded-full flex items-center justify-center"
                 style={{
-                  background: "linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.8) 100%)",
-                  boxShadow: "0 8px 32px rgba(239, 68, 68, 0.3)",
+                  backgroundColor: "rgba(242, 139, 130, 0.8)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
                 }}
               >
                 <AlertTriangle className="w-8 h-8 text-white" />
@@ -506,7 +510,8 @@ export default function ProfilePage() {
                 onClick={() => setShowDeleteConfirm(true)}
                 className="px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 transition-all duration-300"
                 style={{
-                  background: "linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.8) 100%)",
+                  backgroundColor: "rgba(242, 139, 130, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
                 }}
               >
                 <Trash2 className="w-4 h-4 inline mr-2" />
@@ -517,7 +522,8 @@ export default function ProfilePage() {
                 <div
                   className="p-4 rounded-xl border-2 border-dashed border-red-500/50"
                   style={{
-                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    backgroundColor: "rgba(242, 139, 130, 0.08)",
+                    border: "1px solid rgba(242, 139, 130, 0.15)",
                   }}
                 >
                   <p className="text-sm text-red-300 mb-4">
@@ -529,7 +535,8 @@ export default function ProfilePage() {
                       disabled={deleteLoading}
                       className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-all duration-300 disabled:opacity-50"
                       style={{
-                        background: "linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.8) 100%)",
+                        backgroundColor: "rgba(242, 139, 130, 0.8)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
                       }}
                     >
                       {deleteLoading ? 'Clearing...' : 'Yes, Clear Data'}

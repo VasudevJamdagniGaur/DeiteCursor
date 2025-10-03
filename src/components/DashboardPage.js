@@ -166,8 +166,8 @@ export default function DashboardPage() {
     <div
       className="min-h-screen px-6 py-8 relative overflow-hidden slide-up"
       style={{
-        background: isDarkMode 
-          ? "linear-gradient(to bottom, #0B0E14 0%, #1C1F2E 100%)"
+        background: isDarkMode
+          ? "#202124"
           : "#FAFAF8"
       }}
     >
@@ -328,14 +328,14 @@ export default function DashboardPage() {
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(28, 31, 46, 0.4)",
-              boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.15), 0 8px 32px rgba(125, 211, 192, 0.1)",
-              border: "1px solid rgba(125, 211, 192, 0.2)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             } : {
               boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
             }}
           >
-            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} strokeWidth={1.5} />
+            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
 
           <div
@@ -343,14 +343,14 @@ export default function DashboardPage() {
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(28, 31, 46, 0.5)",
-              boxShadow: "inset 0 0 25px rgba(212, 175, 55, 0.2), 0 12px 40px rgba(212, 175, 55, 0.15)",
-              border: "1px solid rgba(212, 175, 55, 0.25)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
             } : {
               boxShadow: "0 0 0 1px #87A96B20, 0 4px 12px rgba(134, 169, 107, 0.2)",
             }}
           >
-            <Brain className="w-7 h-7" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} strokeWidth={1.5} />
+            <Brain className="w-7 h-7" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
           </div>
 
           <div className="flex space-x-2">
@@ -360,15 +360,15 @@ export default function DashboardPage() {
                 isDarkMode ? 'backdrop-blur-md' : 'bg-white'
               }`}
               style={isDarkMode ? {
-                backgroundColor: "rgba(28, 31, 46, 0.4)",
-                boxShadow: "inset 0 0 20px rgba(155, 181, 255, 0.15), 0 8px 32px rgba(155, 181, 255, 0.1)",
-                border: "1px solid rgba(155, 181, 255, 0.2)",
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
               } : {
                 boxShadow: "0 2px 8px rgba(230, 179, 186, 0.15)",
               }}
             >
-              {isDarkMode ? 
-                <Sun className="w-5 h-5" style={{ color: "#9BB5FF" }} strokeWidth={1.5} /> :
+              {isDarkMode ?
+                <Sun className="w-5 h-5" style={{ color: "#8AB4F8" }} strokeWidth={1.5} /> :
                 <Moon className="w-5 h-5" style={{ color: "#E6B3BA" }} strokeWidth={1.5} />
               }
             </div>
@@ -378,14 +378,14 @@ export default function DashboardPage() {
                 isDarkMode ? 'backdrop-blur-md' : 'bg-white'
               }`}
               style={isDarkMode ? {
-                backgroundColor: "rgba(28, 31, 46, 0.4)",
-                boxShadow: "inset 0 0 20px rgba(125, 211, 192, 0.15), 0 8px 32px rgba(125, 211, 192, 0.1)",
-                border: "1px solid rgba(125, 211, 192, 0.2)",
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
               } : {
                 boxShadow: "0 2px 8px rgba(177, 156, 217, 0.15)",
               }}
             >
-              <User className="w-5 h-5" style={{ color: isDarkMode ? "#7DD3C0" : "#B19CD9" }} strokeWidth={1.5} />
+              <User className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#B19CD9" }} strokeWidth={1.5} />
             </div>
           </div>
         </div>
@@ -395,9 +395,9 @@ export default function DashboardPage() {
             isDarkMode ? 'backdrop-blur-lg' : 'bg-white'
           }`}
           style={isDarkMode ? {
-            backgroundColor: "rgba(28, 31, 46, 0.3)",
-            boxShadow: "inset 0 0 30px rgba(125, 211, 192, 0.12), 0 16px 48px rgba(125, 211, 192, 0.08)",
-            border: "1px solid rgba(125, 211, 192, 0.18)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           } : {
             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
             borderTop: "3px solid #87A96B30",
@@ -441,9 +441,9 @@ export default function DashboardPage() {
             isDarkMode ? 'backdrop-blur-lg' : 'bg-white'
           }`}
           style={isDarkMode ? {
-            backgroundColor: "rgba(28, 31, 46, 0.35)",
-            boxShadow: "inset 0 0 35px rgba(212, 175, 55, 0.15), 0 20px 60px rgba(212, 175, 55, 0.1)",
-            border: "1px solid rgba(212, 175, 55, 0.2)",
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
           } : {
             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
             borderTop: "3px solid #E6B3BA30",
@@ -453,8 +453,8 @@ export default function DashboardPage() {
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center"
               style={{
-                backgroundColor: isDarkMode ? "rgba(212, 175, 55, 0.8)" : "#E6B3BA",
-                boxShadow: isDarkMode ? "0 0 20px rgba(212, 175, 55, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)" : "none",
+                backgroundColor: isDarkMode ? "#FDD663" : "#E6B3BA",
+                boxShadow: isDarkMode ? "0 4px 16px rgba(0, 0, 0, 0.15)" : "none",
               }}
             >
               <span className={isDarkMode ? "text-black" : "text-white"} style={{ fontSize: '14px' }}>⚡</span>
@@ -466,9 +466,9 @@ export default function DashboardPage() {
               isDarkMode ? 'backdrop-blur-lg' : ''
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(11, 14, 20, 0.6)",
-              border: "1px solid rgba(155, 181, 255, 0.15)",
-              boxShadow: "inset 0 0 25px rgba(155, 181, 255, 0.08)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
             } : {
               backgroundColor: "#F9F9F7",
             }}
@@ -513,13 +513,14 @@ export default function DashboardPage() {
               isDarkMode ? 'backdrop-blur-lg text-white' : 'text-white'
             }`}
             style={isDarkMode ? {
-              background: "linear-gradient(135deg, rgba(125, 211, 192, 0.8) 0%, rgba(212, 175, 55, 0.8) 50%, rgba(155, 181, 255, 0.8) 100%)",
-              boxShadow: "inset 0 0 30px rgba(255, 255, 255, 0.1), 0 16px 48px rgba(125, 211, 192, 0.2)",
-              color: "#0B0E14",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
+              backgroundColor: "rgba(42, 42, 45, 0.8)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              color: "#FFFFFF",
             } : {
-              background: "linear-gradient(135deg, #87A96B 0%, #E6B3BA 50%, #B19CD9 100%)",
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
               boxShadow: "0 4px 12px rgba(134, 169, 107, 0.25)",
+              color: "#0B0E14",
             }}
           >
             <MessageCircle className="w-5 h-5" />
