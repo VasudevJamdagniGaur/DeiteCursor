@@ -3,7 +3,9 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   updateProfile,
-  onAuthStateChanged 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import { auth } from "../firebase/config";
 
@@ -53,6 +55,31 @@ export const signInUser = async (email, password) => {
     };
   } catch (error) {
     console.error("Error signing in:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+// Sign in with Google
+export const signInWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    
+    return {
+      success: true,
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL
+      }
+    };
+  } catch (error) {
+    console.error("Error signing in with Google:", error);
     return {
       success: false,
       error: error.message

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUpUser } from '../services/authService';
+import { signUpUser, signInWithGoogle } from '../services/authService';
 import ShuffleText from './ShuffleText';
 
 const SignupPage = () => {
@@ -16,6 +16,24 @@ const SignupPage = () => {
     'linear-gradient(135deg, #2D1B69 0%, #1A0033 50%, #2D1B69 100%)', // Purple variant
     'linear-gradient(135deg, #0F0F23 0%, #1A0033 50%, #0F0F23 100%)', // Dark purple
   ];
+
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithGoogle();
+      if (result.success) {
+        console.log('Google Sign-In successful:', result.user);
+        // Navigate to dashboard on successful sign-in
+        navigate('/dashboard');
+      } else {
+        console.error('Google Sign-In failed:', result.error);
+        alert('Failed to sign in with Google: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error during Google Sign-In:', error);
+      alert('An error occurred during Google Sign-In');
+    }
+  };
 
   useEffect(() => {
     // Trigger fade-in animation on component mount
@@ -97,6 +115,7 @@ const SignupPage = () => {
         <div className="space-y-4">
           {/* Continue with Google */}
           <button
+            onClick={handleGoogleSignIn}
             className="w-full mobile-button rounded-2xl font-semibold text-gray-800 transition-all duration-300 hover:scale-[0.98] active:scale-[0.96] flex items-center justify-center gap-3"
             style={{
               background: 'white',
