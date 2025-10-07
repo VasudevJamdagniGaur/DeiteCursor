@@ -214,24 +214,65 @@ export default function DashboardPage() {
     
     try {
       console.log('🔄 Manually generating reflection for date:', dateId);
+      console.log('🔍 User ID:', user.uid);
+      console.log('🔍 Date ID:', dateId);
+      console.log('🔍 Selected Date:', selectedDate);
       setIsLoadingReflection(true);
       
       // Get messages for the selected date
-      const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+      console.log('📥 Fetching messages from Firestore...');
+      let messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
       
-      if (!messagesResult.success || messagesResult.messages.length === 0) {
-        alert('No messages found for this date. Please chat with Deite first!');
+      console.log('📥 Messages result:', messagesResult);
+      console.log('📥 Success:', messagesResult.success);
+      console.log('📥 Messages count:', messagesResult.messages?.length);
+      
+      // If no messages found with dashes, try without dashes (e.g., "20251008" instead of "2025-10-08")
+      if (messagesResult.success && messagesResult.messages.length === 0) {
+        const dateIdNoDashes = dateId.replace(/-/g, '');
+        console.log('📥 Trying alternate format:', dateIdNoDashes);
+        messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateIdNoDashes);
+        console.log('📥 Alternate format result:', messagesResult);
+        
+        if (messagesResult.success && messagesResult.messages.length > 0) {
+          console.log('✅ Found messages with alternate format!');
+        }
+      }
+      
+      console.log('📥 Final messages:', messagesResult.messages);
+      
+      if (!messagesResult.success) {
+        alert('Error fetching messages: ' + messagesResult.error);
+        setIsLoadingReflection(false);
+        return;
+      }
+      
+      if (messagesResult.messages.length === 0) {
+        // Try to list all available dates for debugging
+        console.log('🔍 Checking for any chat days...');
+        const chatDaysResult = await firestoreService.getAllChatDays(user.uid);
+        console.log('🔍 Available chat days:', chatDaysResult.chatDays);
+        
+        let availableDates = '';
+        if (chatDaysResult.success && chatDaysResult.chatDays.length > 0) {
+          availableDates = '\n\nAvailable dates:\n' + chatDaysResult.chatDays.map(d => d.date || d.id).join(', ');
+        }
+        
+        alert('No messages found for this date. Please chat with Deite first!\n\nDate: ' + dateId + '\nPath: users/' + user.uid + '/days/' + dateId + '/messages' + availableDates);
         setIsLoadingReflection(false);
         return;
       }
 
       console.log('📝 Found', messagesResult.messages.length, 'messages to generate reflection from');
+      console.log('📝 First message:', messagesResult.messages[0]);
       
       // Generate reflection
+      console.log('🤖 Generating reflection via AI...');
       const generatedReflection = await reflectionService.generateReflection(messagesResult.messages);
       console.log('✅ Reflection generated:', generatedReflection);
       
       // Save reflection
+      console.log('💾 Saving reflection to Firestore...');
       await firestoreService.saveReflectionNew(user.uid, dateId, {
         summary: generatedReflection,
         mood: 'neutral',
@@ -243,6 +284,7 @@ export default function DashboardPage() {
       setReflection(generatedReflection);
       
       console.log('💾 Reflection saved and displayed!');
+      alert('✅ Reflection generated successfully!');
     } catch (error) {
       console.error('❌ Error generating reflection:', error);
       alert('Failed to generate reflection: ' + error.message);
