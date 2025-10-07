@@ -203,6 +203,54 @@ export default function DashboardPage() {
     setIsCalendarOpen(false);
   };
 
+  const handleGenerateReflection = async () => {
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in to generate reflections');
+      return;
+    }
+
+    const dateId = getDateId(selectedDate);
+    
+    try {
+      console.log('🔄 Manually generating reflection for date:', dateId);
+      setIsLoadingReflection(true);
+      
+      // Get messages for the selected date
+      const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+      
+      if (!messagesResult.success || messagesResult.messages.length === 0) {
+        alert('No messages found for this date. Please chat with Deite first!');
+        setIsLoadingReflection(false);
+        return;
+      }
+
+      console.log('📝 Found', messagesResult.messages.length, 'messages to generate reflection from');
+      
+      // Generate reflection
+      const generatedReflection = await reflectionService.generateReflection(messagesResult.messages);
+      console.log('✅ Reflection generated:', generatedReflection);
+      
+      // Save reflection
+      await firestoreService.saveReflectionNew(user.uid, dateId, {
+        summary: generatedReflection,
+        mood: 'neutral',
+        score: 50,
+        insights: []
+      });
+      
+      // Update local state
+      setReflection(generatedReflection);
+      
+      console.log('💾 Reflection saved and displayed!');
+    } catch (error) {
+      console.error('❌ Error generating reflection:', error);
+      alert('Failed to generate reflection: ' + error.message);
+    } finally {
+      setIsLoadingReflection(false);
+    }
+  };
+
   return (
     <div
       className="min-h-screen px-6 py-8 relative overflow-hidden slide-up"
@@ -526,7 +574,10 @@ export default function DashboardPage() {
             ) : reflection ? (
               <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{reflection}</p>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full">
+              <button
+                onClick={handleGenerateReflection}
+                className="flex flex-col items-center justify-center h-full w-full hover:opacity-80 transition-all duration-300 cursor-pointer"
+              >
                 <div
                   className={`w-12 h-12 rounded-lg flex items-center justify-center mb-3 ${
                     isDarkMode ? 'backdrop-blur-md' : 'bg-white'
@@ -541,8 +592,13 @@ export default function DashboardPage() {
                 >
                   <span className="text-2xl">🌿</span>
                 </div>
-                <p className={`text-sm text-center italic ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Take a mindful moment to reflect 🧘‍♀️</p>
-              </div>
+                <p className={`text-sm text-center italic ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Click to generate reflection 🧘‍♀️
+                </p>
+                <p className={`text-xs text-center mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  (Must have chat messages for this date)
+                </p>
+              </button>
             )}
           </div>
         </div>
