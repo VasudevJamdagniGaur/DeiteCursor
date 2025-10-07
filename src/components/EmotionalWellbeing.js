@@ -811,10 +811,10 @@ export default function EmotionalWellbeing() {
 
     // Default emotions when no data
     const topEmotions = [
-      { name: 'Happiness', value: 50, color: '#10B981' },
-      { name: 'Energy', value: 50, color: '#F59E0B' },
-      { name: 'Anxiety', value: 25, color: '#EF4444' },
-      { name: 'Stress', value: 25, color: '#8B5CF6' }
+      { name: 'Happiness', value: 0, color: '#10B981' },
+      { name: 'Energy', value: 0, color: '#F59E0B' },
+      { name: 'Anxiety', value: 0, color: '#EF4444' },
+      { name: 'Stress', value: 0, color: '#8B5CF6' }
     ];
 
     console.log('✅ Balance data processed successfully with default values');
@@ -840,10 +840,10 @@ export default function EmotionalWellbeing() {
       return {
         day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         date: dateStr,
-        happiness: dayData ? dayData.happiness : 50,
-        anxiety: dayData ? dayData.anxiety : 25,
-        energy: dayData ? dayData.energy : 50,
-        stress: dayData ? dayData.stress : 25
+        happiness: dayData ? dayData.happiness : 0,
+        anxiety: dayData ? dayData.anxiety : 0,
+        energy: dayData ? dayData.energy : 0,
+        stress: dayData ? dayData.stress : 0
       };
     });
 
@@ -1268,43 +1268,6 @@ Return in this JSON format:
   const renderMoodSurvey = () => (
     <div className="space-y-4">
 
-      {/* Empty State Message */}
-      {emotionalData.length === 0 && (
-        <div className={`rounded-xl p-8 backdrop-blur-lg transition-all duration-300 text-center ${
-          isDarkMode ? 'bg-gray-800/40 border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
-        }`}>
-          <div className="flex flex-col items-center space-y-4">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={isDarkMode ? {
-                backgroundColor: "rgba(42, 42, 45, 0.6)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              } : {
-                backgroundColor: "rgba(255, 255, 255, 0.6)",
-                border: "1px solid rgba(0, 0, 0, 0.08)",
-              }}
-            >
-              <Heart className="w-8 h-8" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} />
-            </div>
-            <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              No Emotional Data Yet
-            </h3>
-            <p className={`text-center max-w-md ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Start chatting with Deite to track your emotional journey. Your happiness, energy, anxiety, and stress levels will be analyzed from your conversations and displayed here.
-            </p>
-            <button
-              onClick={() => navigate('/chat')}
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
-            >
-              Start Chatting
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Show all sections only if we have data */}
-      {emotionalData.length > 0 && (
-        <>
           {/* 1. Mood Chart - Line Chart - Mobile Optimized */}
           <div
             className={`rounded-xl p-4 backdrop-blur-lg transition-all duration-300 ${
@@ -1376,6 +1339,27 @@ Return in this JSON format:
             </div>
 
             <div className="h-64 w-full">
+          {emotionalData.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={isDarkMode ? {
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                  } : {
+                    backgroundColor: "rgba(255, 255, 255, 0.6)",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  <Heart className="w-6 h-6" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} />
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  No data yet
+                </p>
+              </div>
+            </div>
+          ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart 
                   data={weeklyMoodData}
@@ -1457,6 +1441,7 @@ Return in this JSON format:
                   />
                 </LineChart>
               </ResponsiveContainer>
+          )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-4">
@@ -1480,7 +1465,6 @@ Return in this JSON format:
           </div>
 
           {/* 2. Emotional Balance - Line Chart - Mobile Optimized */}
-          {moodBalance.length > 0 && (
             <div
               className={`rounded-xl p-4 backdrop-blur-lg transition-all duration-300 ${
                 isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
@@ -1551,6 +1535,27 @@ Return in this JSON format:
               </div>
 
               <div className="h-64 w-full">
+          {moodBalance.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={isDarkMode ? {
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                  } : {
+                    backgroundColor: "rgba(255, 255, 255, 0.6)",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  <Target className="w-6 h-6" style={{ color: isDarkMode ? "#D4AF37" : "#87A96B" }} />
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  No balance data yet
+                </p>
+              </div>
+            </div>
+          ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={moodBalance}>
                     <XAxis 
@@ -1611,6 +1616,7 @@ Return in this JSON format:
                     />
                   </LineChart>
                 </ResponsiveContainer>
+          )}
               </div>
 
               <div className="flex flex-wrap justify-center gap-4 mt-4">
@@ -1628,7 +1634,6 @@ Return in this JSON format:
                 </div>
               </div>
             </div>
-          )}
 
           {/* 3. Highlights */}
           <div
@@ -1666,6 +1671,25 @@ Return in this JSON format:
               </div>
             </div>
 
+        {emotionalData.length === 0 ? (
+          <div className="text-center py-8">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <Award className="w-6 h-6" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
+            </div>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Highlights will appear here
+            </p>
+          </div>
+        ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Best Mood Day - Unified UI with Green Title */}
               <div
@@ -1732,6 +1756,7 @@ Return in this JSON format:
                 </p>
               </div>
             </div>
+        )}
           </div>
 
           {/* 4. Triggers */}
@@ -1765,6 +1790,26 @@ Return in this JSON format:
               </h3>
             </div>
 
+        {emotionalData.length === 0 ? (
+          <div className="text-center py-8">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <Lightbulb className="w-6 h-6" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} />
+            </div>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Patterns will appear here
+            </p>
+          </div>
+        ) : (
+          <>
             {/* Loading State */}
             {patternLoading && (
               <div className="flex items-center justify-center py-8">
@@ -1945,12 +1990,14 @@ Return in this JSON format:
                       </div>
                     </div>
                   </div>
+              )}
+            </>
                 )}
               </>
             )}
           </div>
 
-          {/* 5. Guidance */}
+      {/* 5. Personalised Guidance */}
           <div
             className={`rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
               isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
@@ -1981,6 +2028,25 @@ Return in this JSON format:
               </h3>
             </div>
 
+        {emotionalData.length === 0 ? (
+          <div className="text-center py-8">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <BookOpen className="w-6 h-6" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
+            </div>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Guidance will appear here
+            </p>
+          </div>
+        ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Success State - Requirements Met */}
               {habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
@@ -2287,15 +2353,16 @@ Return in this JSON format:
                 </>
               )}
             </div>
+        )}
           </div>
 
-          {/* Data Summary */}
+      {/* Data Summary - Only show when we have data */}
+      {emotionalData.length > 0 && (
           <div className="text-center py-4">
             <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Showing real emotional data from {emotionalData.length} conversation{emotionalData.length !== 1 ? 's' : ''} over {selectedPeriod} days
             </p>
           </div>
-        </>
       )}
     </div>
   );
