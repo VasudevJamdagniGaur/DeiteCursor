@@ -11,10 +11,10 @@ class EmotionalAnalysisService {
     if (!messages || !Array.isArray(messages)) {
       console.error('❌ EMOTIONAL ERROR: Invalid messages array, using defaults');
       return {
-        happiness: 50,
-        energy: 50,
-        anxiety: 25,
-        stress: 25
+        happiness: 0,
+        energy: 0,
+        anxiety: 0,
+        stress: 0
       };
     }
     
@@ -22,10 +22,10 @@ class EmotionalAnalysisService {
 
     if (!messages || messages.length === 0) {
       return {
-        happiness: 50,
-        energy: 50,
-        anxiety: 25,
-        stress: 25
+        happiness: 0,
+        energy: 0,
+        anxiety: 0,
+        stress: 0
       };
     }
 
@@ -37,10 +37,10 @@ class EmotionalAnalysisService {
     if (conversationTranscript.length < 20) {
       console.log('⚠️ Conversation too short for analysis');
       return {
-        happiness: 50,
-        energy: 50,
-        anxiety: 25,
-        stress: 25
+        happiness: 0,
+        energy: 0,
+        anxiety: 0,
+        stress: 0
       };
     }
     
@@ -129,10 +129,10 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
             const scores = JSON.parse(jsonMatch[0]);
             
             // Validate and apply emotion rules with 200% cap
-            let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 50));
-            let energy = Math.max(0, Math.min(100, parseInt(scores.energy) || 50));
-            let anxiety = Math.max(0, Math.min(100, parseInt(scores.anxiety) || 25));
-            let stress = Math.max(0, Math.min(100, parseInt(scores.stress) || 25));
+            let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 0));
+            let energy = Math.max(0, Math.min(100, parseInt(scores.energy) || 0));
+            let anxiety = Math.max(0, Math.min(100, parseInt(scores.anxiety) || 0));
+            let stress = Math.max(0, Math.min(100, parseInt(scores.stress) || 0));
             
             console.log('🔍 Raw AI scores:', {happiness, energy, anxiety, stress});
             
@@ -228,10 +228,10 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
       console.error('💥 Error in emotional analysis:', error);
       // Return default scores if analysis fails
       return {
-        happiness: 50,
-        energy: 50,
-        anxiety: 25,
-        stress: 25
+        happiness: 0,
+        energy: 0,
+        anxiety: 0,
+        stress: 0
       };
     }
   }
@@ -246,10 +246,10 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
         
         // Validate and clamp scores
         const scores = {
-          happiness: this.clampScore(parsed.happiness || 50),
-          energy: this.clampScore(parsed.energy || 50),
-          anxiety: this.clampScore(parsed.anxiety || 25),
-          stress: this.clampScore(parsed.stress || 25)
+          happiness: this.clampScore(parsed.happiness || 0),
+          energy: this.clampScore(parsed.energy || 0),
+          anxiety: this.clampScore(parsed.anxiety || 0),
+          stress: this.clampScore(parsed.stress || 0)
         };
 
         return scores;
@@ -264,10 +264,10 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
 
   extractScoresFromText(text) {
     const defaultScores = {
-      happiness: 50,
-      energy: 50,
-      anxiety: 25,
-      stress: 25
+      happiness: 0,
+      energy: 0,
+      anxiety: 0,
+      stress: 0
     };
 
     try {
