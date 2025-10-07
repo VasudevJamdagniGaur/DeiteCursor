@@ -4,6 +4,7 @@ import { Brain, MessageCircle, Calendar, Heart, Sparkles, User, Sun, Moon } from
 import { useTheme } from '../contexts/ThemeContext';
 import CalendarPopup from './CalendarPopup';
 import reflectionService from '../services/reflectionService';
+import firestoreService from '../services/firestoreService';
 import { getCurrentUser } from '../services/authService';
 import { getDateId } from '../utils/dateUtils';
 
@@ -14,6 +15,31 @@ export default function DashboardPage() {
   const [reflection, setReflection] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isLoadingReflection, setIsLoadingReflection] = useState(false);
+  const [chatDays, setChatDays] = useState([]);
+
+  // Load all chat days for calendar indicators
+  useEffect(() => {
+    const loadChatDays = async () => {
+      const user = getCurrentUser();
+      if (!user) {
+        console.log('📅 DASHBOARD: No user logged in, cannot load chat days');
+        return;
+      }
+
+      try {
+        console.log('📅 DASHBOARD: Loading all chat days for calendar...');
+        const result = await firestoreService.getAllChatDays(user.uid);
+        if (result.success) {
+          console.log('📅 DASHBOARD: Loaded chat days:', result.chatDays);
+          setChatDays(result.chatDays);
+        }
+      } catch (error) {
+        console.error('📅 DASHBOARD: Error loading chat days:', error);
+      }
+    };
+
+    loadChatDays();
+  }, []); // Run once on mount
 
   useEffect(() => {
     // Load reflection for the current date from Firestore
@@ -153,8 +179,23 @@ export default function DashboardPage() {
     navigate('/profile');
   };
 
-  const handleCalendarClick = () => {
+  const handleCalendarClick = async () => {
     setIsCalendarOpen(true);
+    
+    // Refresh chat days when opening calendar
+    const user = getCurrentUser();
+    if (user) {
+      try {
+        console.log('📅 DASHBOARD: Refreshing chat days for calendar...');
+        const result = await firestoreService.getAllChatDays(user.uid);
+        if (result.success) {
+          console.log('📅 DASHBOARD: Refreshed chat days:', result.chatDays);
+          setChatDays(result.chatDays);
+        }
+      } catch (error) {
+        console.error('📅 DASHBOARD: Error refreshing chat days:', error);
+      }
+    }
   };
 
   const handleDateSelect = (date) => {
@@ -536,6 +577,7 @@ export default function DashboardPage() {
         onClose={() => setIsCalendarOpen(false)}
         selectedDate={selectedDate}
         onDateSelect={handleDateSelect}
+        chatDays={chatDays}
       />
     </div>
   );

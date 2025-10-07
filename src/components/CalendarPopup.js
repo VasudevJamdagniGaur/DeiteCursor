@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect }) => {
+const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays = [] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -77,6 +77,19 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect }) => {
            date.getFullYear() === selectedDate.getFullYear();
   };
 
+  const hasChatActivity = (date) => {
+    if (!date || !chatDays || chatDays.length === 0) return false;
+    
+    // Format date as YYYYMMDD to match dateId format
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateId = `${year}${month}${day}`;
+    
+    // Check if this dateId exists in chatDays
+    return chatDays.some(chatDay => chatDay.date === dateId || chatDay.id === dateId);
+  };
+
   const days = getDaysInMonth(currentMonth);
 
   if (!isOpen) return null;
@@ -147,27 +160,42 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect }) => {
           {days.map((date, index) => (
             <div key={index} className="aspect-square">
               {date ? (
-                <button
-                  onClick={() => handleDateClick(date)}
-                  className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-200 hover:scale-105 ${
-                    isSelected(date)
-                      ? 'text-black font-bold shadow-lg'
-                      : isToday(date)
-                      ? 'text-white bg-gray-700/50 border border-cyan-400/50'
-                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
-                  }`}
-                  style={
-                    isSelected(date)
-                      ? {
-                          backgroundColor: "rgba(129, 201, 149, 0.9)",
-                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                          border: "1px solid rgba(255, 255, 255, 0.08)",
-                        }
-                      : {}
-                  }
-                >
-                  {date.getDate()}
-                </button>
+                <div className="relative w-full h-full">
+                  <button
+                    onClick={() => handleDateClick(date)}
+                    className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-200 hover:scale-105 ${
+                      isSelected(date)
+                        ? 'text-black font-bold shadow-lg'
+                        : isToday(date)
+                        ? 'text-white bg-gray-700/50 border border-cyan-400/50'
+                        : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
+                    }`}
+                    style={
+                      isSelected(date)
+                        ? {
+                            backgroundColor: "rgba(129, 201, 149, 0.9)",
+                            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                          }
+                        : {}
+                    }
+                  >
+                    {date.getDate()}
+                  </button>
+                  {/* Green circle indicator for chat activity */}
+                  {hasChatActivity(date) && !isSelected(date) && (
+                    <div 
+                      className="absolute bottom-1 left-1/2 transform -translate-x-1/2"
+                      style={{
+                        width: '5px',
+                        height: '5px',
+                        borderRadius: '50%',
+                        backgroundColor: '#81C995',
+                        boxShadow: '0 0 6px rgba(129, 201, 149, 0.6)',
+                      }}
+                    />
+                  )}
+                </div>
               ) : (
                 <div className="w-full h-full" />
               )}

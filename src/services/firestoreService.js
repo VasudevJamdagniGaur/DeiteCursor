@@ -141,6 +141,30 @@ class FirestoreService {
   }
 
   /**
+   * Get all chat days for a user (for calendar display)
+   */
+  async getAllChatDays(uid) {
+    try {
+      const chatsRef = collection(this.db, `users/${uid}/chats`);
+      const q = query(chatsRef, orderBy('date', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      const chatDays = [];
+      snapshot.forEach(doc => {
+        chatDays.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      return { success: true, chatDays };
+    } catch (error) {
+      console.error('Error getting all chat days:', error);
+      return { success: false, error: error.message, chatDays: [] };
+    }
+  }
+
+  /**
    * Save or update a day reflection
    */
   async saveDayReflection(uid, dateId, reflectionData) {
