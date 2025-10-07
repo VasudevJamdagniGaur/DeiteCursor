@@ -14,8 +14,12 @@ export default function ChatPage() {
   const location = useLocation();
   const { isDarkMode } = useTheme();
   
-  const selectedDateString = location.state?.selectedDate || new Date().toDateString();
-  const selectedDateId = getDateId(new Date(selectedDateString));
+  // Fix: Use getDateId directly with the date object or current date
+  const selectedDate = location.state?.selectedDate ? new Date(location.state.selectedDate) : new Date();
+  const selectedDateId = getDateId(selectedDate);
+  
+  console.log('📅 CHAT: Selected date:', selectedDate);
+  console.log('📅 CHAT: Date ID for saving:', selectedDateId);
   
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');

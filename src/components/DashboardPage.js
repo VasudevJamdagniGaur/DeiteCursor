@@ -167,8 +167,10 @@ export default function DashboardPage() {
   };
 
   const handleChatClick = () => {
-    // Pass the selected date as state to the chat page
-    navigate('/chat', { state: { selectedDate: selectedDate.toDateString() } });
+    // Pass the selected date as state to the chat page (use ISO string for consistency)
+    console.log('📅 DASHBOARD: Navigating to chat with date:', selectedDate);
+    console.log('📅 DASHBOARD: Date ID:', getDateId(selectedDate));
+    navigate('/chat', { state: { selectedDate: selectedDate.toISOString() } });
   };
 
   const handleWellbeingClick = () => {
