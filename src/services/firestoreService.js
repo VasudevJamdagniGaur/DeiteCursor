@@ -500,10 +500,10 @@ class FirestoreService {
             moodData.push({
               date: dateId,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              happiness: data.happiness || 50,
-              anxiety: data.anxiety || 25,
-              stress: data.stress || 25,
-              energy: data.energy || 50
+              happiness: data.happiness || 0,
+              anxiety: data.anxiety || 0,
+              stress: data.stress || 0,
+              energy: data.energy || 0
             });
             console.log(`📊 FIRESTORE NEW: Found mood data for ${dateId}:`, data);
           } else {
@@ -511,10 +511,10 @@ class FirestoreService {
             moodData.push({
               date: dateId,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              happiness: 50,
-              anxiety: 25,
-              stress: 25,
-              energy: 50
+              happiness: 0,
+              anxiety: 0,
+              stress: 0,
+              energy: 0
             });
             console.log(`📊 FIRESTORE NEW: No mood data for ${dateId}, using defaults`);
           }
