@@ -37,12 +37,6 @@ const SignupPage = () => {
           {/* Inner logo circle */}
           <div
             className={`relative mobile-logo rounded-full flex items-center justify-center transition-all duration-1500 delay-300 logo-glow ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
-            style={{
-              background: 'rgba(139, 195, 74, 0.15)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(139, 195, 74, 0.3)',
-              boxShadow: '0 0 40px rgba(139, 195, 74, 0.2), inset 0 0 40px rgba(139, 195, 74, 0.1)',
-            }}
           >
             <div className="text-3xl font-bold tracking-wider">
               <ShuffleText />
