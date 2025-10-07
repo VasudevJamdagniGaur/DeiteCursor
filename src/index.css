@@ -204,3 +204,33 @@ button:hover {
   position: relative;
 }
 
+/* Dynamic background animations */
+@keyframes backgroundShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.3;
+  }
+}
+
+.background-animated {
+  background-size: 200% 200%;
+  animation: backgroundShift 8s ease-in-out infinite;
+}
+
+.particle-float {
+  animation: particleFloat 6s ease-in-out infinite;
+}
+
