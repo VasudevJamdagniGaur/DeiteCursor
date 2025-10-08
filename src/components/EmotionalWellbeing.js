@@ -2958,25 +2958,6 @@ Return in this JSON format:
             <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
           </button>
 
-          <button
-            onClick={handleForceAnalysis}
-            className={`px-4 py-2 rounded-xl flex items-center space-x-2 hover:opacity-90 transition-all duration-200 touch-manipulation ${
-              isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-            }`}
-            style={isDarkMode ? {
-              backgroundColor: "rgba(129, 201, 149, 0.2)",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-              border: "1px solid rgba(129, 201, 149, 0.3)",
-            } : {
-              backgroundColor: "rgba(129, 201, 149, 0.2)",
-              boxShadow: "0 2px 8px rgba(129, 201, 149, 0.15)",
-              border: "1px solid rgba(129, 201, 149, 0.3)",
-            }}
-            title="Analyze Today's Chat"
-          >
-            <Brain className="w-4 h-4" style={{ color: "#81C995" }} />
-            <span className="text-sm font-medium" style={{ color: isDarkMode ? "#81C995" : "#4A8C6A" }}>Analyze</span>
-          </button>
         </div>
 
         <div className="flex items-center space-x-3 flex-1 justify-center">
