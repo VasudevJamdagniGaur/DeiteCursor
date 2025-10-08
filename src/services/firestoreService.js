@@ -508,12 +508,20 @@ class FirestoreService {
       
       const moodData = [];
       
+      // Get the current date ID in India timezone
+      const todayDateId = getDateId(new Date());
+      console.log(`📊 FIRESTORE NEW: Today's date ID (India timezone): ${todayDateId}`);
+      
+      // Parse today's date to get year, month, day
+      const [todayYear, todayMonth, todayDay] = todayDateId.split('-').map(Number);
+      
       // Get data for each day in the range
       for (let i = days - 1; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateId = getDateId(date); // Use the same getDateId function for consistency!
-        console.log(`📊 FIRESTORE NEW: Checking mood data for date: ${dateId}`);
+        // Create a date object from today's India timezone date and subtract days
+        // Note: Month is 0-indexed in JavaScript Date
+        const targetDate = new Date(todayYear, todayMonth - 1, todayDay - i);
+        const dateId = targetDate.toLocaleDateString('en-CA'); // Format as YYYY-MM-DD
+        console.log(`📊 FIRESTORE NEW: Checking mood data for date: ${dateId} (${i} days ago)`);
         
         try {
           const moodRef = doc(this.db, `users/${uid}/days/${dateId}/moodChart/daily`);
@@ -526,7 +534,7 @@ class FirestoreService {
             
             const dayData = {
               date: dateId,
-              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               happiness: data.happiness || 0,
               anxiety: data.anxiety || 0,
               stress: data.stress || 0,
@@ -540,7 +548,7 @@ class FirestoreService {
             console.log(`📊 FIRESTORE NEW: ❌ No mood data for ${dateId}, using defaults`);
             moodData.push({
               date: dateId,
-              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               happiness: 0,
               anxiety: 0,
               stress: 0,

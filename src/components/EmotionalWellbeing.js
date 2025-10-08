@@ -1064,6 +1064,9 @@ export default function EmotionalWellbeing() {
       setWeeklyMoodData([]);
       setEmotionalData([]);
       setMoodBalance([]);
+      setTopEmotions([]);
+      setPatternAnalysis(null);
+      setHighlights({});
       setChartKey(prev => prev + 1); // Force chart re-render
 
       // Reload all data
@@ -1439,11 +1442,22 @@ Return in this JSON format:
       // First, refresh all data from Firestore
       console.log('🔄 Step 1: Refreshing data from Firestore...');
       
-      // Clear cache
-      localStorage.removeItem(`moodChart_${user.uid}_${selectedPeriod}`);
-      localStorage.removeItem(`emotionalBalance_${user.uid}_${balancePeriod}`);
-      localStorage.removeItem(`patterns_${user.uid}_${patternPeriod}`);
-      localStorage.removeItem(`highlights_${user.uid}_${highlightsPeriod}`);
+      // Clear cache using correct cache keys
+      localStorage.removeItem(getCacheKey('emotional', selectedPeriod, user.uid));
+      localStorage.removeItem(getCacheKey('balance', balancePeriod, user.uid));
+      localStorage.removeItem(getCacheKey('pattern', patternPeriod, user.uid));
+      localStorage.removeItem(getCacheKey('highlights', '3months', user.uid));
+      console.log('🗑️ Cache cleared for all data types');
+      
+      // Reset state to force re-render
+      setWeeklyMoodData([]);
+      setEmotionalData([]);
+      setMoodBalance([]);
+      setTopEmotions([]);
+      setPatternAnalysis(null);
+      setHighlights({});
+      setChartKey(prev => prev + 1); // Force chart re-render
+      console.log('🔄 State reset complete');
       
       // Reload all data
       await loadFreshEmotionalData();
@@ -1636,7 +1650,7 @@ Return in this JSON format:
             </div>
 
             <div className="h-64 w-full">
-          {emotionalData.length === 0 ? (
+          {weeklyMoodData.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div
