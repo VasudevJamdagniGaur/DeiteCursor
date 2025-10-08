@@ -44,51 +44,26 @@ class EmotionalAnalysisService {
       };
     }
     
-    const analysisPrompt = `Analyze this conversation and score emotions (0-100) following these STRICT RULES:
+    const analysisPrompt = `You are an emotion analyzer. Analyze the conversation below and return ONLY a JSON object with emotional scores.
 
-EMOTION SCORING RULES (Total sum must not exceed 200%):
-
-HAPPINESS (0-100):
-- Reflects positive emotions: joy, satisfaction, relief, excitement, gratitude
-- MUST decrease if stress or anxiety are high
-- Can only be very high if stress and anxiety are low
-- If grief, trauma, financial struggles, negative feelings present → happiness should NOT exceed 50 unless clear acceptance/resolution
-- Short bursts of joy cannot outweigh deeper negative emotions
-
-STRESS (0-100):
-- Reflects pressure, overwhelm, emotional burden
-- MUST be ≥50 if grief, trauma, financial difficulties mentioned (unless clearly resolved)
-- Should correlate with anxiety when both from same cause
-- Can be high with happiness only if mixed emotions explicitly expressed
-- May reduce if user ends feeling calm/reassured
-- CRITICAL: For serious events (death, financial difficulty, major trauma) → stress MUST be HIGHER than anxiety
-
-ANXIETY (0-100):
-- Reflects worry, uncertainty, fear, nervousness
-- Should move in same direction as stress (within ±25 difference) unless explicitly separated
-- MUST be ≥50 when grief, trauma, financial struggles present (unless strong emotional control)
-- Can be lower than stress if user acknowledges challenges but feels mentally prepared
-- Sudden worry spikes should raise anxiety more than stress
-- CRITICAL: For serious events (death, financial difficulty, major trauma) → anxiety should be LOWER than stress
-
-ENERGY (0-100):
-- Reflects motivation, vitality, activity level
-- INDEPENDENT of happiness, stress, anxiety
-- High stress can coexist with high energy (tense but active)
-- Low energy can coexist with happiness (peaceful but tired) or high stress (burnout)
-- Rises with momentum/productivity/excitement, falls with fatigue/burnout/hopelessness
-
-CRITICAL CONSTRAINT: The sum of all four scores MUST NOT exceed 200.
-If total > 200, proportionally reduce all scores to fit within 200.
+RULES:
+1. Happiness (0-100): positive emotions, joy, satisfaction
+2. Energy (0-100): vitality, motivation, activity level
+3. Anxiety (0-100): worry, fear, nervousness
+4. Stress (0-100): pressure, overwhelm, burden
+5. Total of all 4 scores must be ≤ 200
+6. High stress/anxiety means lower happiness
+7. Energy is independent of other emotions
 
 CONVERSATION:
 ${conversationTranscript}
 
-Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
-{"happiness": 0-100, "energy": 0-100, "anxiety": 0-100, "stress": 0-100}`;
+Return ONLY valid JSON, no explanation:
+{"happiness": X, "energy": Y, "anxiety": Z, "stress": W}`;
 
     // Try multiple models in case one doesn't exist
-    const modelsToTry = ['llama3.2', 'llama3:8b', 'llama3', 'llama2'];
+    // Note: Your RunPod instance has llama3:70b available
+    const modelsToTry = ['llama3:70b', 'llama3.2', 'llama3:8b', 'llama3', 'llama2'];
     
     for (const modelName of modelsToTry) {
       try {
@@ -125,17 +100,56 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
 
       if (data.response) {
         const responseText = data.response.trim();
-        console.log('📊 AI Analysis response:', responseText);
+        console.log('📊 AI Analysis response (first 300 chars):', responseText.substring(0, 300));
 
-        // Parse the JSON response
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          console.error('❌ No JSON found in response');
-          throw new Error('No JSON found in API response');
+        // Parse the JSON response - try multiple patterns
+        let scores = null;
+        
+        // Try 1: Find JSON object with our exact keys
+        const exactMatch = responseText.match(/\{\s*"happiness"\s*:\s*\d+\s*,\s*"energy"\s*:\s*\d+\s*,\s*"anxiety"\s*:\s*\d+\s*,\s*"stress"\s*:\s*\d+\s*\}/);
+        if (exactMatch) {
+          scores = JSON.parse(exactMatch[0]);
+          console.log('✅ Found exact JSON match:', scores);
         }
-
-        const scores = JSON.parse(jsonMatch[0]);
-        console.log('✅ JSON parsed successfully:', scores);
+        
+        // Try 2: Find any JSON object with our keys (in any order)
+        if (!scores) {
+          const anyJsonMatch = responseText.match(/\{[^{}]*"happiness"[^{}]*"energy"[^{}]*"anxiety"[^{}]*"stress"[^{}]*\}/);
+          if (anyJsonMatch) {
+            try {
+              scores = JSON.parse(anyJsonMatch[0]);
+              console.log('✅ Found JSON match (any order):', scores);
+            } catch (e) {
+              console.log('⚠️ JSON parse failed for any-order match');
+            }
+          }
+        }
+        
+        // Try 3: Extract numbers from any JSON-like structure
+        if (!scores) {
+          const happinessMatch = responseText.match(/"happiness"\s*:\s*(\d+)/);
+          const energyMatch = responseText.match(/"energy"\s*:\s*(\d+)/);
+          const anxietyMatch = responseText.match(/"anxiety"\s*:\s*(\d+)/);
+          const stressMatch = responseText.match(/"stress"\s*:\s*(\d+)/);
+          
+          if (happinessMatch && energyMatch && anxietyMatch && stressMatch) {
+            scores = {
+              happiness: parseInt(happinessMatch[1]),
+              energy: parseInt(energyMatch[1]),
+              anxiety: parseInt(anxietyMatch[1]),
+              stress: parseInt(stressMatch[1])
+            };
+            console.log('✅ Extracted scores from text:', scores);
+          }
+        }
+        
+        if (!scores) {
+          console.error('❌ No valid emotional scores found in response');
+          console.error('Full response:', responseText);
+          throw new Error('Could not extract emotional scores from API response');
+        }
+        
+        console.log('✅ Scores extracted successfully:', scores);
             
         // Validate and apply emotion rules with 200% cap
         let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 0));
@@ -308,7 +322,7 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
   async testAPI() {
     console.log('🧪 Testing API connectivity...');
     const testPrompt = 'Respond with only: SUCCESS';
-    const modelsToTest = ['llama3.2', 'llama3:8b', 'llama3', 'llama2'];
+    const modelsToTest = ['llama3:70b', 'llama3.2', 'llama3:8b', 'llama3', 'llama2'];
 
     for (const modelName of modelsToTest) {
       try {
