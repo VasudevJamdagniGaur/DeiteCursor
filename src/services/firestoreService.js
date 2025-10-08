@@ -544,15 +544,27 @@ class FirestoreService {
           }
         } catch (dayError) {
           console.error(`❌ Error getting mood data for ${dateId}:`, dayError);
-          // Add default data for this day
-          moodData.push({
-            date: dateId,
-            day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            happiness: 50,
-            anxiety: 25,
-            stress: 25,
-            energy: 50
-          });
+          // Only add defaults if this is a permissions/network error, not if no data exists
+          if (dayError.code === 'permission-denied' || dayError.code === 'unavailable') {
+            moodData.push({
+              date: dateId,
+              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              happiness: 50,
+              anxiety: 25,
+              stress: 25,
+              energy: 50
+            });
+          } else {
+            // For other errors (like no data), add zeros
+            moodData.push({
+              date: dateId,
+              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              happiness: 0,
+              anxiety: 0,
+              stress: 0,
+              energy: 0
+            });
+          }
         }
       }
       

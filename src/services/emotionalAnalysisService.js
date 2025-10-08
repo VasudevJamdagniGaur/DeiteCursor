@@ -89,6 +89,17 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
 
     try {
       console.log('🌐 Making API call for emotional analysis...');
+      console.log('🌐 API URL:', `${this.baseURL}api/generate`);
+      console.log('🌐 Request payload:', JSON.stringify({
+        model: 'llama3:70b',
+        prompt: analysisPrompt.slice(0, 100) + '...',
+        stream: false,
+        options: {
+          temperature: 0.3,
+          top_p: 0.9,
+          max_tokens: 200
+        }
+      }));
 
       const response = await fetch(`${this.baseURL}api/generate`, {
         method: 'POST',
@@ -124,9 +135,15 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
 
         // Parse the JSON response
         try {
+          let scores;
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            const scores = JSON.parse(jsonMatch[0]);
+            scores = JSON.parse(jsonMatch[0]);
+            console.log('✅ JSON parsed successfully:', scores);
+          } else {
+            console.error('❌ No JSON found in response');
+            throw new Error('No JSON found in API response');
+          }
             
             // Validate and apply emotion rules with 200% cap
             let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 0));
@@ -284,6 +301,7 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
       };
     } catch (error) {
       console.error('❌ Error extracting scores from text:', error);
+      console.error('❌ Full error details:', error);
       return defaultScores;
     }
   }
@@ -291,6 +309,42 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
   clampScore(score) {
     // Ensure score is between 0 and 100
     return Math.max(0, Math.min(100, Math.round(score || 50)));
+  }
+
+  // Test method to check API connectivity
+  async testAPI() {
+    try {
+      console.log('🧪 Testing API connectivity...');
+      const testPrompt = 'Hello, respond with just "API test successful"';
+
+      const response = await fetch(`${this.baseURL}api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3:8b',
+          prompt: testPrompt,
+          stream: false,
+          options: {
+            temperature: 0.1,
+            max_tokens: 50
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ API test successful:', data.response);
+        return { success: true, response: data.response };
+      } else {
+        console.error('❌ API test failed:', response.status);
+        return { success: false, error: response.status };
+      }
+    } catch (error) {
+      console.error('❌ API test error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   createDailyTranscript(messages) {

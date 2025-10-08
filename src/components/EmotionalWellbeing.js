@@ -120,6 +120,7 @@ export default function EmotionalWellbeing() {
   const [emotionExplanations, setEmotionExplanations] = useState(null);
   const [isLoadingFresh, setIsLoadingFresh] = useState(false);
   const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
+  const [chartKey, setChartKey] = useState(0); // Force chart re-render
 
   // Debug logging for data states
   useEffect(() => {
@@ -128,6 +129,14 @@ export default function EmotionalWellbeing() {
     console.log('🔍 DEBUG: emotionalData length:', emotionalData?.length);
     console.log('🔍 DEBUG: emotionalData sample:', emotionalData?.[0]);
   }, [weeklyMoodData, emotionalData]);
+
+  // Force chart re-render when data changes
+  useEffect(() => {
+    if (weeklyMoodData.length > 0) {
+      setChartKey(prev => prev + 1);
+      console.log('🔄 CHART: Forcing re-render with new data');
+    }
+  }, [weeklyMoodData]);
 
   // Cache keys for different data types
   const getCacheKey = (type, period, userId) => `emotional_wellbeing_${type}_${period}_${userId}`;
@@ -442,6 +451,13 @@ export default function EmotionalWellbeing() {
           console.log('📊 UNIFIED: Found', validMoodData.length, 'days with rule-compliant scores');
           console.log('📊 UNIFIED: Sample data:', processedMoodData[0]);
           console.log('📊 UNIFIED: All processed data:', processedMoodData);
+
+          // Check if we have real data (not all zeros)
+          const hasRealData = processedMoodData.some(day =>
+            day.happiness !== 0 || day.energy !== 0 || day.anxiety !== 0 || day.stress !== 0
+          );
+          console.log('📊 UNIFIED: Has real data:', hasRealData);
+
           setWeeklyMoodData(processedMoodData); // Use processed data with rules applied
           setEmotionalData(processedMoodData);
           
@@ -1073,6 +1089,90 @@ export default function EmotionalWellbeing() {
     }
   };
 
+  const handleFullTest = async () => {
+    console.log('🚀 Starting comprehensive test of entire flow...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      // Step 1: Test API connectivity first
+      console.log('🧪 STEP 1: Testing API connectivity...');
+      const apiTest = await emotionalAnalysisService.testAPI();
+      if (apiTest.success) {
+        console.log('✅ STEP 1 PASSED: API is working');
+      } else {
+        console.log('❌ STEP 1 FAILED: API not working');
+        alert('❌ API not working: ' + apiTest.error);
+        return;
+      }
+
+      // Step 2: Check if there's any mood data for today
+      console.log('📊 STEP 2: Checking if mood data exists...');
+      const todayId = getDateId(new Date());
+      const moodRef = doc(db, `users/${user.uid}/days/${todayId}/moodChart/daily`);
+      const snapshot = await getDoc(moodRef);
+
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        console.log('✅ STEP 2 PASSED: Found mood data:', data);
+
+        // Step 3: Test loading via getMoodChartDataNew
+        console.log('📊 STEP 3: Testing getMoodChartDataNew...');
+        const result = await firestoreService.getMoodChartDataNew(user.uid, 7);
+        console.log('📊 STEP 3 RESULT:', result);
+
+        if (result.success && result.moodData) {
+          console.log('✅ STEP 3 PASSED: getMoodChartDataNew returned data');
+
+          // Step 4: Check if our data is in the result
+          const ourData = result.moodData.find(d => d.date === todayId);
+          console.log('📊 STEP 4: Looking for our data in result:', ourData);
+
+          if (ourData && (ourData.happiness !== 0 || ourData.energy !== 0 || ourData.anxiety !== 0 || ourData.stress !== 0)) {
+            console.log('✅ STEP 4 PASSED: Found our analyzed data in result');
+
+            // Step 5: Manually trigger data loading
+            console.log('📊 STEP 5: Manually triggering data loading...');
+            await loadRealEmotionalDataInternal();
+
+            console.log('✅ ALL TESTS PASSED! Data should be displaying correctly.');
+            alert('✅ All tests passed! If charts still show defaults, try refreshing the page.');
+
+          } else {
+            console.log('❌ STEP 4 FAILED: Data found but all values are 0');
+            alert('❌ Found data but all values are 0. Check if emotional analysis actually ran.');
+          }
+        } else {
+          console.log('❌ STEP 3 FAILED: getMoodChartDataNew failed');
+          alert('❌ getMoodChartDataNew failed. Check console for details.');
+        }
+      } else {
+        console.log('❌ STEP 2 FAILED: No mood data found for today');
+        alert('❌ No mood data found for today. Did you chat and was emotional analysis run?');
+      }
+    } catch (error) {
+      console.error('❌ Full test failed:', error);
+      alert('❌ Test failed: ' + error.message);
+    }
+  };
+
+  const handleTestAPI = async () => {
+    console.log('🧪 Testing API connectivity...');
+    try {
+      const result = await emotionalAnalysisService.testAPI();
+      if (result.success) {
+        alert('✅ API test successful! Response: ' + result.response);
+      } else {
+        alert('❌ API test failed: ' + result.error);
+      }
+    } catch (error) {
+      alert('❌ API test error: ' + error.message);
+    }
+  };
+
   // Custom tooltip component for the line chart
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -1461,6 +1561,7 @@ Return in this JSON format:
           ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
+                  key={chartKey}
                   data={weeklyMoodData}
                   onClick={(data) => {
                     if (data && data.activePayload && data.activePayload[0]) {
@@ -1657,7 +1758,7 @@ Return in this JSON format:
             </div>
           ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={moodBalance}>
+                  <LineChart key={`balance-${chartKey}`} data={moodBalance}>
                     <XAxis 
                       dataKey="day" 
                       axisLine={false}
@@ -2487,21 +2588,59 @@ Return in this JSON format:
             : "rgba(250, 250, 248, 0.95)",
         }}
       >
-        <button
-          onClick={handleBack}
-          className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity touch-manipulation ${
-            isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-          }`}
-          style={isDarkMode ? {
-            backgroundColor: "rgba(42, 42, 45, 0.6)",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-          } : {
-            boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
-          }}
-        >
-          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleBack}
+            className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity touch-manipulation ${
+              isDarkMode ? 'backdrop-blur-md' : 'bg-white'
+            }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+            } : {
+              boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
+            }}
+          >
+            <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
+          </button>
+
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handleTestAPI}
+              className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200 touch-manipulation ${
+                isDarkMode ? 'backdrop-blur-md' : 'bg-white'
+              }`}
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
+              }}
+              title="Test API"
+            >
+              <span className="text-xs font-bold" style={{ color: isDarkMode ? "#F28B82" : "#87A96B" }}>🔗</span>
+            </button>
+
+            <button
+              onClick={handleFullTest}
+              className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200 touch-manipulation ${
+                isDarkMode ? 'backdrop-blur-md' : 'bg-white'
+              }`}
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
+              }}
+              title="Run Full Test"
+            >
+              <span className="text-xs font-bold" style={{ color: isDarkMode ? "#81C995" : "#87A96B" }}>🧪</span>
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center space-x-3 flex-1 justify-center">
           <div
