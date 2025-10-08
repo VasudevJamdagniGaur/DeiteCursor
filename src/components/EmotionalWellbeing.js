@@ -1184,14 +1184,38 @@ Return in this JSON format:
   };
 
   const handleAIUpdate = async () => {
-    console.log('🤖 Starting AI comprehensive update...');
+    console.log('🤖 Starting comprehensive data refresh...');
     setIsUpdating(true);
 
     try {
       const user = getCurrentUser();
-      const userId = user?.uid || 'anonymous';
+      if (!user) {
+        alert('Please sign in to refresh data');
+        setIsUpdating(false);
+        return;
+      }
+
+      // First, refresh all data from Firestore
+      console.log('🔄 Step 1: Refreshing data from Firestore...');
+      
+      // Clear cache
+      localStorage.removeItem(`moodChart_${user.uid}_${selectedPeriod}`);
+      localStorage.removeItem(`emotionalBalance_${user.uid}_${balancePeriod}`);
+      localStorage.removeItem(`patterns_${user.uid}_${patternPeriod}`);
+      localStorage.removeItem(`highlights_${user.uid}_${highlightsPeriod}`);
+      
+      // Reload all data
+      await loadFreshEmotionalData();
+      await loadFreshBalanceData();
+      await loadFreshPatternAnalysis();
+      await loadFreshHighlightsData();
+      await loadHabitAnalysis();
+      
+      console.log('✅ All data refreshed from Firestore!');
+      alert('✅ Data refreshed successfully!');
 
       // Get emotional data for analysis (using current selected period)
+      const userId = user.uid;
       let emotionalDataRaw;
       if (selectedPeriod === 7) {
         emotionalDataRaw = emotionalAnalysisService.getEmotionalData(userId, 7);
@@ -1203,7 +1227,7 @@ Return in this JSON format:
 
       if (emotionalDataRaw.length === 0) {
         console.log('📝 No emotional data found for AI analysis');
-        alert('No emotional data available for analysis. Please chat with Deite first to generate emotional data.');
+        // Don't show error, just finish since we refreshed the data
         return;
       }
 
@@ -2419,40 +2443,21 @@ Return in this JSON format:
             : "rgba(250, 250, 248, 0.95)",
         }}
       >
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleBack}
-            className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity touch-manipulation ${
-              isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-            }`}
-            style={isDarkMode ? {
-              backgroundColor: "rgba(42, 42, 45, 0.6)",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            } : {
-              boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
-            }}
-          >
-            <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
-          </button>
-
-          <button
-            onClick={handleRefreshData}
-            className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200 touch-manipulation ${
-              isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-            }`}
-            style={isDarkMode ? {
-              backgroundColor: "rgba(42, 42, 45, 0.6)",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            } : {
-              boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
-            }}
-            title="Refresh Data"
-          >
-            <RefreshCw className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#87A96B" }} strokeWidth={1.5} />
-          </button>
-        </div>
+        <button
+          onClick={handleBack}
+          className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity touch-manipulation ${
+            isDarkMode ? 'backdrop-blur-md' : 'bg-white'
+          }`}
+          style={isDarkMode ? {
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          } : {
+            boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
+          }}
+        >
+          <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
+        </button>
 
         <div className="flex items-center space-x-3 flex-1 justify-center">
           <div
