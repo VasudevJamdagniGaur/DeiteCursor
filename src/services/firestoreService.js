@@ -521,6 +521,7 @@ class FirestoreService {
           
           if (snapshot.exists()) {
             const data = snapshot.data();
+            console.log(`📊 FIRESTORE NEW: Found mood data for ${dateId}:`, data);
             moodData.push({
               date: dateId,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -529,9 +530,9 @@ class FirestoreService {
               stress: data.stress || 0,
               energy: data.energy || 0
             });
-            console.log(`📊 FIRESTORE NEW: Found mood data for ${dateId}:`, data);
           } else {
             // No data for this day
+            console.log(`📊 FIRESTORE NEW: No mood data for ${dateId}, using defaults`);
             moodData.push({
               date: dateId,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -540,7 +541,6 @@ class FirestoreService {
               stress: 0,
               energy: 0
             });
-            console.log(`📊 FIRESTORE NEW: No mood data for ${dateId}, using defaults`);
           }
         } catch (dayError) {
           console.error(`❌ Error getting mood data for ${dateId}:`, dayError);

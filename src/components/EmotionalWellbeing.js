@@ -7,6 +7,7 @@ import habitAnalysisService from '../services/habitAnalysisService';
 import { getCurrentUser } from '../services/authService';
 import chatService from '../services/chatService';
 import firestoreService from '../services/firestoreService';
+import { getDateId } from '../utils/dateUtils';
 import { 
   Brain, 
   ArrowLeft, 
@@ -23,14 +24,16 @@ import {
   Sun,
   RefreshCw
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -117,6 +120,14 @@ export default function EmotionalWellbeing() {
   const [emotionExplanations, setEmotionExplanations] = useState(null);
   const [isLoadingFresh, setIsLoadingFresh] = useState(false);
   const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
+
+  // Debug logging for data states
+  useEffect(() => {
+    console.log('🔍 DEBUG: weeklyMoodData length:', weeklyMoodData?.length);
+    console.log('🔍 DEBUG: weeklyMoodData sample:', weeklyMoodData?.[0]);
+    console.log('🔍 DEBUG: emotionalData length:', emotionalData?.length);
+    console.log('🔍 DEBUG: emotionalData sample:', emotionalData?.[0]);
+  }, [weeklyMoodData, emotionalData]);
 
   // Cache keys for different data types
   const getCacheKey = (type, period, userId) => `emotional_wellbeing_${type}_${period}_${userId}`;
@@ -429,6 +440,8 @@ export default function EmotionalWellbeing() {
         
         if (validMoodData.length > 0) {
           console.log('📊 UNIFIED: Found', validMoodData.length, 'days with rule-compliant scores');
+          console.log('📊 UNIFIED: Sample data:', processedMoodData[0]);
+          console.log('📊 UNIFIED: All processed data:', processedMoodData);
           setWeeklyMoodData(processedMoodData); // Use processed data with rules applied
           setEmotionalData(processedMoodData);
           
@@ -1012,21 +1025,51 @@ export default function EmotionalWellbeing() {
       localStorage.removeItem(`emotionalBalance_${user.uid}_${balancePeriod}`);
       localStorage.removeItem(`patterns_${user.uid}_${patternPeriod}`);
       localStorage.removeItem(`highlights_${user.uid}_${highlightsPeriod}`);
-      
+
       console.log('🗑️ Cache cleared, reloading fresh data...');
-      
+
       // Reload all data
       await loadFreshEmotionalData();
       await loadFreshBalanceData();
       await loadFreshPatternAnalysis();
       await loadFreshHighlightsData();
       await loadHabitAnalysis();
-      
+
       console.log('✅ All data refreshed!');
       alert('✅ Data refreshed successfully!');
     } catch (error) {
       console.error('❌ Error refreshing data:', error);
       alert('Failed to refresh data: ' + error.message);
+    }
+  };
+
+  const handleCheckFirestoreData = async () => {
+    console.log('🔍 Checking Firestore data...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in to check data');
+      return;
+    }
+
+    try {
+      // Check today's data
+      const todayId = getDateId(new Date());
+      console.log('🔍 Checking data for today:', todayId);
+
+      const moodRef = doc(db, `users/${user.uid}/days/${todayId}/moodChart/daily`);
+      const snapshot = await getDoc(moodRef);
+
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        console.log('✅ Found mood data:', data);
+        alert(`Found mood data for today!\n\nHappiness: ${data.happiness}\nEnergy: ${data.energy}\nAnxiety: ${data.anxiety}\nStress: ${data.stress}`);
+      } else {
+        console.log('❌ No mood data found for today');
+        alert('No mood data found for today. Make sure you chatted and emotional analysis ran.');
+      }
+    } catch (error) {
+      console.error('❌ Error checking Firestore data:', error);
+      alert('Error checking data: ' + error.message);
     }
   };
 
@@ -1417,7 +1460,7 @@ Return in this JSON format:
             </div>
           ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart 
+                <LineChart
                   data={weeklyMoodData}
                   onClick={(data) => {
                     if (data && data.activePayload && data.activePayload[0]) {
@@ -1427,6 +1470,7 @@ Return in this JSON format:
                     }
                   }}
                 >
+
                   <XAxis 
                     dataKey="day" 
                     axisLine={false}
