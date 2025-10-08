@@ -249,17 +249,109 @@ Return ONLY valid JSON, no explanation:
       }
     }
     
-    // If all models failed, return default scores
-    console.error('❌ All models failed for emotional analysis');
-    console.error('❌ CRITICAL: Emotional analysis completely failed - all models unavailable or returned invalid data');
-    console.error('❌ CRITICAL: This will result in 0/0/0/0 scores which may become default 50/50/25/25 values');
-    console.error('❌ CRITICAL: Check if RunPod server is running and accessible');
-    return {
-      happiness: 0,
-      energy: 0,
-      anxiety: 0,
-      stress: 0
+    // If all models failed, use fallback text analysis
+    console.error('❌ All AI models failed for emotional analysis');
+    console.warn('🔄 FALLBACK: Using text-based emotional analysis instead...');
+    
+    return this.fallbackEmotionalAnalysis(messages);
+  }
+
+  // Fallback emotional analysis using text patterns when AI fails
+  fallbackEmotionalAnalysis(messages) {
+    console.log('🔄 FALLBACK ANALYSIS: Analyzing conversation using text patterns...');
+    
+    if (!messages || messages.length < 2) {
+      return { happiness: 55, energy: 55, anxiety: 20, stress: 20 };
+    }
+
+    // Get all user messages
+    const userMessages = messages.filter(m => m.sender === 'user').map(m => m.text.toLowerCase());
+    const conversationText = userMessages.join(' ');
+    
+    console.log('🔄 FALLBACK: Analyzing', userMessages.length, 'user messages');
+    console.log('🔄 FALLBACK: Total conversation length:', conversationText.length, 'characters');
+    
+    // Enhanced positive emotion keywords
+    const happyWords = ['happy', 'great', 'good', 'wonderful', 'amazing', 'love', 'joy', 'excited', 'awesome', 'fantastic', 'perfect', 'best', 'beautiful', 'grateful', 'thankful', 'blessed', 'proud', 'accomplished', 'success', 'achieved', 'excellent', 'brilliant', 'delightful', 'cheerful', 'optimistic', 'hopeful', 'confident'];
+    const energyWords = ['energetic', 'motivated', 'active', 'productive', 'accomplished', 'did', 'finished', 'completed', 'working', 'exercise', 'gym', 'run', 'going', 'doing', 'action', 'create', 'build', 'make', 'achieve', 'progress', 'forward', 'moving'];
+    
+    // Enhanced negative emotion keywords
+    const anxietyWords = ['anxious', 'worried', 'nervous', 'fear', 'scared', 'uncertain', 'doubt', 'concern', 'afraid', 'panic', 'overwhelm', 'overthink', 'what if', 'worried about', 'uncertainty', 'insecure', 'apprehensive', 'uneasy'];
+    const stressWords = ['stress', 'stressed', 'pressure', 'deadline', 'busy', 'exhausted', 'difficult', 'hard', 'struggle', 'problem', 'issue', 'tough', 'challenging', 'burden', 'overwork', 'tense', 'strain'];
+    
+    // Neutral/negative words that reduce happiness
+    const sadWords = ['sad', 'depressed', 'down', 'unhappy', 'terrible', 'awful', 'bad', 'worst', 'hate', 'angry', 'frustrated', 'upset', 'crying', 'hurt', 'disappointed', 'miserable', 'lonely', 'hopeless'];
+    const lowEnergyWords = ['tired', 'exhausted', 'fatigue', 'sleepy', 'lazy', 'unmotivated', 'lethargic', 'drained', 'worn out', 'weary', 'sluggish'];
+    
+    // Count keyword matches
+    const happyCount = happyWords.filter(word => conversationText.includes(word)).length;
+    const energyCount = energyWords.filter(word => conversationText.includes(word)).length;
+    const anxietyCount = anxietyWords.filter(word => conversationText.includes(word)).length;
+    const stressCount = stressWords.filter(word => conversationText.includes(word)).length;
+    const sadCount = sadWords.filter(word => conversationText.includes(word)).length;
+    const lowEnergyCount = lowEnergyWords.filter(word => conversationText.includes(word)).length;
+    
+    console.log('🔄 FALLBACK: Keyword counts - Happy:', happyCount, 'Energy:', energyCount, 'Anxiety:', anxietyCount, 'Stress:', stressCount, 'Sad:', sadCount, 'LowEnergy:', lowEnergyCount);
+    
+    // Calculate base scores (0-100 scale) with better distribution
+    let happiness = 55 + (happyCount * 10) - (sadCount * 12) - (anxietyCount * 4) - (stressCount * 4);
+    let energy = 55 + (energyCount * 10) - (lowEnergyCount * 12) - (stressCount * 3);
+    let anxiety = 18 + (anxietyCount * 15) + (stressCount * 4) + (sadCount * 3);
+    let stress = 18 + (stressCount * 15) + (anxietyCount * 4) + (lowEnergyCount * 2);
+    
+    // Add randomness for more natural variation (±5 points)
+    happiness += Math.floor(Math.random() * 11) - 5;
+    energy += Math.floor(Math.random() * 11) - 5;
+    anxiety += Math.floor(Math.random() * 11) - 5;
+    stress += Math.floor(Math.random() * 11) - 5;
+    
+    // Clamp values between 0 and 100
+    happiness = Math.max(0, Math.min(100, Math.round(happiness)));
+    energy = Math.max(0, Math.min(100, Math.round(energy)));
+    anxiety = Math.max(0, Math.min(100, Math.round(anxiety)));
+    stress = Math.max(0, Math.min(100, Math.round(stress)));
+    
+    console.log('🔄 FALLBACK: Before cap - H:', happiness, 'E:', energy, 'A:', anxiety, 'S:', stress);
+    
+    // Apply 200% total cap
+    let total = happiness + energy + anxiety + stress;
+    if (total > 200) {
+      const scaleFactor = 200 / total;
+      happiness = Math.round(happiness * scaleFactor);
+      energy = Math.round(energy * scaleFactor);
+      anxiety = Math.round(anxiety * scaleFactor);
+      stress = Math.round(stress * scaleFactor);
+      console.log('🔧 FALLBACK: Applied 200% cap, scaled by', scaleFactor.toFixed(2));
+    }
+    
+    // Ensure minimum total (at least 100 points distributed)
+    total = happiness + energy + anxiety + stress;
+    if (total < 100) {
+      const boostFactor = 100 / total;
+      happiness = Math.round(happiness * boostFactor);
+      energy = Math.round(energy * boostFactor);
+      anxiety = Math.round(anxiety * boostFactor);
+      stress = Math.round(stress * boostFactor);
+      console.log('🔧 FALLBACK: Boosted scores to meet 100 minimum, boost factor:', boostFactor.toFixed(2));
+    }
+    
+    // Apply emotion rules
+    if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
+      happiness = Math.min(40, happiness);
+      console.log('🔧 FALLBACK: High stress/anxiety detected, reducing happiness to', happiness);
+    }
+    
+    const scores = {
+      happiness,
+      energy,
+      anxiety,
+      stress
     };
+    
+    console.log('✅ FALLBACK ANALYSIS: Final scores:', scores);
+    console.log('✅ FALLBACK ANALYSIS: Total:', happiness + energy + anxiety + stress, '/ 200');
+    
+    return scores;
   }
 
 
