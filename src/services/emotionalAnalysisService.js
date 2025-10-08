@@ -251,6 +251,9 @@ Return ONLY valid JSON, no explanation:
     
     // If all models failed, return default scores
     console.error('❌ All models failed for emotional analysis');
+    console.error('❌ CRITICAL: Emotional analysis completely failed - all models unavailable or returned invalid data');
+    console.error('❌ CRITICAL: This will result in 0/0/0/0 scores which may become default 50/50/25/25 values');
+    console.error('❌ CRITICAL: Check if RunPod server is running and accessible');
     return {
       happiness: 0,
       energy: 0,

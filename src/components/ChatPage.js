@@ -473,17 +473,30 @@ export default function ChatPage() {
           console.log('✅ AI Emotional analysis generated:', emotionalScores);
           console.log('🎯 Scores breakdown - H:', emotionalScores.happiness, 'E:', emotionalScores.energy, 'A:', emotionalScores.anxiety, 'S:', emotionalScores.stress);
           
+          // Check if scores are all zeros
+          const total = (emotionalScores.happiness || 0) + (emotionalScores.energy || 0) + (emotionalScores.anxiety || 0) + (emotionalScores.stress || 0);
+          if (total === 0) {
+            console.error('❌ CRITICAL: Emotional analysis returned ALL ZEROS - API likely failed');
+            console.error('❌ CRITICAL: This means the RunPod AI server did not generate valid scores');
+            console.error('❌ CRITICAL: Check browser console for "All models failed" error above');
+          }
+          
           const user = getCurrentUser();
           if (user) {
             // Save to NEW Firestore structure - moodChart
             console.log('💾 SAVING AI SCORES TO FIREBASE:', emotionalScores);
             console.log('💾 User ID:', user.uid, 'Date ID:', selectedDateId);
+            console.log('💾 Firestore path will be: users/' + user.uid + '/days/' + selectedDateId + '/moodChart/daily');
             
             try {
-              await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
-              console.log('💾 ✅ AI Mood chart saved to Firestore NEW structure - DONE!');
+              const saveResult = await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
+              console.log('💾 ✅ AI Mood chart saved to Firestore - Result:', saveResult);
+              if (!saveResult.success) {
+                console.error('❌ CRITICAL: Save failed:', saveResult.error);
+              }
             } catch (saveError) {
               console.error('❌ Error saving mood chart:', saveError);
+              console.error('❌ CRITICAL: Save error details:', saveError.message, saveError.code);
             }
             
             // Also calculate and save emotional balance

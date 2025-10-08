@@ -531,6 +531,7 @@ class FirestoreService {
             const data = snapshot.data();
             console.log(`📊 FIRESTORE NEW: ✅ Found mood data for ${dateId}:`, data);
             console.log(`📊 FIRESTORE NEW: ✅ Raw values - H:${data.happiness} E:${data.energy} A:${data.anxiety} S:${data.stress}`);
+            console.log(`📊 FIRESTORE NEW: ✅ Firestore path was: users/${uid}/days/${dateId}/moodChart/daily`);
             
             const dayData = {
               date: dateId,
@@ -546,6 +547,8 @@ class FirestoreService {
           } else {
             // No data for this day
             console.log(`📊 FIRESTORE NEW: ❌ No mood data for ${dateId}, using defaults`);
+            console.log(`📊 FIRESTORE NEW: ❌ Checked path: users/${uid}/days/${dateId}/moodChart/daily`);
+            console.log(`📊 FIRESTORE NEW: ❌ This means NO DATA was saved to Firestore for this date`);
             moodData.push({
               date: dateId,
               day: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
