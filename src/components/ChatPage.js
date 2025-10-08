@@ -64,6 +64,97 @@ export default function ChatPage() {
     localStorage.setItem(`chatMessages_${selectedDateId}`, JSON.stringify(newMessages));
   };
 
+  const checkAndGenerateEmotionalAnalysis = async (uid, dateId, messages) => {
+    try {
+      console.log('🔍 AUTO-ANALYSIS: Checking emotional data for date:', dateId);
+      
+      // Filter out welcome messages first
+      const realMessages = messages.filter(m => m.id !== 'welcome' && m.text && m.text.length > 0);
+      
+      if (realMessages.length < 2) {
+        console.log('⚠️ AUTO-ANALYSIS: Not enough messages (need at least 2), skipping');
+        return;
+      }
+      
+      console.log('🔍 AUTO-ANALYSIS: Found', realMessages.length, 'real messages');
+      
+      // Check existing mood data
+      const moodRef = await firestoreService.getMoodChartDataNew(uid, 1);
+      
+      let shouldGenerate = false;
+      
+      if (!moodRef.success || !moodRef.moodData || moodRef.moodData.length === 0) {
+        console.log('🔄 AUTO-ANALYSIS: No mood data found, will generate');
+        shouldGenerate = true;
+      } else {
+        const todayMood = moodRef.moodData[0];
+        console.log('🔍 AUTO-ANALYSIS: Current mood data:', todayMood);
+        
+        const total = (todayMood.happiness || 0) + (todayMood.energy || 0) + 
+                     (todayMood.anxiety || 0) + (todayMood.stress || 0);
+        
+        // Check for default/invalid values
+        const isDefaultPattern = (todayMood.happiness === 50 && todayMood.energy === 50 && 
+                                  todayMood.anxiety === 25 && todayMood.stress === 25);
+        const isEmptyOrInvalid = total === 0 || total === 100 || isDefaultPattern;
+        const isWrongDate = todayMood.date !== dateId;
+        
+        console.log('🔍 AUTO-ANALYSIS: Total:', total, 'IsDefault:', isDefaultPattern, 
+                    'IsEmpty:', isEmptyOrInvalid, 'WrongDate:', isWrongDate);
+        
+        if (isEmptyOrInvalid || isWrongDate) {
+          console.log('🔄 AUTO-ANALYSIS: Invalid/default data detected, will regenerate');
+          shouldGenerate = true;
+        } else {
+          console.log('✅ AUTO-ANALYSIS: Valid data exists, skipping generation');
+        }
+      }
+      
+      if (shouldGenerate) {
+        console.log('🚀 AUTO-ANALYSIS: Starting emotional analysis...');
+        await generateAndSaveEmotionalAnalysis(uid, dateId, realMessages);
+        console.log('✅ AUTO-ANALYSIS: Complete! Mood data updated.');
+      }
+    } catch (error) {
+      console.error('❌ AUTO-ANALYSIS: Error:', error);
+    }
+  };
+
+  const generateAndSaveEmotionalAnalysis = async (uid, dateId, messages) => {
+    try {
+      // Filter out welcome message and ensure we have real conversation
+      const realMessages = messages.filter(m => m.id !== 'welcome' && m.text && m.text.length > 0);
+      
+      if (realMessages.length < 2) {
+        console.log('⚠️ Not enough messages for emotional analysis');
+        return;
+      }
+      
+      console.log('🧠 Generating emotional analysis for', realMessages.length, 'messages...');
+      const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(realMessages);
+      console.log('✅ Generated emotional scores:', emotionalScores);
+      
+      // Save to Firestore
+      await firestoreService.saveMoodChartNew(uid, dateId, emotionalScores);
+      console.log('💾 Emotional scores saved to Firestore');
+      
+      // Also save emotional balance
+      const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
+      const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+      const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+      const neutral = 100 - positive - negative;
+      
+      await firestoreService.saveEmotionalBalanceNew(uid, dateId, {
+        positive: Math.round(positive),
+        negative: Math.round(negative),
+        neutral: Math.round(neutral)
+      });
+      console.log('💾 Emotional balance saved to Firestore');
+    } catch (error) {
+      console.error('❌ Error generating emotional analysis:', error);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
@@ -431,6 +522,10 @@ export default function ChatPage() {
             setMessages(result.messages);
             // Also save to localStorage as backup
             saveMessages(result.messages);
+            
+            // Check if we need to generate emotional analysis for these messages
+            await checkAndGenerateEmotionalAnalysis(user.uid, selectedDateId, result.messages);
+            
             return;
           } else {
             console.log('📖 No messages in Firestore, checking localStorage...');
