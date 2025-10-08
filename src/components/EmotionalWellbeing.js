@@ -1173,6 +1173,70 @@ export default function EmotionalWellbeing() {
     }
   };
 
+  const handleForceAnalysis = async () => {
+    console.log('🔬 FORCE ANALYSIS: Starting manual emotional analysis for today...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      const todayId = getDateId(new Date());
+      console.log('🔬 FORCE ANALYSIS: Date ID:', todayId);
+
+      // Get today's messages
+      const messagesResult = await firestoreService.getChatMessagesNew(user.uid, todayId);
+      console.log('🔬 FORCE ANALYSIS: Messages result:', messagesResult);
+
+      if (!messagesResult.success || messagesResult.messages.length === 0) {
+        alert('No messages found for today. Chat with Deite first!');
+        return;
+      }
+
+      console.log('🔬 FORCE ANALYSIS: Found', messagesResult.messages.length, 'messages');
+      console.log('🔬 FORCE ANALYSIS: Sample message:', messagesResult.messages[0]);
+
+      // Run emotional analysis
+      console.log('🔬 FORCE ANALYSIS: Calling analyzeEmotionalScores...');
+      const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesResult.messages);
+      console.log('🔬 FORCE ANALYSIS: Results:', emotionalScores);
+
+      if (emotionalScores.happiness === 0 && emotionalScores.energy === 0 && 
+          emotionalScores.anxiety === 0 && emotionalScores.stress === 0) {
+        alert('⚠️ Analysis returned all zeros. Check console for API errors.');
+        return;
+      }
+
+      // Save to Firestore
+      console.log('🔬 FORCE ANALYSIS: Saving to Firestore...');
+      await firestoreService.saveMoodChartNew(user.uid, todayId, emotionalScores);
+      console.log('🔬 FORCE ANALYSIS: Saved successfully!');
+
+      // Calculate and save emotional balance
+      const total = emotionalScores.happiness + emotionalScores.energy + 
+                    emotionalScores.stress + emotionalScores.anxiety;
+      const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+      const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+      const neutral = 100 - positive - negative;
+
+      await firestoreService.saveEmotionalBalanceNew(user.uid, todayId, {
+        positive: Math.round(positive),
+        negative: Math.round(negative),
+        neutral: Math.round(neutral)
+      });
+
+      alert(`✅ Analysis complete!\n\nHappiness: ${emotionalScores.happiness}\nEnergy: ${emotionalScores.energy}\nAnxiety: ${emotionalScores.anxiety}\nStress: ${emotionalScores.stress}\n\nNow click Refresh to see the chart!`);
+
+      // Auto-refresh the data
+      await handleRefreshData();
+
+    } catch (error) {
+      console.error('🔬 FORCE ANALYSIS ERROR:', error);
+      alert('❌ Analysis failed: ' + error.message);
+    }
+  };
+
   // Custom tooltip component for the line chart
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -2605,41 +2669,25 @@ Return in this JSON format:
             <ArrowLeft className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
           </button>
 
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={handleTestAPI}
-              className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200 touch-manipulation ${
-                isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-              }`}
-              style={isDarkMode ? {
-                backgroundColor: "rgba(42, 42, 45, 0.6)",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              } : {
-                boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
-              }}
-              title="Test API"
-            >
-              <span className="text-xs font-bold" style={{ color: isDarkMode ? "#F28B82" : "#87A96B" }}>🔗</span>
-            </button>
-
-            <button
-              onClick={handleFullTest}
-              className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200 touch-manipulation ${
-                isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-              }`}
-              style={isDarkMode ? {
-                backgroundColor: "rgba(42, 42, 45, 0.6)",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              } : {
-                boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
-              }}
-              title="Run Full Test"
-            >
-              <span className="text-xs font-bold" style={{ color: isDarkMode ? "#81C995" : "#87A96B" }}>🧪</span>
-            </button>
-          </div>
+          <button
+            onClick={handleForceAnalysis}
+            className={`px-4 py-2 rounded-xl flex items-center space-x-2 hover:opacity-90 transition-all duration-200 touch-manipulation ${
+              isDarkMode ? 'backdrop-blur-md' : 'bg-white'
+            }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(129, 201, 149, 0.2)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+              border: "1px solid rgba(129, 201, 149, 0.3)",
+            } : {
+              backgroundColor: "rgba(129, 201, 149, 0.2)",
+              boxShadow: "0 2px 8px rgba(129, 201, 149, 0.15)",
+              border: "1px solid rgba(129, 201, 149, 0.3)",
+            }}
+            title="Analyze Today's Chat"
+          >
+            <Brain className="w-4 h-4" style={{ color: "#81C995" }} />
+            <span className="text-sm font-medium" style={{ color: isDarkMode ? "#81C995" : "#4A8C6A" }}>Analyze</span>
+          </button>
         </div>
 
         <div className="flex items-center space-x-3 flex-1 justify-center">
