@@ -52,8 +52,8 @@ CRITICAL RULES - MUST FOLLOW:
 3. Energy (1-100): vitality, motivation, activity level, enthusiasm
 4. Anxiety (1-100): worry, fear, nervousness, unease
 5. Stress (1-100): pressure, overwhelm, burden, tension
-6. Total of all 4 scores must be between 100 and 200
-7. High stress/anxiety (>60) means happiness must be ≤40
+6. If happiness is high (>70), stress and anxiety should be low (<40)
+7. If stress or anxiety is high (>60), happiness should be moderate to low (<50)
 8. Each number must be an integer (whole number, no decimals)
 9. NEVER return 0 for any value - minimum is 1
 
@@ -177,17 +177,6 @@ Example valid responses:
         
         console.log('🔍 Raw AI scores (min=1, max=100):', {happiness, energy, anxiety, stress});
         
-        // Apply 200% total cap constraint
-        let total = happiness + energy + anxiety + stress;
-        if (total > 200) {
-          const scaleFactor = 200 / total;
-          happiness = Math.round(happiness * scaleFactor);
-          energy = Math.round(energy * scaleFactor);
-          anxiety = Math.round(anxiety * scaleFactor);
-          stress = Math.round(stress * scaleFactor);
-          console.log('🔧 RULE: Total was', total, 'scaled down by factor', scaleFactor.toFixed(2));
-        }
-        
         // Apply specific emotion rules
         // Rule: Happiness decreases if stress/anxiety are high
         if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
@@ -260,7 +249,7 @@ Example valid responses:
         
         const finalTotal = happiness + energy + anxiety + stress;
         console.log('✅ AI Emotional scores with rules applied:', validatedScores);
-        console.log('✅ Final total:', finalTotal, '/ 200 (cap)');
+        console.log('✅ Final total:', finalTotal);
         console.log('✅ All scores are valid (1-100):', happiness >= 1 && energy >= 1 && anxiety >= 1 && stress >= 1);
         
         // Double check - if any score is still 0, use fallback
@@ -343,29 +332,7 @@ Example valid responses:
     anxiety = Math.max(1, Math.min(100, Math.round(anxiety)));
     stress = Math.max(1, Math.min(100, Math.round(stress)));
     
-    console.log('🔄 FALLBACK: Before cap - H:', happiness, 'E:', energy, 'A:', anxiety, 'S:', stress);
-    
-    // Apply 200% total cap
-    let total = happiness + energy + anxiety + stress;
-    if (total > 200) {
-      const scaleFactor = 200 / total;
-      happiness = Math.round(happiness * scaleFactor);
-      energy = Math.round(energy * scaleFactor);
-      anxiety = Math.round(anxiety * scaleFactor);
-      stress = Math.round(stress * scaleFactor);
-      console.log('🔧 FALLBACK: Applied 200% cap, scaled by', scaleFactor.toFixed(2));
-    }
-    
-    // Ensure minimum total (at least 100 points distributed)
-    total = happiness + energy + anxiety + stress;
-    if (total < 100) {
-      const boostFactor = 100 / total;
-      happiness = Math.round(happiness * boostFactor);
-      energy = Math.round(energy * boostFactor);
-      anxiety = Math.round(anxiety * boostFactor);
-      stress = Math.round(stress * boostFactor);
-      console.log('🔧 FALLBACK: Boosted scores to meet 100 minimum, boost factor:', boostFactor.toFixed(2));
-    }
+    console.log('🔄 FALLBACK: After clamping - H:', happiness, 'E:', energy, 'A:', anxiety, 'S:', stress);
     
     // Apply emotion rules
     if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
@@ -387,7 +354,7 @@ Example valid responses:
     };
     
     console.log('✅ FALLBACK ANALYSIS: Final scores:', scores);
-    console.log('✅ FALLBACK ANALYSIS: Total:', happiness + energy + anxiety + stress, '/ 200');
+    console.log('✅ FALLBACK ANALYSIS: Total:', happiness + energy + anxiety + stress);
     console.log('✅ FALLBACK ANALYSIS: All values between 1-100:', happiness >= 1 && energy >= 1 && anxiety >= 1 && stress >= 1);
     
     return scores;

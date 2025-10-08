@@ -581,26 +581,22 @@ export default function EmotionalWellbeing() {
         console.log('📊 UNIFIED: ✅ RAW FIRESTORE DATA:', result.moodData);
         console.log('📊 UNIFIED: ✅ Oct 8 in raw data:', result.moodData.find(d => d.day && d.day.includes('Oct 8')));
         
-        // Apply emotion rules and 200% cap to ALL loaded data
+        // Apply emotion rules to ALL loaded data (NO 200% cap)
         const processedMoodData = result.moodData.map(day => {
           let { happiness, energy, anxiety, stress } = day;
           
-          // Apply 200% cap
-          const total = happiness + energy + anxiety + stress;
-          if (total > 200) {
-            const scaleFactor = 200 / total;
-            happiness = Math.round(happiness * scaleFactor);
-            energy = Math.round(energy * scaleFactor);
-            anxiety = Math.round(anxiety * scaleFactor);
-            stress = Math.round(stress * scaleFactor);
-            console.log(`🔧 CHART: Applied 200% cap to ${day.day}, total was ${total}, scaled to ${happiness + energy + anxiety + stress}`);
-          }
-          
           // Apply emotion rules
           // Rule: Happiness decreases if stress/anxiety are high
-          if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
-            happiness = Math.min(40, happiness);
+          if ((stress >= 60 || anxiety >= 60) && happiness > 50) {
+            happiness = Math.min(50, happiness);
             console.log(`🔧 CHART: Reduced happiness for ${day.day} due to high stress/anxiety`);
+          }
+          
+          // Rule: If happiness is very high, stress/anxiety should be lower
+          if (happiness >= 70) {
+            if (stress > 40) stress = 40;
+            if (anxiety > 40) anxiety = 40;
+            console.log(`🔧 CHART: Reduced stress/anxiety for ${day.day} due to high happiness`);
           }
           
           return {
@@ -628,12 +624,17 @@ export default function EmotionalWellbeing() {
 
           // Force state update with new reference to trigger re-render
           const newMoodData = [...processedMoodData]; // Create new array reference
+          
+          console.log('🔄 CHART: About to update state with:', newMoodData.length, 'days');
+          console.log('🔄 CHART: First day data:', newMoodData[0]);
+          console.log('🔄 CHART: Last day data:', newMoodData[newMoodData.length - 1]);
+          console.log('🔄 CHART: Oct 8 data:', newMoodData.find(d => d.day && d.day.includes('Oct 8')));
+          
           setWeeklyMoodData(newMoodData);
           setEmotionalData(newMoodData);
           
-          console.log('🔄 CHART: State updated, triggering re-render...');
-          console.log('🔄 CHART: New data length:', newMoodData.length);
-          console.log('🔄 CHART: Oct 8 data:', newMoodData.find(d => d.day && d.day.includes('Oct 8')));
+          console.log('✅ CHART: State updated successfully!');
+          console.log('✅ CHART: weeklyMoodData should now have', newMoodData.length, 'days');
           
           // Calculate averages for display using processed data
           const avgHappiness = processedMoodData.reduce((sum, item) => sum + item.happiness, 0) / processedMoodData.length;
@@ -643,7 +644,7 @@ export default function EmotionalWellbeing() {
           const avgTotal = avgHappiness + avgEnergy + avgAnxiety + avgStress;
           
           console.log('📊 UNIFIED: Rule-Applied Averages - H:', Math.round(avgHappiness), 'E:', Math.round(avgEnergy), 'A:', Math.round(avgAnxiety), 'S:', Math.round(avgStress));
-          console.log('📊 UNIFIED: Average total:', Math.round(avgTotal), '/ 200 (cap)');
+          console.log('📊 UNIFIED: Average total:', Math.round(avgTotal));
           
           // Return data for caching
           return {
@@ -702,23 +703,18 @@ export default function EmotionalWellbeing() {
       if (result.success && result.moodData && result.moodData.length > 0) {
         console.log('⚖️ Processing balance data from Firebase:', result.moodData.length, 'days');
         
-        // Apply emotion rules and 200% cap to balance data
+        // Apply emotion rules to balance data (NO 200% cap)
         const processedMoodData = result.moodData.map(day => {
           let { happiness, energy, anxiety, stress } = day;
           
-          // Apply 200% cap
-          const total = happiness + energy + anxiety + stress;
-          if (total > 200) {
-            const scaleFactor = 200 / total;
-            happiness = Math.round(happiness * scaleFactor);
-            energy = Math.round(energy * scaleFactor);
-            anxiety = Math.round(anxiety * scaleFactor);
-            stress = Math.round(stress * scaleFactor);
+          // Apply emotion rules
+          if ((stress >= 60 || anxiety >= 60) && happiness > 50) {
+            happiness = Math.min(50, happiness);
           }
           
-          // Apply emotion rules
-          if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
-            happiness = Math.min(40, happiness);
+          if (happiness >= 70) {
+            if (stress > 40) stress = 40;
+            if (anxiety > 40) anxiety = 40;
           }
           
           return {
@@ -769,23 +765,18 @@ export default function EmotionalWellbeing() {
       if (result.success && result.moodData && result.moodData.length > 0) {
         console.log('🏆 Processing highlights data from Firebase:', result.moodData.length, 'days');
         
-        // Apply emotion rules and 200% cap to highlights data
+        // Apply emotion rules to highlights data (NO 200% cap)
         const processedMoodData = result.moodData.map(day => {
           let { happiness, energy, anxiety, stress } = day;
           
-          // Apply 200% cap
-          const total = happiness + energy + anxiety + stress;
-          if (total > 200) {
-            const scaleFactor = 200 / total;
-            happiness = Math.round(happiness * scaleFactor);
-            energy = Math.round(energy * scaleFactor);
-            anxiety = Math.round(anxiety * scaleFactor);
-            stress = Math.round(stress * scaleFactor);
+          // Apply emotion rules
+          if ((stress >= 60 || anxiety >= 60) && happiness > 50) {
+            happiness = Math.min(50, happiness);
           }
           
-          // Apply emotion rules
-          if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
-            happiness = Math.min(40, happiness);
+          if (happiness >= 70) {
+            if (stress > 40) stress = 40;
+            if (anxiety > 40) anxiety = 40;
           }
           
           return {
