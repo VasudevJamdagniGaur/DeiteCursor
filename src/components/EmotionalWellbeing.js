@@ -651,17 +651,34 @@ export default function EmotionalWellbeing() {
 
   const processHighlightsDataInternal = async (data, userId) => {
     console.log(`🔄 Processing highlights data: ${data.length} entries for last 3 months`);
+    console.log(`🔄 All data received:`, data.map(d => ({ 
+      date: d.date, 
+      h: d.happiness, 
+      e: d.energy, 
+      a: d.anxiety, 
+      s: d.stress,
+      total: (d.happiness || 0) + (d.energy || 0) + (d.anxiety || 0) + (d.stress || 0)
+    })));
     
-    // Filter valid data for highlights (must have actual emotional scores, not defaults)
-    const validData = data.filter(item => 
-      item.happiness !== undefined && 
-      item.happiness > 0 && 
-      item.energy > 0 && 
-      item.anxiety > 0 && 
-      item.stress > 0
-    );
+    // Filter valid data for highlights (must have actual emotional scores, not all zeros)
+    const validData = data.filter(item => {
+      const hasData = item.happiness !== undefined && 
+        (item.happiness > 0 || item.energy > 0 || item.anxiety > 0 || item.stress > 0);
+      const total = (item.happiness || 0) + (item.energy || 0) + (item.anxiety || 0) + (item.stress || 0);
+      return hasData && total >= 10; // At least 10 points total to avoid nearly empty days
+    });
     
     console.log(`🔄 Valid highlights data: ${validData.length} entries (filtered from ${data.length})`);
+    console.log(`🔄 Valid data dates:`, validData.map(d => d.date));
+    
+    // Debug: Show which dates were filtered out
+    const filteredOut = data.filter(item => {
+      const hasData = item.happiness !== undefined && 
+        (item.happiness > 0 || item.energy > 0 || item.anxiety > 0 || item.stress > 0);
+      const total = (item.happiness || 0) + (item.energy || 0) + (item.anxiety || 0) + (item.stress || 0);
+      return !(hasData && total >= 10);
+    });
+    console.log(`🔄 Filtered out ${filteredOut.length} days:`, filteredOut.map(d => ({ date: d.date, total: (d.happiness || 0) + (d.energy || 0) + (d.anxiety || 0) + (d.stress || 0) })));
     
     if (validData.length === 0) {
       console.log('📝 No valid emotional data found for highlights');
@@ -681,6 +698,26 @@ export default function EmotionalWellbeing() {
         }
       };
     }
+    
+    // If we only have one day of data, we can't show different days
+    if (validData.length === 1) {
+      console.log('📝 Only one day of emotional data available');
+      const onlyDay = validData[0];
+      return {
+        peak: {
+          title: "Best Mood Day",
+          description: "This is your first day tracking emotions with Deite. Keep chatting to see more insights!",
+          date: onlyDay.date ? new Date(onlyDay.date).toLocaleDateString() : 'Unknown Date',
+          score: Math.round((onlyDay.happiness + onlyDay.energy) / 2)
+        },
+        toughestDay: {
+          title: "Challenging Day", 
+          description: "Chat with Deite for a few more days to identify patterns and challenging moments.",
+          date: "Track more days",
+          score: 0
+        }
+      };
+    }
 
     // Generate highlights based on real data
     const bestDay = validData.reduce((best, current) => {
@@ -689,14 +726,36 @@ export default function EmotionalWellbeing() {
       return currentScore > bestScore ? current : best;
     });
 
-    const worstDay = validData.reduce((worst, current) => {
+    // Find worst day, but ensure it's different from best day
+    let worstDay = validData.reduce((worst, current) => {
       const currentScore = (current.anxiety + current.stress) / 2;
       const worstScore = (worst.anxiety + worst.stress) / 2;
       return currentScore > worstScore ? current : worst;
     });
 
-    console.log('🏆 Best day found:', bestDay);
-    console.log('🏆 Worst day found:', worstDay);
+    // If best day and worst day are the same, find different days
+    if (validData.length > 1 && bestDay.date === worstDay.date) {
+      console.log('⚠️ Best day and worst day are the same:', bestDay.date);
+      console.log('⚠️ Finding alternative days from', validData.length, 'valid days');
+      
+      // Filter out the best day and find worst from remaining days
+      const otherDays = validData.filter(day => day.date !== bestDay.date);
+      console.log('⚠️ Other days available:', otherDays.map(d => d.date));
+      
+      if (otherDays.length > 0) {
+        worstDay = otherDays.reduce((worst, current) => {
+          const currentScore = (current.anxiety + current.stress) / 2;
+          const worstScore = (worst.anxiety + worst.stress) / 2;
+          return currentScore > worstScore ? current : worst;
+        });
+        console.log('✅ Found alternative worst day:', worstDay.date);
+      } else {
+        console.log('⚠️ No other days available, keeping same day but will show different descriptions');
+      }
+    }
+
+    console.log('🏆 Best day found:', bestDay.date, '- Happiness:', bestDay.happiness, 'Energy:', bestDay.energy);
+    console.log('🏆 Worst day found:', worstDay.date, '- Anxiety:', worstDay.anxiety, 'Stress:', worstDay.stress);
 
     let highlightsData;
 
