@@ -17,9 +17,13 @@ export default function ChatPage() {
   // Fix: Use getDateId directly with the date object or current date
   const selectedDate = location.state?.selectedDate ? new Date(location.state.selectedDate) : new Date();
   const selectedDateId = getDateId(selectedDate);
+  const isWhisperMode = location.state?.isWhisperMode || false;
+  const isFreshSession = location.state?.isFreshSession || false;
   
   console.log('📅 CHAT: Selected date:', selectedDate);
   console.log('📅 CHAT: Date ID for saving:', selectedDateId);
+  console.log('🤫 CHAT: Whisper mode:', isWhisperMode);
+  console.log('🆕 CHAT: Fresh session:', isFreshSession);
   
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -588,6 +592,13 @@ export default function ChatPage() {
     const loadMessages = async () => {
       const user = getCurrentUser();
       
+      // If this is a fresh session (Whisper Mode), skip loading previous messages
+      if (isFreshSession) {
+        console.log('🤫 WHISPER MODE: Starting fresh session, not loading previous messages');
+        setWelcomeMessage();
+        return;
+      }
+      
       // Try to load from Firestore first if user is logged in
       if (user) {
         try {
@@ -633,9 +644,17 @@ export default function ChatPage() {
     };
 
     const setWelcomeMessage = () => {
+      let welcomeText;
+      
+      if (isWhisperMode) {
+        welcomeText = "Welcome to your Whisper Session. This is a private, fresh space just for you. What would you like to share in confidence today?";
+      } else {
+        welcomeText = "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?";
+      }
+      
       const welcomeMessage = {
         id: 'welcome',
-        text: "Hey there! I'm Deite, and I'm genuinely glad you're here. There's something beautiful about taking a moment to connect with yourself and your feelings. What's been on your heart lately?",
+        text: welcomeText,
         sender: 'ai',
         timestamp: new Date()
       };
@@ -717,7 +736,9 @@ export default function ChatPage() {
             <Brain className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div>
-            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Deite</h1>
+            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+              {isWhisperMode ? 'Whisper Session' : 'Deite'}
+            </h1>
           </div>
         </div>
 

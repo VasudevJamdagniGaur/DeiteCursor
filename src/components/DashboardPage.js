@@ -168,16 +168,17 @@ export default function DashboardPage() {
 
   const handleChatClick = () => {
     // Pass the selected date as state to the chat page (use ISO string for consistency)
+    // This will load existing chat messages for the selected date
     console.log('📅 DASHBOARD: Navigating to chat with date:', selectedDate);
     console.log('📅 DASHBOARD: Date ID:', getDateId(selectedDate));
-    navigate('/chat', { state: { selectedDate: selectedDate.toISOString() } });
+    navigate('/chat', { state: { selectedDate: selectedDate.toISOString(), isWhisperMode: false } });
   };
 
   const handleWhisperClick = () => {
-    // Navigate to whisper session (same as chat for now, can be customized later)
-    console.log('📅 DASHBOARD: Navigating to whisper session with date:', selectedDate);
-    console.log('📅 DASHBOARD: Date ID:', getDateId(selectedDate));
-    navigate('/chat', { state: { selectedDate: selectedDate.toISOString(), isWhisperMode: true } });
+    // Navigate to whisper session - always starts fresh, doesn't load previous messages
+    console.log('📅 DASHBOARD: Navigating to whisper session (fresh chat)');
+    console.log('📅 DASHBOARD: Whisper session will start with clean slate');
+    navigate('/chat', { state: { selectedDate: new Date().toISOString(), isWhisperMode: true, isFreshSession: true } });
   };
 
   const handleWellbeingClick = () => {
