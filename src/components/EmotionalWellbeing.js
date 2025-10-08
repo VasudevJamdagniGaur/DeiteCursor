@@ -122,6 +122,35 @@ export default function EmotionalWellbeing() {
   const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
   const [chartKey, setChartKey] = useState(0); // Force chart re-render
 
+  // Expose force update function to global scope
+  useEffect(() => {
+    window.forceDashboardUpdate = async () => {
+      console.log('🔥 GLOBAL FORCE UPDATE: Called from external script');
+      const user = getCurrentUser();
+      if (user) {
+        console.log('🔥 GLOBAL FORCE UPDATE: Clearing all caches and reloading...');
+        // Clear all caches
+        const cacheKeys = Object.keys(localStorage).filter(key =>
+          key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance') || key.includes('force_fresh_data_until')
+        );
+        cacheKeys.forEach(key => localStorage.removeItem(key));
+
+        // Force immediate data load from Firestore
+        const result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+        if (result.success && result.moodData && result.moodData.length > 0) {
+          console.log('✅ GLOBAL FORCE UPDATE: Got fresh data from Firestore');
+          setWeeklyMoodData(result.moodData);
+          setEmotionalData(result.moodData);
+          setChartKey(prev => prev + 1);
+        }
+
+        // Reload all data
+        await loadFreshData();
+        console.log('✅ GLOBAL FORCE UPDATE: Complete');
+      }
+    };
+  }, [selectedPeriod]);
+
   // Debug logging for data states
   useEffect(() => {
     console.log('🔍 DEBUG: =================== STATE UPDATE ===================');
@@ -304,10 +333,36 @@ export default function EmotionalWellbeing() {
     }
   };
 
+  const loadFreshDataOnly = async () => {
+    console.log('🚨 FORCE FRESH ONLY: Loading data directly from Firestore (no caching)...');
+    const user = getCurrentUser();
+    if (!user) return;
+
+    try {
+      // Load emotional data directly from Firestore
+      const result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+      if (result.success && result.moodData && result.moodData.length > 0) {
+        console.log('✅ FORCE FRESH ONLY: Got fresh data from Firestore:', result.moodData.length, 'days');
+        setWeeklyMoodData(result.moodData);
+        setEmotionalData(result.moodData);
+        setChartKey(prev => prev + 1); // Force chart re-render
+      }
+
+      // Also load balance data
+      const balanceResult = await firestoreService.getMoodChartDataNew(user.uid, 30); // Balance uses 30 days
+      if (balanceResult.success && balanceResult.moodData && balanceResult.moodData.length > 0) {
+        setMoodBalance(balanceResult.moodData);
+      }
+
+    } catch (error) {
+      console.error('❌ FORCE FRESH ONLY Error:', error);
+    }
+  };
+
   const loadFreshData = async () => {
     console.log('🔄 Loading fresh data in background...');
     setIsLoadingFresh(true);
-    
+
     try {
       await Promise.all([
         loadFreshEmotionalData(),
@@ -326,16 +381,27 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      // Check if we need to force fresh data loading (bypass all caching)
+      const forceFreshUntil = localStorage.getItem('force_fresh_data_until');
+      const currentTime = Date.now();
+      const shouldForceFresh = forceFreshUntil && parseInt(forceFreshUntil) > currentTime;
+
+      if (shouldForceFresh) {
+        console.log('🚨 FORCE FRESH MODE: Bypassing all caching for fresh data...');
+        // Skip all caching and load directly from Firestore
+        loadFreshDataOnly();
+        return;
+      }
+
       // Check if we need to force refresh due to new data
       const lastRefresh = localStorage.getItem('emotional_data_refresh');
-      const currentTime = Date.now();
       const shouldForceRefresh = lastRefresh && (currentTime - parseInt(lastRefresh)) < 60000; // Within last minute
 
       if (shouldForceRefresh) {
         console.log('🔄 FORCE REFRESH: New emotional data detected, clearing all caches...');
         // Clear ALL emotional wellbeing caches
         const cacheKeys = Object.keys(localStorage).filter(key =>
-          key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance')
+          key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance') || key.includes('force_fresh_data_until')
         );
         cacheKeys.forEach(key => {
           localStorage.removeItem(key);
@@ -345,6 +411,23 @@ export default function EmotionalWellbeing() {
 
       // Load cached data instantly
       loadCachedData(user.uid);
+
+      // CRITICAL: Check for forced fresh data and use it immediately
+      const forcedCacheKey = `emotional_wellbeing_emotional_7_${user.uid}`;
+      const forcedData = localStorage.getItem(forcedCacheKey);
+
+      if (forcedData) {
+        try {
+          const parsedForcedData = JSON.parse(forcedData);
+          console.log('🔥 FORCE DATA: Using forced fresh data:', parsedForcedData);
+          setWeeklyMoodData(parsedForcedData.weeklyMoodData || []);
+          setEmotionalData(parsedForcedData.emotionalData || []);
+          setChartKey(prev => prev + 1); // Force chart re-render
+        } catch (error) {
+          console.error('❌ Error parsing forced data:', error);
+        }
+      }
+
       // Then fetch fresh data in background
       loadFreshData();
     }
@@ -375,17 +458,32 @@ export default function EmotionalWellbeing() {
     const handleCustomEvent = (e) => {
       console.log('🔄 CUSTOM EVENT: Emotional data updated!', e.detail);
       const user = getCurrentUser();
-      if (user) {
-        console.log('🔄 CUSTOM EVENT: Clearing cache and reloading...');
-        // Clear all caches
+      if (user && e.detail && e.detail.scores) {
+        console.log('🔥 CUSTOM EVENT: Using provided scores directly!');
+        const { scores, dateId } = e.detail;
+
+        // Create fresh mood data from the provided scores
+        const freshMoodData = [{
+          date: dateId,
+          day: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          happiness: scores.happiness,
+          anxiety: scores.anxiety,
+          stress: scores.stress,
+          energy: scores.energy
+        }];
+
+        // Set the data directly in state to force immediate update
+        setWeeklyMoodData(freshMoodData);
+        setEmotionalData(freshMoodData);
+        setChartKey(prev => prev + 1); // Force chart re-render
+
+        console.log('✅ CUSTOM EVENT: Mood data updated immediately:', freshMoodData);
+
+        // Also clear caches to ensure consistency
         const cacheKeys = Object.keys(localStorage).filter(key =>
           key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance')
         );
         cacheKeys.forEach(key => localStorage.removeItem(key));
-
-        // Force reload
-        loadCachedData(user.uid);
-        loadFreshData();
       }
     };
 
@@ -1179,7 +1277,8 @@ export default function EmotionalWellbeing() {
         key.includes('emotionalBalance') ||
         key.includes('patterns') ||
         key.includes('highlights') ||
-        key.includes('emotional_data_refresh')
+        key.includes('emotional_data_refresh') ||
+        key.includes('force_fresh_data_until')
       );
       cacheKeys.forEach(key => localStorage.removeItem(key));
       console.log(`🗑️ Cleared ${cacheKeys.length} cache entries`);
@@ -1194,7 +1293,24 @@ export default function EmotionalWellbeing() {
       setHighlights({});
       setChartKey(prev => prev + 1); // Force chart re-render
 
-      // Reload all data
+      // AGGRESSIVE: Force immediate data load from Firestore
+      console.log('🔥 AGGRESSIVE REFRESH: Loading data directly from Firestore...');
+      const result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+
+      if (result.success && result.moodData && result.moodData.length > 0) {
+        console.log('✅ AGGRESSIVE REFRESH: Got fresh data from Firestore:', result.moodData.length, 'days');
+        setWeeklyMoodData(result.moodData);
+        setEmotionalData(result.moodData);
+        setChartKey(prev => prev + 1); // Force chart re-render
+
+        // Clear the force fresh flag since we have fresh data now
+        localStorage.removeItem('force_fresh_data_until');
+        console.log('✅ Cleared force fresh flag');
+      } else {
+        console.log('❌ AGGRESSIVE REFRESH: No data from Firestore');
+      }
+
+      // Reload all data in background
       console.log('📥 Loading fresh data from Firestore...');
       await loadFreshEmotionalData();
       await loadFreshBalanceData();
@@ -1203,7 +1319,7 @@ export default function EmotionalWellbeing() {
       await loadHabitAnalysis();
 
       console.log('✅ All data refreshed!');
-      
+
       // Don't show alert if called from force analysis
       if (!window.isForceAnalysis) {
         alert('✅ Data refreshed successfully!');

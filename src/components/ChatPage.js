@@ -168,8 +168,33 @@ export default function ChatPage() {
 
       // Also dispatch a custom event that the dashboard can listen for
       window.dispatchEvent(new CustomEvent('emotionalDataUpdated', {
-        detail: { timestamp: refreshTimestamp, dateId: dateId }
+        detail: { timestamp: refreshTimestamp, dateId: dateId, scores: emotionalScores }
       }));
+
+      // CRITICAL: Force immediate UI update by setting data directly in localStorage with current timestamp
+      console.log('🔥 FORCE UI UPDATE: Setting fresh mood data directly...');
+      const freshMoodData = [{
+        date: dateId,
+        day: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        happiness: emotionalScores.happiness,
+        anxiety: emotionalScores.anxiety,
+        stress: emotionalScores.stress,
+        energy: emotionalScores.energy
+      }];
+
+      // Override cache with fresh data
+      const cacheKey = `emotional_wellbeing_emotional_7_${uid}`;
+      localStorage.setItem(cacheKey, JSON.stringify({
+        weeklyMoodData: freshMoodData,
+        emotionalData: freshMoodData,
+        timestamp: new Date().toISOString()
+      }));
+
+      console.log('✅ Fresh mood data set in cache:', freshMoodData);
+
+      // Set a global flag to force fresh data loading for the next 5 minutes
+      localStorage.setItem('force_fresh_data_until', (Date.now() + 5 * 60 * 1000).toString());
+      console.log('🚨 Set force fresh data flag for 5 minutes');
 
       // Also trigger a page refresh for the dashboard if it's currently open
       if (window.location.hash.includes('emotional-wellbeing') || window.location.pathname.includes('emotional-wellbeing')) {
@@ -179,6 +204,15 @@ export default function ChatPage() {
           window.location.reload();
         }, 500);
       }
+
+      // Force immediate update of any open dashboard windows/tabs
+      console.log('🔥 FORCE UPDATE: Triggering immediate dashboard update...');
+      setTimeout(() => {
+        // Try to call the dashboard's force update function if it exists
+        if (window.forceDashboardUpdate) {
+          window.forceDashboardUpdate();
+        }
+      }, 1000);
       
     } catch (error) {
       console.error('❌ Error generating emotional analysis:', error);
