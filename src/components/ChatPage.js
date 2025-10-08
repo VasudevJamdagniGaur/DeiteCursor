@@ -417,7 +417,30 @@ export default function ChatPage() {
 
   useEffect(() => {
     // Load existing messages or set welcome message
-    const loadMessages = () => {
+    const loadMessages = async () => {
+      const user = getCurrentUser();
+      
+      // Try to load from Firestore first if user is logged in
+      if (user) {
+        try {
+          console.log('📖 Loading messages from Firestore for date:', selectedDateId);
+          const result = await firestoreService.getChatMessagesNew(user.uid, selectedDateId);
+          
+          if (result.success && result.messages && result.messages.length > 0) {
+            console.log('✅ Loaded', result.messages.length, 'messages from Firestore');
+            setMessages(result.messages);
+            // Also save to localStorage as backup
+            saveMessages(result.messages);
+            return;
+          } else {
+            console.log('📖 No messages in Firestore, checking localStorage...');
+          }
+        } catch (error) {
+          console.error('❌ Error loading from Firestore:', error);
+        }
+      }
+      
+      // Fallback to localStorage if Firestore fails or no messages found
       const storedMessages = localStorage.getItem(`chatMessages_${selectedDateId}`);
       if (storedMessages) {
         try {
@@ -427,6 +450,7 @@ export default function ChatPage() {
             timestamp: new Date(msg.timestamp)
           }));
           setMessages(messagesWithDates);
+          console.log('✅ Loaded', messagesWithDates.length, 'messages from localStorage');
         } catch (error) {
           console.error('Error parsing stored messages:', error);
           setWelcomeMessage();
