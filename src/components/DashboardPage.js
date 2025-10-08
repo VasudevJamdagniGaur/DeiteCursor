@@ -173,6 +173,13 @@ export default function DashboardPage() {
     navigate('/chat', { state: { selectedDate: selectedDate.toISOString() } });
   };
 
+  const handleWhisperClick = () => {
+    // Navigate to whisper session (same as chat for now, can be customized later)
+    console.log('📅 DASHBOARD: Navigating to whisper session with date:', selectedDate);
+    console.log('📅 DASHBOARD: Date ID:', getDateId(selectedDate));
+    navigate('/chat', { state: { selectedDate: selectedDate.toISOString(), isWhisperMode: true } });
+  };
+
   const handleWellbeingClick = () => {
     navigate('/wellbeing');
   };
@@ -647,7 +654,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex flex-col space-y-3 justify-center">
           <button
             onClick={handleChatClick}
             className={`flex items-center space-x-3 font-medium rounded-2xl px-8 py-4 hover:opacity-90 transition-all duration-300 w-full justify-center relative overflow-hidden ${
@@ -667,6 +674,27 @@ export default function DashboardPage() {
             <MessageCircle className="w-5 h-5" />
             <span>Chat with Deite</span>
             <span className="text-lg">💬</span>
+          </button>
+
+          <button
+            onClick={handleWhisperClick}
+            className={`flex items-center space-x-3 font-medium rounded-2xl px-8 py-4 hover:opacity-90 transition-all duration-300 w-full justify-center relative overflow-hidden ${
+              isDarkMode ? 'backdrop-blur-lg text-white' : 'text-white'
+            }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.8)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              color: "#FFFFFF",
+            } : {
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              boxShadow: "0 4px 12px rgba(134, 169, 107, 0.25)",
+              color: "#0B0E14",
+            }}
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>Whisper Session</span>
+            <span className="text-lg">🤫</span>
           </button>
         </div>
       </div>
