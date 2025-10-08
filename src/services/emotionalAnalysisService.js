@@ -46,20 +46,26 @@ class EmotionalAnalysisService {
     
     const analysisPrompt = `You are an emotion analyzer. Analyze the conversation below and return ONLY a JSON object with emotional scores.
 
-RULES:
-1. Happiness (0-100): positive emotions, joy, satisfaction
-2. Energy (0-100): vitality, motivation, activity level
-3. Anxiety (0-100): worry, fear, nervousness
-4. Stress (0-100): pressure, overwhelm, burden
-5. Total of all 4 scores must be ≤ 200
-6. High stress/anxiety means lower happiness
-7. Energy is independent of other emotions
+CRITICAL RULES - MUST FOLLOW:
+1. Each score MUST be a number between 1 and 100 (NOT 0, minimum is 1)
+2. Happiness (1-100): positive emotions, joy, satisfaction, contentment
+3. Energy (1-100): vitality, motivation, activity level, enthusiasm
+4. Anxiety (1-100): worry, fear, nervousness, unease
+5. Stress (1-100): pressure, overwhelm, burden, tension
+6. Total of all 4 scores must be between 100 and 200
+7. High stress/anxiety (>60) means happiness must be ≤40
+8. Each number must be an integer (whole number, no decimals)
+9. NEVER return 0 for any value - minimum is 1
 
 CONVERSATION:
 ${conversationTranscript}
 
-Return ONLY valid JSON, no explanation:
-{"happiness": X, "energy": Y, "anxiety": Z, "stress": W}`;
+Return ONLY valid JSON with integers between 1-100, no explanation, no extra text:
+{"happiness": X, "energy": Y, "anxiety": Z, "stress": W}
+
+Example valid responses:
+{"happiness": 65, "energy": 58, "anxiety": 32, "stress": 28}
+{"happiness": 38, "energy": 42, "anxiety": 55, "stress": 48}`;
 
     // Try multiple models in case one doesn't exist
     // Note: Your RunPod instance has llama3:70b available
@@ -69,25 +75,36 @@ Return ONLY valid JSON, no explanation:
       try {
         console.log(`🌐 Trying model: ${modelName} for emotional analysis...`);
         console.log('🌐 API URL:', `${this.baseURL}api/generate`);
+        console.log('🌐 Sending request to:', this.baseURL);
+        
+        const requestBody = {
+          model: modelName,
+          prompt: analysisPrompt,
+          stream: false,
+          options: {
+            temperature: 0.3,
+            top_p: 0.9,
+            num_predict: 200
+          }
+        };
+        
+        console.log('🌐 Request body:', {
+          model: modelName,
+          promptLength: analysisPrompt.length,
+          stream: false,
+          options: requestBody.options
+        });
 
         const response = await fetch(`${this.baseURL}api/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: modelName,
-            prompt: analysisPrompt,
-            stream: false,
-            options: {
-              temperature: 0.3,
-              top_p: 0.9,
-              num_predict: 200
-            }
-          })
+          body: JSON.stringify(requestBody)
         });
 
         console.log(`📥 Response status for ${modelName}:`, response.status);
+        console.log(`📥 Response OK:`, response.ok);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -152,12 +169,13 @@ Return ONLY valid JSON, no explanation:
         console.log('✅ Scores extracted successfully:', scores);
             
         // Validate and apply emotion rules with 200% cap
-        let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 0));
-        let energy = Math.max(0, Math.min(100, parseInt(scores.energy) || 0));
-        let anxiety = Math.max(0, Math.min(100, parseInt(scores.anxiety) || 0));
-        let stress = Math.max(0, Math.min(100, parseInt(scores.stress) || 0));
+        // CRITICAL: Ensure minimum value of 1, never 0
+        let happiness = Math.max(1, Math.min(100, parseInt(scores.happiness) || 1));
+        let energy = Math.max(1, Math.min(100, parseInt(scores.energy) || 1));
+        let anxiety = Math.max(1, Math.min(100, parseInt(scores.anxiety) || 1));
+        let stress = Math.max(1, Math.min(100, parseInt(scores.stress) || 1));
         
-        console.log('🔍 Raw AI scores:', {happiness, energy, anxiety, stress});
+        console.log('🔍 Raw AI scores (min=1, max=100):', {happiness, energy, anxiety, stress});
         
         // Apply 200% total cap constraint
         let total = happiness + energy + anxiety + stress;
@@ -227,6 +245,12 @@ Return ONLY valid JSON, no explanation:
           }
         }
         
+        // FINAL VALIDATION: Ensure all scores are between 1-100 (never 0)
+        happiness = Math.max(1, Math.min(100, happiness));
+        energy = Math.max(1, Math.min(100, energy));
+        anxiety = Math.max(1, Math.min(100, anxiety));
+        stress = Math.max(1, Math.min(100, stress));
+        
         const validatedScores = {
           happiness: happiness,
           energy: energy,
@@ -237,6 +261,14 @@ Return ONLY valid JSON, no explanation:
         const finalTotal = happiness + energy + anxiety + stress;
         console.log('✅ AI Emotional scores with rules applied:', validatedScores);
         console.log('✅ Final total:', finalTotal, '/ 200 (cap)');
+        console.log('✅ All scores are valid (1-100):', happiness >= 1 && energy >= 1 && anxiety >= 1 && stress >= 1);
+        
+        // Double check - if any score is still 0, use fallback
+        if (happiness === 0 || energy === 0 || anxiety === 0 || stress === 0) {
+          console.error('❌ AI returned invalid scores with zeros, using fallback instead');
+          return this.fallbackEmotionalAnalysis(messages);
+        }
+        
         return validatedScores;
       }
       
@@ -305,11 +337,11 @@ Return ONLY valid JSON, no explanation:
     anxiety += Math.floor(Math.random() * 11) - 5;
     stress += Math.floor(Math.random() * 11) - 5;
     
-    // Clamp values between 0 and 100
-    happiness = Math.max(0, Math.min(100, Math.round(happiness)));
-    energy = Math.max(0, Math.min(100, Math.round(energy)));
-    anxiety = Math.max(0, Math.min(100, Math.round(anxiety)));
-    stress = Math.max(0, Math.min(100, Math.round(stress)));
+    // Clamp values between 1 and 100 (NEVER 0)
+    happiness = Math.max(1, Math.min(100, Math.round(happiness)));
+    energy = Math.max(1, Math.min(100, Math.round(energy)));
+    anxiety = Math.max(1, Math.min(100, Math.round(anxiety)));
+    stress = Math.max(1, Math.min(100, Math.round(stress)));
     
     console.log('🔄 FALLBACK: Before cap - H:', happiness, 'E:', energy, 'A:', anxiety, 'S:', stress);
     
@@ -341,6 +373,12 @@ Return ONLY valid JSON, no explanation:
       console.log('🔧 FALLBACK: High stress/anxiety detected, reducing happiness to', happiness);
     }
     
+    // FINAL VALIDATION: Ensure no zeros after all processing
+    happiness = Math.max(1, happiness);
+    energy = Math.max(1, energy);
+    anxiety = Math.max(1, anxiety);
+    stress = Math.max(1, stress);
+    
     const scores = {
       happiness,
       energy,
@@ -350,6 +388,7 @@ Return ONLY valid JSON, no explanation:
     
     console.log('✅ FALLBACK ANALYSIS: Final scores:', scores);
     console.log('✅ FALLBACK ANALYSIS: Total:', happiness + energy + anxiety + stress, '/ 200');
+    console.log('✅ FALLBACK ANALYSIS: All values between 1-100:', happiness >= 1 && energy >= 1 && anxiety >= 1 && stress >= 1);
     
     return scores;
   }
