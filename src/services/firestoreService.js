@@ -521,18 +521,23 @@ class FirestoreService {
           
           if (snapshot.exists()) {
             const data = snapshot.data();
-            console.log(`📊 FIRESTORE NEW: Found mood data for ${dateId}:`, data);
-            moodData.push({
+            console.log(`📊 FIRESTORE NEW: ✅ Found mood data for ${dateId}:`, data);
+            console.log(`📊 FIRESTORE NEW: ✅ Raw values - H:${data.happiness} E:${data.energy} A:${data.anxiety} S:${data.stress}`);
+            
+            const dayData = {
               date: dateId,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               happiness: data.happiness || 0,
               anxiety: data.anxiety || 0,
               stress: data.stress || 0,
               energy: data.energy || 0
-            });
+            };
+            
+            console.log(`📊 FIRESTORE NEW: ✅ Pushing to array:`, dayData);
+            moodData.push(dayData);
           } else {
             // No data for this day
-            console.log(`📊 FIRESTORE NEW: No mood data for ${dateId}, using defaults`);
+            console.log(`📊 FIRESTORE NEW: ❌ No mood data for ${dateId}, using defaults`);
             moodData.push({
               date: dateId,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -568,7 +573,9 @@ class FirestoreService {
         }
       }
       
-      console.log(`📊 FIRESTORE NEW: Retrieved mood data for ${moodData.length} days`);
+      console.log(`📊 FIRESTORE NEW: ✅ Retrieved mood data for ${moodData.length} days`);
+      console.log(`📊 FIRESTORE NEW: ✅ Complete array:`, moodData);
+      console.log(`📊 FIRESTORE NEW: ✅ Oct 8 data in array:`, moodData.find(d => d.day && d.day.includes('Oct 8')));
       return { success: true, moodData };
     } catch (error) {
       console.error('❌ FIRESTORE NEW: Error getting mood chart data:', error);

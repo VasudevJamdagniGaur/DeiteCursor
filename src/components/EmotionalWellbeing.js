@@ -124,10 +124,13 @@ export default function EmotionalWellbeing() {
 
   // Debug logging for data states
   useEffect(() => {
+    console.log('🔍 DEBUG: =================== STATE UPDATE ===================');
     console.log('🔍 DEBUG: weeklyMoodData length:', weeklyMoodData?.length);
-    console.log('🔍 DEBUG: weeklyMoodData sample:', weeklyMoodData?.[0]);
+    console.log('🔍 DEBUG: weeklyMoodData FULL ARRAY:', weeklyMoodData);
+    console.log('🔍 DEBUG: Oct 8 in weeklyMoodData:', weeklyMoodData?.find(d => d.day && d.day.includes('Oct 8')));
     console.log('🔍 DEBUG: emotionalData length:', emotionalData?.length);
-    console.log('🔍 DEBUG: emotionalData sample:', emotionalData?.[0]);
+    console.log('🔍 DEBUG: emotionalData FULL ARRAY:', emotionalData);
+    console.log('🔍 DEBUG: ====================================================');
   }, [weeklyMoodData, emotionalData]);
 
   // Force chart re-render when data changes
@@ -411,7 +414,9 @@ export default function EmotionalWellbeing() {
       console.log('📊 UNIFIED: Mood chart data result:', result);
 
       if (result.success && result.moodData && result.moodData.length > 0) {
-        console.log('📊 UNIFIED: Processing AI-generated mood data:', result.moodData.length, 'days');
+        console.log('📊 UNIFIED: ✅ Processing AI-generated mood data:', result.moodData.length, 'days');
+        console.log('📊 UNIFIED: ✅ RAW FIRESTORE DATA:', result.moodData);
+        console.log('📊 UNIFIED: ✅ Oct 8 in raw data:', result.moodData.find(d => d.day && d.day.includes('Oct 8')));
         
         // Apply emotion rules and 200% cap to ALL loaded data
         const processedMoodData = result.moodData.map(day => {
@@ -458,8 +463,14 @@ export default function EmotionalWellbeing() {
           );
           console.log('📊 UNIFIED: Has real data:', hasRealData);
 
-          setWeeklyMoodData(processedMoodData); // Use processed data with rules applied
-          setEmotionalData(processedMoodData);
+          // Force state update with new reference to trigger re-render
+          const newMoodData = [...processedMoodData]; // Create new array reference
+          setWeeklyMoodData(newMoodData);
+          setEmotionalData(newMoodData);
+          
+          console.log('🔄 CHART: State updated, triggering re-render...');
+          console.log('🔄 CHART: New data length:', newMoodData.length);
+          console.log('🔄 CHART: Oct 8 data:', newMoodData.find(d => d.day && d.day.includes('Oct 8')));
           
           // Calculate averages for display using processed data
           const avgHappiness = processedMoodData.reduce((sum, item) => sum + item.happiness, 0) / processedMoodData.length;
@@ -1036,15 +1047,27 @@ export default function EmotionalWellbeing() {
     }
 
     try {
-      // Clear cache
-      localStorage.removeItem(`moodChart_${user.uid}_${selectedPeriod}`);
-      localStorage.removeItem(`emotionalBalance_${user.uid}_${balancePeriod}`);
-      localStorage.removeItem(`patterns_${user.uid}_${patternPeriod}`);
-      localStorage.removeItem(`highlights_${user.uid}_${highlightsPeriod}`);
+      // Clear ALL cache (everything)
+      console.log('🗑️ Clearing all cache...');
+      const cacheKeys = Object.keys(localStorage).filter(key => 
+        key.includes('emotional_wellbeing') || 
+        key.includes('moodChart') || 
+        key.includes('emotionalBalance') ||
+        key.includes('patterns') ||
+        key.includes('highlights')
+      );
+      cacheKeys.forEach(key => localStorage.removeItem(key));
+      console.log(`🗑️ Cleared ${cacheKeys.length} cache entries`);
 
-      console.log('🗑️ Cache cleared, reloading fresh data...');
+      // Reset state to force re-render
+      console.log('🔄 Resetting state...');
+      setWeeklyMoodData([]);
+      setEmotionalData([]);
+      setMoodBalance([]);
+      setChartKey(prev => prev + 1); // Force chart re-render
 
       // Reload all data
+      console.log('📥 Loading fresh data from Firestore...');
       await loadFreshEmotionalData();
       await loadFreshBalanceData();
       await loadFreshPatternAnalysis();
@@ -1052,7 +1075,11 @@ export default function EmotionalWellbeing() {
       await loadHabitAnalysis();
 
       console.log('✅ All data refreshed!');
-      alert('✅ Data refreshed successfully!');
+      
+      // Don't show alert if called from force analysis
+      if (!window.isForceAnalysis) {
+        alert('✅ Data refreshed successfully!');
+      }
     } catch (error) {
       console.error('❌ Error refreshing data:', error);
       alert('Failed to refresh data: ' + error.message);
@@ -1226,10 +1253,17 @@ export default function EmotionalWellbeing() {
         neutral: Math.round(neutral)
       });
 
-      alert(`✅ Analysis complete!\n\nHappiness: ${emotionalScores.happiness}\nEnergy: ${emotionalScores.energy}\nAnxiety: ${emotionalScores.anxiety}\nStress: ${emotionalScores.stress}\n\nNow click Refresh to see the chart!`);
-
-      // Auto-refresh the data
+      // Auto-refresh the data FIRST
+      console.log('🔬 FORCE ANALYSIS: Refreshing chart data...');
+      window.isForceAnalysis = true;
       await handleRefreshData();
+      
+      // Wait a moment for state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      window.isForceAnalysis = false;
+
+      alert(`✅ Analysis complete!\n\nHappiness: ${emotionalScores.happiness}\nEnergy: ${emotionalScores.energy}\nAnxiety: ${emotionalScores.anxiety}\nStress: ${emotionalScores.stress}\n\nChart updated successfully!`);
 
     } catch (error) {
       console.error('🔬 FORCE ANALYSIS ERROR:', error);
