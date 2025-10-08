@@ -134,109 +134,102 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
         console.log('📊 AI Analysis response:', responseText);
 
         // Parse the JSON response
-        try {
-          let scores;
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            scores = JSON.parse(jsonMatch[0]);
-            console.log('✅ JSON parsed successfully:', scores);
-          } else {
-            console.error('❌ No JSON found in response');
-            throw new Error('No JSON found in API response');
-          }
-            
-            // Validate and apply emotion rules with 200% cap
-            let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 0));
-            let energy = Math.max(0, Math.min(100, parseInt(scores.energy) || 0));
-            let anxiety = Math.max(0, Math.min(100, parseInt(scores.anxiety) || 0));
-            let stress = Math.max(0, Math.min(100, parseInt(scores.stress) || 0));
-            
-            console.log('🔍 Raw AI scores:', {happiness, energy, anxiety, stress});
-            
-            // Apply 200% total cap constraint
-            const total = happiness + energy + anxiety + stress;
-            if (total > 200) {
-              const scaleFactor = 200 / total;
-              happiness = Math.round(happiness * scaleFactor);
-              energy = Math.round(energy * scaleFactor);
-              anxiety = Math.round(anxiety * scaleFactor);
-              stress = Math.round(stress * scaleFactor);
-              console.log('🔧 RULE: Total was', total, 'scaled down by factor', scaleFactor.toFixed(2));
-            }
-            
-            // Apply specific emotion rules
-            // Rule: Happiness decreases if stress/anxiety are high
-            if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
-              happiness = Math.min(40, happiness);
-              console.log('🔧 RULE: High stress/anxiety detected, reducing happiness');
-            }
-            
-            // Rule: Happiness can only be very high if stress/anxiety are low
-            if (happiness >= 70 && (stress > 40 || anxiety > 40)) {
-              happiness = Math.min(60, happiness);
-              console.log('🔧 RULE: High happiness with high stress/anxiety, reducing happiness');
-            }
-            
-            // Check for serious life events in conversation
-            const conversationLower = conversationTranscript.toLowerCase();
-            const seriousEvents = [
-              'death', 'died', 'passed away', 'funeral', 'loss of', 'lost someone',
-              'financial difficulty', 'financial crisis', 'bankruptcy', 'debt', 'money problems',
-              'lost job', 'unemployed', 'fired', 'laid off',
-              'divorce', 'breakup', 'relationship ended',
-              'illness', 'cancer', 'hospital', 'surgery',
-              'trauma', 'abuse', 'accident', 'emergency'
-            ];
-            
-            const hasSeriousEvent = seriousEvents.some(event => conversationLower.includes(event));
-            
-            if (hasSeriousEvent) {
-              console.log('🔧 SERIOUS EVENT DETECTED: Adjusting stress > anxiety rule');
-              
-              // For serious events, stress should be higher than anxiety
-              if (anxiety >= stress) {
-                const total = stress + anxiety;
-                stress = Math.min(100, Math.round(total * 0.6)); // 60% of combined
-                anxiety = Math.min(100, Math.round(total * 0.4)); // 40% of combined
-                console.log('🔧 RULE: Serious event - stress set higher than anxiety:', {stress, anxiety});
-              }
-              
-              // Ensure minimums for serious events
-              stress = Math.max(stress, 60);
-              anxiety = Math.max(anxiety, 50);
-              console.log('🔧 RULE: Applied serious event minimums - stress ≥60, anxiety ≥50');
-            } else {
-              // Normal stress/anxiety correlation (within ±25)
-              const stressAnxietyDiff = Math.abs(stress - anxiety);
-              if (stressAnxietyDiff > 25) {
-                const avg = (stress + anxiety) / 2;
-                if (stress > anxiety) {
-                  stress = Math.min(100, Math.round(avg + 12));
-                  anxiety = Math.max(0, Math.round(avg - 12));
-                } else {
-                  anxiety = Math.min(100, Math.round(avg + 12));
-                  stress = Math.max(0, Math.round(avg - 12));
-                }
-                console.log('🔧 RULE: Adjusted normal stress/anxiety correlation, diff was:', stressAnxietyDiff);
-              }
-            }
-            
-            const validatedScores = {
-              happiness: happiness,
-              energy: energy,
-              anxiety: anxiety,
-              stress: stress
-            };
-            
-            const finalTotal = happiness + energy + anxiety + stress;
-            console.log('✅ AI Emotional scores with rules applied:', validatedScores);
-            console.log('✅ Final total:', finalTotal, '/ 200 (cap)');
-            return validatedScores;
-          }
-        } catch (parseError) {
-          console.error('❌ JSON parse error:', parseError.message);
-          console.log('Raw response for debugging:', responseText);
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          console.error('❌ No JSON found in response');
+          throw new Error('No JSON found in API response');
         }
+
+        const scores = JSON.parse(jsonMatch[0]);
+        console.log('✅ JSON parsed successfully:', scores);
+            
+        // Validate and apply emotion rules with 200% cap
+        let happiness = Math.max(0, Math.min(100, parseInt(scores.happiness) || 0));
+        let energy = Math.max(0, Math.min(100, parseInt(scores.energy) || 0));
+        let anxiety = Math.max(0, Math.min(100, parseInt(scores.anxiety) || 0));
+        let stress = Math.max(0, Math.min(100, parseInt(scores.stress) || 0));
+        
+        console.log('🔍 Raw AI scores:', {happiness, energy, anxiety, stress});
+        
+        // Apply 200% total cap constraint
+        let total = happiness + energy + anxiety + stress;
+        if (total > 200) {
+          const scaleFactor = 200 / total;
+          happiness = Math.round(happiness * scaleFactor);
+          energy = Math.round(energy * scaleFactor);
+          anxiety = Math.round(anxiety * scaleFactor);
+          stress = Math.round(stress * scaleFactor);
+          console.log('🔧 RULE: Total was', total, 'scaled down by factor', scaleFactor.toFixed(2));
+        }
+        
+        // Apply specific emotion rules
+        // Rule: Happiness decreases if stress/anxiety are high
+        if ((stress >= 60 || anxiety >= 60) && happiness > 40) {
+          happiness = Math.min(40, happiness);
+          console.log('🔧 RULE: High stress/anxiety detected, reducing happiness');
+        }
+        
+        // Rule: Happiness can only be very high if stress/anxiety are low
+        if (happiness >= 70 && (stress > 40 || anxiety > 40)) {
+          happiness = Math.min(60, happiness);
+          console.log('🔧 RULE: High happiness with high stress/anxiety, reducing happiness');
+        }
+        
+        // Check for serious life events in conversation
+        const conversationLower = conversationTranscript.toLowerCase();
+        const seriousEvents = [
+          'death', 'died', 'passed away', 'funeral', 'loss of', 'lost someone',
+          'financial difficulty', 'financial crisis', 'bankruptcy', 'debt', 'money problems',
+          'lost job', 'unemployed', 'fired', 'laid off',
+          'divorce', 'breakup', 'relationship ended',
+          'illness', 'cancer', 'hospital', 'surgery',
+          'trauma', 'abuse', 'accident', 'emergency'
+        ];
+        
+        const hasSeriousEvent = seriousEvents.some(event => conversationLower.includes(event));
+        
+        if (hasSeriousEvent) {
+          console.log('🔧 SERIOUS EVENT DETECTED: Adjusting stress > anxiety rule');
+          
+          // For serious events, stress should be higher than anxiety
+          if (anxiety >= stress) {
+            const stressAnxietyTotal = stress + anxiety;
+            stress = Math.min(100, Math.round(stressAnxietyTotal * 0.6)); // 60% of combined
+            anxiety = Math.min(100, Math.round(stressAnxietyTotal * 0.4)); // 40% of combined
+            console.log('🔧 RULE: Serious event - stress set higher than anxiety:', {stress, anxiety});
+          }
+          
+          // Ensure minimums for serious events
+          stress = Math.max(stress, 60);
+          anxiety = Math.max(anxiety, 50);
+          console.log('🔧 RULE: Applied serious event minimums - stress ≥60, anxiety ≥50');
+        } else {
+          // Normal stress/anxiety correlation (within ±25)
+          const stressAnxietyDiff = Math.abs(stress - anxiety);
+          if (stressAnxietyDiff > 25) {
+            const avg = (stress + anxiety) / 2;
+            if (stress > anxiety) {
+              stress = Math.min(100, Math.round(avg + 12));
+              anxiety = Math.max(0, Math.round(avg - 12));
+            } else {
+              anxiety = Math.min(100, Math.round(avg + 12));
+              stress = Math.max(0, Math.round(avg - 12));
+            }
+            console.log('🔧 RULE: Adjusted normal stress/anxiety correlation, diff was:', stressAnxietyDiff);
+          }
+        }
+        
+        const validatedScores = {
+          happiness: happiness,
+          energy: energy,
+          anxiety: anxiety,
+          stress: stress
+        };
+        
+        const finalTotal = happiness + energy + anxiety + stress;
+        console.log('✅ AI Emotional scores with rules applied:', validatedScores);
+        console.log('✅ Final total:', finalTotal, '/ 200 (cap)');
+        return validatedScores;
       }
       
       throw new Error('Could not parse AI response');
