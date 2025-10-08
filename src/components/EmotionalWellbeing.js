@@ -1164,9 +1164,9 @@ export default function EmotionalWellbeing() {
     try {
       const result = await emotionalAnalysisService.testAPI();
       if (result.success) {
-        alert('✅ API test successful! Response: ' + result.response);
+        alert(`✅ API test successful!\n\nWorking Model: ${result.model}\nResponse: ${result.response}`);
       } else {
-        alert('❌ API test failed: ' + result.error);
+        alert('❌ API test failed: ' + result.error + '\n\nCheck console for details.');
       }
     } catch (error) {
       alert('❌ API test error: ' + error.message);

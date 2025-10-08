@@ -87,47 +87,41 @@ ${conversationTranscript}
 Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
 {"happiness": 0-100, "energy": 0-100, "anxiety": 0-100, "stress": 0-100}`;
 
-    try {
-      console.log('🌐 Making API call for emotional analysis...');
-      console.log('🌐 API URL:', `${this.baseURL}api/generate`);
-      console.log('🌐 Request payload:', JSON.stringify({
-        model: 'llama3:70b',
-        prompt: analysisPrompt.slice(0, 100) + '...',
-        stream: false,
-        options: {
-          temperature: 0.3,
-          top_p: 0.9,
-          max_tokens: 200
+    // Try multiple models in case one doesn't exist
+    const modelsToTry = ['llama3.2', 'llama3:8b', 'llama3', 'llama2'];
+    
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`🌐 Trying model: ${modelName} for emotional analysis...`);
+        console.log('🌐 API URL:', `${this.baseURL}api/generate`);
+
+        const response = await fetch(`${this.baseURL}api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelName,
+            prompt: analysisPrompt,
+            stream: false,
+            options: {
+              temperature: 0.3,
+              top_p: 0.9,
+              num_predict: 200
+            }
+          })
+        });
+
+        console.log(`📥 Response status for ${modelName}:`, response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ API Error for ${modelName}:`, response.status, errorText);
+          continue; // Try next model
         }
-      }));
 
-      const response = await fetch(`${this.baseURL}api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama3:70b',
-          prompt: analysisPrompt,
-          stream: false,
-          options: {
-            temperature: 0.3,
-            top_p: 0.9,
-            max_tokens: 200
-          }
-        })
-      });
-
-      console.log('📥 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', response.status, errorText);
-        throw new Error(`API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Raw response received');
+        const data = await response.json();
+        console.log(`✅ Raw response received from ${modelName}`);
 
       if (data.response) {
         const responseText = data.response.trim();
@@ -232,19 +226,25 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
         return validatedScores;
       }
       
-      throw new Error('Could not parse AI response');
-
-    } catch (error) {
-      console.error('💥 Error in emotional analysis:', error);
-      // Return default scores if analysis fails
-      return {
-        happiness: 0,
-        energy: 0,
-        anxiety: 0,
-        stress: 0
-      };
+      // If we reached here, this model failed, try next one
+      console.log(`⚠️ Model ${modelName} failed to parse response`);
+      
+      } catch (modelError) {
+        console.error(`💥 Error with model ${modelName}:`, modelError.message);
+        // Continue to next model
+      }
     }
+    
+    // If all models failed, return default scores
+    console.error('❌ All models failed for emotional analysis');
+    return {
+      happiness: 0,
+      energy: 0,
+      anxiety: 0,
+      stress: 0
+    };
   }
+
 
   parseEmotionalScores(responseText) {
     try {
@@ -304,40 +304,49 @@ Apply these rules strictly and ensure total ≤ 200. Return ONLY this JSON:
     return Math.max(0, Math.min(100, Math.round(score || 50)));
   }
 
-  // Test method to check API connectivity
+  // Test method to check API connectivity and available models
   async testAPI() {
-    try {
-      console.log('🧪 Testing API connectivity...');
-      const testPrompt = 'Hello, respond with just "API test successful"';
+    console.log('🧪 Testing API connectivity...');
+    const testPrompt = 'Respond with only: SUCCESS';
+    const modelsToTest = ['llama3.2', 'llama3:8b', 'llama3', 'llama2'];
 
-      const response = await fetch(`${this.baseURL}api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama3:8b',
-          prompt: testPrompt,
-          stream: false,
-          options: {
-            temperature: 0.1,
-            max_tokens: 50
-          }
-        })
-      });
+    for (const modelName of modelsToTest) {
+      try {
+        console.log(`🧪 Testing model: ${modelName}...`);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ API test successful:', data.response);
-        return { success: true, response: data.response };
-      } else {
-        console.error('❌ API test failed:', response.status);
-        return { success: false, error: response.status };
+        const response = await fetch(`${this.baseURL}api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelName,
+            prompt: testPrompt,
+            stream: false,
+            options: {
+              temperature: 0.1,
+              num_predict: 10
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`✅ Model ${modelName} test successful:`, data.response);
+          return { success: true, model: modelName, response: data.response };
+        } else {
+          console.error(`❌ Model ${modelName} test failed:`, response.status);
+          const errorText = await response.text();
+          console.error('Error details:', errorText);
+        }
+      } catch (error) {
+        console.error(`❌ Model ${modelName} error:`, error.message);
       }
-    } catch (error) {
-      console.error('❌ API test error:', error);
-      return { success: false, error: error.message };
     }
+
+    // If all models failed
+    console.error('❌ All models failed');
+    return { success: false, error: 'All models failed' };
   }
 
   createDailyTranscript(messages) {
