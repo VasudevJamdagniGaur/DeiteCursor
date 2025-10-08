@@ -561,7 +561,7 @@ class FirestoreService {
           if (dayError.code === 'permission-denied' || dayError.code === 'unavailable') {
             moodData.push({
               date: dateId,
-              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               happiness: 50,
               anxiety: 25,
               stress: 25,
@@ -571,7 +571,7 @@ class FirestoreService {
             // For other errors (like no data), add zeros
             moodData.push({
               date: dateId,
-              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               happiness: 0,
               anxiety: 0,
               stress: 0,
