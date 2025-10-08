@@ -150,6 +150,36 @@ export default function ChatPage() {
         neutral: Math.round(neutral)
       });
       console.log('💾 Emotional balance saved to Firestore');
+      
+      // CRITICAL: Clear the dashboard cache so new data shows immediately
+      console.log('🗑️ Clearing dashboard cache to show fresh data...');
+      const cacheKeys = Object.keys(localStorage).filter(key =>
+        key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance')
+      );
+      cacheKeys.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('🗑️ Removed cache:', key);
+      });
+
+      // Set a timestamp to force UI refresh
+      const refreshTimestamp = Date.now();
+      localStorage.setItem('emotional_data_refresh', refreshTimestamp.toString());
+      console.log('✅ Set refresh timestamp:', refreshTimestamp);
+
+      // Also dispatch a custom event that the dashboard can listen for
+      window.dispatchEvent(new CustomEvent('emotionalDataUpdated', {
+        detail: { timestamp: refreshTimestamp, dateId: dateId }
+      }));
+
+      // Also trigger a page refresh for the dashboard if it's currently open
+      if (window.location.hash.includes('emotional-wellbeing') || window.location.pathname.includes('emotional-wellbeing')) {
+        console.log('🔄 Dashboard is currently open, forcing refresh...');
+        // Force a hard refresh after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+      
     } catch (error) {
       console.error('❌ Error generating emotional analysis:', error);
     }

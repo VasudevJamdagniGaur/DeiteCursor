@@ -326,11 +326,76 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      // Check if we need to force refresh due to new data
+      const lastRefresh = localStorage.getItem('emotional_data_refresh');
+      const currentTime = Date.now();
+      const shouldForceRefresh = lastRefresh && (currentTime - parseInt(lastRefresh)) < 60000; // Within last minute
+
+      if (shouldForceRefresh) {
+        console.log('🔄 FORCE REFRESH: New emotional data detected, clearing all caches...');
+        // Clear ALL emotional wellbeing caches
+        const cacheKeys = Object.keys(localStorage).filter(key =>
+          key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance')
+        );
+        cacheKeys.forEach(key => {
+          localStorage.removeItem(key);
+          console.log('🗑️ Cleared cache:', key);
+        });
+      }
+
       // Load cached data instantly
       loadCachedData(user.uid);
       // Then fetch fresh data in background
       loadFreshData();
     }
+  }, [loadCachedData]);
+
+  // Listen for localStorage changes and custom events to detect when new emotional data is saved
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'emotional_data_refresh' && e.newValue) {
+        console.log('🔄 STORAGE CHANGE: New emotional data detected!');
+        // Force immediate refresh
+        const user = getCurrentUser();
+        if (user) {
+          console.log('🔄 STORAGE CHANGE: Clearing cache and reloading...');
+          // Clear all caches
+          const cacheKeys = Object.keys(localStorage).filter(key =>
+            key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance')
+          );
+          cacheKeys.forEach(key => localStorage.removeItem(key));
+
+          // Force reload
+          loadCachedData(user.uid);
+          loadFreshData();
+        }
+      }
+    };
+
+    const handleCustomEvent = (e) => {
+      console.log('🔄 CUSTOM EVENT: Emotional data updated!', e.detail);
+      const user = getCurrentUser();
+      if (user) {
+        console.log('🔄 CUSTOM EVENT: Clearing cache and reloading...');
+        // Clear all caches
+        const cacheKeys = Object.keys(localStorage).filter(key =>
+          key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance')
+        );
+        cacheKeys.forEach(key => localStorage.removeItem(key));
+
+        // Force reload
+        loadCachedData(user.uid);
+        loadFreshData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('emotionalDataUpdated', handleCustomEvent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('emotionalDataUpdated', handleCustomEvent);
+    };
   }, [loadCachedData]);
 
   useEffect(() => {
@@ -1108,12 +1173,13 @@ export default function EmotionalWellbeing() {
     try {
       // Clear ALL cache (everything)
       console.log('🗑️ Clearing all cache...');
-      const cacheKeys = Object.keys(localStorage).filter(key => 
-        key.includes('emotional_wellbeing') || 
-        key.includes('moodChart') || 
+      const cacheKeys = Object.keys(localStorage).filter(key =>
+        key.includes('emotional_wellbeing') ||
+        key.includes('moodChart') ||
         key.includes('emotionalBalance') ||
         key.includes('patterns') ||
-        key.includes('highlights')
+        key.includes('highlights') ||
+        key.includes('emotional_data_refresh')
       );
       cacheKeys.forEach(key => localStorage.removeItem(key));
       console.log(`🗑️ Cleared ${cacheKeys.length} cache entries`);
