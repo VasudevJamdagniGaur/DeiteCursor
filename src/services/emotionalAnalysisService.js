@@ -521,18 +521,22 @@ Example valid responses:
       console.log('✅ Emotional data saved to localStorage');
       
       // CRITICAL FIX: Also save to Firestore for mood chart
-      const firestoreService = require('./firestoreService').default;
-      const firestoreResult = await firestoreService.saveMoodChartNew(userId, dateId, {
-        happiness: scores.happiness,
-        energy: scores.energy,
-        anxiety: scores.anxiety,
-        stress: scores.stress
-      });
-      
-      if (firestoreResult.success) {
-        console.log('✅ Emotional data saved to Firestore for mood chart');
-      } else {
-        console.error('❌ Failed to save to Firestore:', firestoreResult.error);
+      try {
+        const { default: firestoreService } = await import('./firestoreService');
+        const firestoreResult = await firestoreService.saveMoodChartNew(userId, dateId, {
+          happiness: scores.happiness,
+          energy: scores.energy,
+          anxiety: scores.anxiety,
+          stress: scores.stress
+        });
+        
+        if (firestoreResult.success) {
+          console.log('✅ Emotional data saved to Firestore for mood chart');
+        } else {
+          console.error('❌ Failed to save to Firestore:', firestoreResult.error);
+        }
+      } catch (importError) {
+        console.error('❌ Error importing firestoreService:', importError);
       }
       
       return { success: true };
@@ -556,7 +560,7 @@ Example valid responses:
       
       console.log(`📊 Found ${existingData.length} records in localStorage to migrate`);
       
-      const firestoreService = require('./firestoreService').default;
+      const { default: firestoreService } = await import('./firestoreService');
       let migrated = 0;
       
       for (const record of existingData) {

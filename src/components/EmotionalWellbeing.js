@@ -1291,6 +1291,10 @@ export default function EmotionalWellbeing() {
       cacheKeys.forEach(key => localStorage.removeItem(key));
       console.log(`🗑️ Cleared ${cacheKeys.length} cache entries`);
 
+      // DEBUG: Check if we have any localStorage emotional data
+      const emotionalData = localStorage.getItem(`emotional_data_${user.uid}`);
+      console.log('🔍 DEBUG: localStorage emotional data:', emotionalData);
+
       // Reset state to force re-render
       console.log('🔄 Resetting state...');
       setWeeklyMoodData([]);
@@ -1307,6 +1311,7 @@ export default function EmotionalWellbeing() {
 
       if (result.success && result.moodData && result.moodData.length > 0) {
         console.log('✅ AGGRESSIVE REFRESH: Got fresh data from Firestore:', result.moodData.length, 'days');
+        console.log('🔍 DEBUG: Fresh data sample:', result.moodData[0]);
         setWeeklyMoodData(result.moodData);
         setEmotionalData(result.moodData);
         setChartKey(prev => prev + 1); // Force chart re-render
@@ -1316,6 +1321,7 @@ export default function EmotionalWellbeing() {
         console.log('✅ Cleared force fresh flag');
       } else {
         console.log('❌ AGGRESSIVE REFRESH: No data from Firestore');
+        console.log('🔍 DEBUG: Result details:', result);
       }
 
       // Reload all data in background
