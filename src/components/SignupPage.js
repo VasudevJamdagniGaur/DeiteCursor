@@ -113,11 +113,11 @@ const SignupPage = () => {
                 key={currentWordIndex}
                 text={shuffleWords[currentWordIndex]}
                 shuffleDirection="right"
-                duration={0.35}
+                duration={0.9}
                 animationMode="evenodd"
                 shuffleTimes={1}
                 ease="power3.out"
-                stagger={0.03}
+                stagger={0.07}
                 threshold={0}
                 rootMargin="0px"
                 triggerOnce={false}
