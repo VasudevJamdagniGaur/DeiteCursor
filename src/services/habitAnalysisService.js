@@ -3,7 +3,7 @@ import { getDateIdDaysAgo, getDateId } from '../utils/dateUtils';
 
 class HabitAnalysisService {
   constructor() {
-    this.baseURL = 'https://0dc728udh3bkqd-11434.proxy.runpod.net/';
+    this.baseURL = 'https://4u3ol68zgrzbpe-11434.proxy.runpod.net/';
     this.minDaysRequired = 30; // Minimum 30 days for meaningful habit analysis
     this.minMessagesRequired = 50; // Minimum 50 messages for analysis
   }
