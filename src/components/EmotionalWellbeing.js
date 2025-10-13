@@ -1458,6 +1458,77 @@ export default function EmotionalWellbeing() {
     }
   };
 
+  const handleMigrateData = async () => {
+    console.log('🔄 MANUAL MIGRATION: Starting migration of localStorage data...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      // Get emotional data from localStorage
+      const emotionalDataKey = `emotional_data_${user.uid}`;
+      const emotionalData = JSON.parse(localStorage.getItem(emotionalDataKey) || '[]');
+      
+      console.log(`📊 Found ${emotionalData.length} emotional records in localStorage`);
+      
+      if (emotionalData.length === 0) {
+        alert('No emotional data found in localStorage. Chat with Deite first to generate some data!');
+        return;
+      }
+
+      console.log('📋 Sample data:', emotionalData.slice(0, 2));
+      
+      let migrated = 0;
+      for (const record of emotionalData) {
+        try {
+          const result = await firestoreService.saveMoodChartNew(user.uid, record.date, {
+            happiness: record.happiness,
+            energy: record.energy,
+            anxiety: record.anxiety,
+            stress: record.stress
+          });
+          
+          if (result.success) {
+            migrated++;
+            console.log(`✅ Migrated ${record.date}: H:${record.happiness} E:${record.energy} A:${record.anxiety} S:${record.stress}`);
+          } else {
+            console.error(`❌ Failed to migrate ${record.date}:`, result.error);
+          }
+        } catch (error) {
+          console.error(`❌ Error migrating ${record.date}:`, error);
+        }
+      }
+      
+      console.log(`🎉 Migration complete! ${migrated}/${emotionalData.length} records migrated`);
+      
+      if (migrated > 0) {
+        // Mark migration as complete
+        localStorage.setItem('emotional_data_migrated', 'true');
+        
+        // Clear mood chart cache to force refresh
+        const cacheKeys = Object.keys(localStorage).filter(key =>
+          key.includes('emotional_wellbeing') || key.includes('moodChart')
+        );
+        cacheKeys.forEach(key => {
+          localStorage.removeItem(key);
+          console.log('🗑️ Cleared cache:', key);
+        });
+        
+        // Force refresh
+        await loadFreshDataOnly();
+        
+        alert(`✅ Migration successful!\n\nMigrated ${migrated} emotional records to Firestore.\n\nThe mood chart should now show your real data!`);
+      } else {
+        alert('❌ Migration failed. Check console for details.');
+      }
+    } catch (error) {
+      console.error('❌ Migration error:', error);
+      alert('❌ Migration failed: ' + error.message);
+    }
+  };
+
   const handleForceAnalysis = async () => {
     console.log('🔬 FORCE ANALYSIS: Starting manual emotional analysis for today...');
     const user = getCurrentUser();
@@ -3017,6 +3088,22 @@ Return in this JSON format:
             {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'Refresh'}
           </span>
         </button>
+
+        {/* Migration Button - Only show if not migrated yet */}
+        {!localStorage.getItem('emotional_data_migrated') && (
+          <button
+            onClick={handleMigrateData}
+            className="flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+            style={{
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            }}
+          >
+            <Zap className="w-4 h-4" />
+            <span className="text-sm font-medium hidden xs:block">
+              Migrate Data
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Content - Mobile Optimized */}
