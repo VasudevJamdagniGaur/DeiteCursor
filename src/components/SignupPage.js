@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUpUser, signInWithGoogle } from '../services/authService';
-import ShuffleText from './ShuffleText';
+import Shuffle from './ShuffleAdvanced';
 
 const SignupPage = () => {
   const navigate = useNavigate();
   const [isLoaded, setIsLoaded] = useState(false);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  
+  // Words for the shuffle text animation
+  const shuffleWords = ['Feel', 'Reflect', 'Heal', 'Deite'];
 
   // Dynamic background colors that transition smoothly
   const backgroundColors = [
@@ -48,6 +52,15 @@ const SignupPage = () => {
 
     return () => clearInterval(interval);
   }, [backgroundColors.length]);
+
+  useEffect(() => {
+    // Change shuffle word every 2.5 seconds
+    const interval = setInterval(() => {
+      setCurrentWordIndex((prevIndex) => (prevIndex + 1) % shuffleWords.length);
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [shuffleWords.length]);
 
   return (
     <div
@@ -96,7 +109,31 @@ const SignupPage = () => {
             className={`relative mobile-logo rounded-full flex items-center justify-center transition-all duration-1500 delay-300 logo-glow ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
           >
             <div className="text-3xl font-bold tracking-wider">
-              <ShuffleText />
+              <Shuffle
+                key={currentWordIndex}
+                text={shuffleWords[currentWordIndex]}
+                shuffleDirection="right"
+                duration={0.35}
+                animationMode="evenodd"
+                shuffleTimes={1}
+                ease="power3.out"
+                stagger={0.03}
+                threshold={0}
+                rootMargin="0px"
+                triggerOnce={false}
+                triggerOnHover={false}
+                respectReducedMotion={true}
+                tag="span"
+                style={{
+                  background: 'linear-gradient(135deg, #8BC34A 0%, #A5D6A7 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontSize: 'inherit',
+                  fontWeight: 'inherit',
+                }}
+                className="shuffle-text"
+              />
             </div>
             </div>
           </div>
