@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUpUser, signInWithGoogle } from '../services/authService';
 import Shuffle from './ShuffleAdvanced';
@@ -7,20 +7,10 @@ import LaserFlow from './LaserFlow';
 const SignupPage = () => {
   const navigate = useNavigate();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   
   // Words for the shuffle text animation
   const shuffleWords = ['Feel', 'Reflect', 'Heal', 'Deite'];
-
-  // Dynamic background colors that transition smoothly
-  const backgroundColors = [
-    'linear-gradient(135deg, #1A0033 0%, #2D1B69 50%, #1A0033 100%)', // Deep purple
-    'linear-gradient(135deg, #0D1117 0%, #161B22 50%, #0D1117 100%)', // Dark gray
-    'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #1A1A2E 100%)', // Navy blue
-    'linear-gradient(135deg, #2D1B69 0%, #1A0033 50%, #2D1B69 100%)', // Purple variant
-    'linear-gradient(135deg, #0F0F23 0%, #1A0033 50%, #0F0F23 100%)', // Dark purple
-  ];
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -46,15 +36,6 @@ const SignupPage = () => {
   }, []);
 
   useEffect(() => {
-    // Change background color every 3 seconds
-    const interval = setInterval(() => {
-      setBackgroundIndex((prevIndex) => (prevIndex + 1) % backgroundColors.length);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [backgroundColors.length]);
-
-  useEffect(() => {
     // Change shuffle word every 2.5 seconds
     const interval = setInterval(() => {
       setCurrentWordIndex((prevIndex) => (prevIndex + 1) % shuffleWords.length);
@@ -67,38 +48,36 @@ const SignupPage = () => {
     <div
       className={`min-h-screen flex flex-col relative overflow-hidden transition-all duration-1000 background-animated ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
       style={{
-        background: backgroundColors[backgroundIndex],
+        background: 'radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%)',
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        transition: 'background 2s ease-in-out',
       }}
     >
-      {/* LaserFlow Background */}
-      <div className="absolute inset-0" style={{ zIndex: 0 }}>
-        <LaserFlow
-          horizontalBeamOffset={0.1}
-          verticalBeamOffset={0.0}
-          color="#8BC34A"
-        />
-      </div>
-
-      {/* Animated background particles */}
-      <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
-        {[...Array(12)].map((_, i) => (
+      {/* Stars background */}
+      <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 2 }}>
+        {[...Array(80)].map((_, i) => (
           <div
             key={i}
-            className="absolute rounded-full particle-float"
+            className="absolute rounded-full"
             style={{
-              width: Math.random() * 6 + 3 + 'px',
-              height: Math.random() * 6 + 3 + 'px',
+              width: Math.random() * 3 + 1 + 'px',
+              height: Math.random() * 3 + 1 + 'px',
               left: Math.random() * 100 + '%',
               top: Math.random() * 100 + '%',
-              background: `rgba(${139 + Math.random() * 50}, ${195 + Math.random() * 30}, ${74 + Math.random() * 50}, 0.4)`,
-              animationDelay: Math.random() * 5 + 's',
-              animationDuration: Math.random() * 3 + 4 + 's',
+              background: 'white',
+              boxShadow: `0 0 ${Math.random() * 10 + 2}px rgba(255, 255, 255, ${Math.random() * 0.5 + 0.3})`,
+              animation: `twinkle ${Math.random() * 5 + 3}s ease-in-out ${Math.random() * 5}s infinite`,
+              opacity: Math.random() * 0.7 + 0.3,
             }}
           />
         ))}
         </div>
+
+      <style>{`
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+      `}</style>
 
       {/* Centered glowing logo */}
       <div className="flex-1 flex items-center justify-center mobile-container relative" style={{ zIndex: 10 }}>
@@ -149,19 +128,42 @@ const SignupPage = () => {
           </div>
         </div>
 
-      {/* Bottom card with buttons */}
-      <div
-        className={`mobile-container mb-8 rounded-3xl p-6 transition-all duration-1000 delay-700 card-float ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-        style={{
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-          zIndex: 10,
-          position: 'relative'
+      {/* LaserFlow Background - centered with tail at top */}
+      <div 
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          height: '140vh',
+          overflow: 'visible',
+          zIndex: 1,
+          pointerEvents: 'none'
         }}
       >
-        <div className="space-y-4">
+        <LaserFlow
+          horizontalBeamOffset={0.0}
+          verticalBeamOffset={0.2}
+          color="#8BC34A"
+        />
+      </div>
+
+      {/* Bottom card with buttons */}
+      <div style={{ position: 'relative', width: '100%' }}>
+
+        <div
+          className={`mobile-container mb-8 rounded-3xl p-6 transition-all duration-1000 delay-700 card-float ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          style={{
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            zIndex: 10,
+            position: 'relative'
+          }}
+        >
+          <div className="space-y-4">
           {/* Continue with Google */}
           <button
             onClick={handleGoogleSignIn}
@@ -206,6 +208,7 @@ const SignupPage = () => {
             >
               Log in
             </button>
+          </div>
         </div>
       </div>
     </div>
