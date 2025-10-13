@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUpUser, signInWithGoogle } from '../services/authService';
 import Shuffle from './ShuffleAdvanced';
+import LaserFlow from './LaserFlow';
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -71,8 +72,17 @@ const SignupPage = () => {
         transition: 'background 2s ease-in-out',
       }}
     >
+      {/* LaserFlow Background */}
+      <div className="absolute inset-0" style={{ zIndex: 0 }}>
+        <LaserFlow
+          horizontalBeamOffset={0.1}
+          verticalBeamOffset={0.0}
+          color="#8BC34A"
+        />
+      </div>
+
       {/* Animated background particles */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
         {[...Array(12)].map((_, i) => (
           <div
             key={i}
@@ -91,7 +101,7 @@ const SignupPage = () => {
         </div>
 
       {/* Centered glowing logo */}
-      <div className="flex-1 flex items-center justify-center mobile-container relative">
+      <div className="flex-1 flex items-center justify-center mobile-container relative" style={{ zIndex: 10 }}>
           <div className="relative">
           {/* Outer glow ring */}
             <div
@@ -147,6 +157,8 @@ const SignupPage = () => {
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+          zIndex: 10,
+          position: 'relative'
         }}
       >
         <div className="space-y-4">
