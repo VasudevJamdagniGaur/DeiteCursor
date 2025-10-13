@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays = [] }) => {
+const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays = [], reflectionDays = [] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -88,6 +88,19 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
     
     // Check if this dateId exists in chatDays
     return chatDays.some(chatDay => chatDay.date === dateId || chatDay.id === dateId);
+  };
+
+  const hasReflection = (date) => {
+    if (!date || !reflectionDays || reflectionDays.length === 0) return false;
+    
+    // Format date as YYYY-MM-DD to match reflection date format
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateId = `${year}-${month}-${day}`;
+    
+    // Check if this dateId exists in reflectionDays
+    return reflectionDays.some(reflectionDay => reflectionDay.date === dateId || reflectionDay.id === dateId);
   };
 
   const days = getDaysInMonth(currentMonth);
@@ -182,18 +195,34 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
                   >
                     {date.getDate()}
                   </button>
-                  {/* Green circle indicator for chat activity */}
-                  {hasChatActivity(date) && !isSelected(date) && (
-                    <div 
-                      className="absolute bottom-1 left-1/2 transform -translate-x-1/2"
-                      style={{
-                        width: '5px',
-                        height: '5px',
-                        borderRadius: '50%',
-                        backgroundColor: '#81C995',
-                        boxShadow: '0 0 6px rgba(129, 201, 149, 0.6)',
-                      }}
-                    />
+                  {/* Activity indicators */}
+                  {!isSelected(date) && (
+                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                      {/* Green circle indicator for chat activity */}
+                      {hasChatActivity(date) && (
+                        <div 
+                          className="rounded-full"
+                          style={{
+                            width: '5px',
+                            height: '5px',
+                            backgroundColor: '#81C995',
+                            boxShadow: '0 0 6px rgba(129, 201, 149, 0.6)',
+                          }}
+                        />
+                      )}
+                      {/* Purple circle indicator for reflections */}
+                      {hasReflection(date) && (
+                        <div 
+                          className="rounded-full"
+                          style={{
+                            width: '5px',
+                            height: '5px',
+                            backgroundColor: '#A855F7',
+                            boxShadow: '0 0 6px rgba(168, 85, 247, 0.6)',
+                          }}
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
               ) : (
@@ -203,8 +232,32 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
           ))}
         </div>
 
+        {/* Legend */}
+        <div className="mt-4 flex justify-center space-x-4 text-xs">
+          <div className="flex items-center space-x-1">
+            <div 
+              className="w-2 h-2 rounded-full"
+              style={{
+                backgroundColor: '#81C995',
+                boxShadow: '0 0 4px rgba(129, 201, 149, 0.6)',
+              }}
+            />
+            <span className="text-gray-400">Chat</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div 
+              className="w-2 h-2 rounded-full"
+              style={{
+                backgroundColor: '#A855F7',
+                boxShadow: '0 0 4px rgba(168, 85, 247, 0.6)',
+              }}
+            />
+            <span className="text-gray-400">Reflection</span>
+          </div>
+        </div>
+
         {/* Today button */}
-        <div className="mt-6 flex justify-center">
+        <div className="mt-4 flex justify-center">
           <button
             onClick={() => handleDateClick(new Date())}
             className="px-4 py-2 rounded-xl text-sm font-medium text-white hover:opacity-80 transition-all duration-200"

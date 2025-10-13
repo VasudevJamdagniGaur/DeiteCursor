@@ -165,6 +165,33 @@ class FirestoreService {
   }
 
   /**
+   * Get all reflection days for calendar indicators
+   */
+  async getAllReflectionDays(uid) {
+    try {
+      console.log('📅 FIRESTORE: Getting all reflection days for calendar...');
+      
+      const reflectionDaysRef = collection(this.db, `users/${uid}/dayReflections`);
+      const snapshot = await getDocs(reflectionDaysRef);
+      
+      const reflectionDays = [];
+      snapshot.forEach((doc) => {
+        reflectionDays.push({
+          id: doc.id,
+          date: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      console.log('📅 FIRESTORE: Found', reflectionDays.length, 'reflection days');
+      return { success: true, reflectionDays };
+    } catch (error) {
+      console.error('❌ FIRESTORE: Error getting reflection days:', error);
+      return { success: false, error: error.message, reflectionDays: [] };
+    }
+  }
+
+  /**
    * Save or update a day reflection
    */
   async saveDayReflection(uid, dateId, reflectionData) {

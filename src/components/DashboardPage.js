@@ -16,29 +16,39 @@ export default function DashboardPage() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isLoadingReflection, setIsLoadingReflection] = useState(false);
   const [chatDays, setChatDays] = useState([]);
+  const [reflectionDays, setReflectionDays] = useState([]);
 
-  // Load all chat days for calendar indicators
+  // Load all chat days and reflection days for calendar indicators
   useEffect(() => {
-    const loadChatDays = async () => {
+    const loadCalendarData = async () => {
       const user = getCurrentUser();
       if (!user) {
-        console.log('📅 DASHBOARD: No user logged in, cannot load chat days');
+        console.log('📅 DASHBOARD: No user logged in, cannot load calendar data');
         return;
       }
 
       try {
-        console.log('📅 DASHBOARD: Loading all chat days for calendar...');
-        const result = await firestoreService.getAllChatDays(user.uid);
-        if (result.success) {
-          console.log('📅 DASHBOARD: Loaded chat days:', result.chatDays);
-          setChatDays(result.chatDays);
+        console.log('📅 DASHBOARD: Loading calendar data...');
+        
+        // Load chat days
+        const chatResult = await firestoreService.getAllChatDays(user.uid);
+        if (chatResult.success) {
+          console.log('📅 DASHBOARD: Loaded chat days:', chatResult.chatDays);
+          setChatDays(chatResult.chatDays);
+        }
+
+        // Load reflection days
+        const reflectionResult = await firestoreService.getAllReflectionDays(user.uid);
+        if (reflectionResult.success) {
+          console.log('📅 DASHBOARD: Loaded reflection days:', reflectionResult.reflectionDays);
+          setReflectionDays(reflectionResult.reflectionDays);
         }
       } catch (error) {
-        console.error('📅 DASHBOARD: Error loading chat days:', error);
+        console.error('📅 DASHBOARD: Error loading calendar data:', error);
       }
     };
 
-    loadChatDays();
+    loadCalendarData();
   }, []); // Run once on mount
 
   useEffect(() => {
@@ -707,6 +717,7 @@ export default function DashboardPage() {
         selectedDate={selectedDate}
         onDateSelect={handleDateSelect}
         chatDays={chatDays}
+        reflectionDays={reflectionDays}
       />
     </div>
   );
