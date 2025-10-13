@@ -508,7 +508,7 @@ Example valid responses:
         source: 'chat_analysis'
       };
 
-      // Save to localStorage for now (can be extended to Firestore later)
+      // Save to localStorage
       const existingData = JSON.parse(localStorage.getItem(`emotional_data_${userId}`) || '[]');
       
       // Remove existing data for the same date
@@ -518,11 +518,69 @@ Example valid responses:
       const updatedData = [...filteredData, emotionalData];
       
       localStorage.setItem(`emotional_data_${userId}`, JSON.stringify(updatedData));
-      console.log('✅ Emotional data saved successfully');
+      console.log('✅ Emotional data saved to localStorage');
+      
+      // CRITICAL FIX: Also save to Firestore for mood chart
+      const firestoreService = require('./firestoreService').default;
+      const firestoreResult = await firestoreService.saveMoodChartNew(userId, dateId, {
+        happiness: scores.happiness,
+        energy: scores.energy,
+        anxiety: scores.anxiety,
+        stress: scores.stress
+      });
+      
+      if (firestoreResult.success) {
+        console.log('✅ Emotional data saved to Firestore for mood chart');
+      } else {
+        console.error('❌ Failed to save to Firestore:', firestoreResult.error);
+      }
       
       return { success: true };
     } catch (error) {
       console.error('❌ Error saving emotional data:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Helper method to migrate existing localStorage data to Firestore
+  async migrateLocalStorageToFirestore(userId) {
+    try {
+      console.log('🔄 Migrating localStorage emotional data to Firestore...');
+      
+      const existingData = JSON.parse(localStorage.getItem(`emotional_data_${userId}`) || '[]');
+      
+      if (existingData.length === 0) {
+        console.log('ℹ️ No localStorage data to migrate');
+        return { success: true, migrated: 0 };
+      }
+      
+      console.log(`📊 Found ${existingData.length} records in localStorage to migrate`);
+      
+      const firestoreService = require('./firestoreService').default;
+      let migrated = 0;
+      
+      for (const record of existingData) {
+        try {
+          const result = await firestoreService.saveMoodChartNew(userId, record.date, {
+            happiness: record.happiness,
+            energy: record.energy,
+            anxiety: record.anxiety,
+            stress: record.stress
+          });
+          
+          if (result.success) {
+            migrated++;
+            console.log(`✅ Migrated data for ${record.date}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to migrate data for ${record.date}:`, error);
+        }
+      }
+      
+      console.log(`✅ Migration complete: ${migrated}/${existingData.length} records migrated`);
+      return { success: true, migrated };
+    } catch (error) {
+      console.error('❌ Error during migration:', error);
       return { success: false, error: error.message };
     }
   }

@@ -381,6 +381,23 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      // CRITICAL FIX: Migrate any existing localStorage data to Firestore
+      const migrated = localStorage.getItem('emotional_data_migrated');
+      if (!migrated) {
+        console.log('🔄 First time loading - checking for localStorage data to migrate...');
+        emotionalAnalysisService.migrateLocalStorageToFirestore(user.uid).then(result => {
+          if (result.success) {
+            console.log(`✅ Migration complete: ${result.migrated} records migrated`);
+            localStorage.setItem('emotional_data_migrated', 'true');
+            // Clear cache to force reload with new data
+            const cacheKeys = Object.keys(localStorage).filter(key =>
+              key.includes('emotional_wellbeing') || key.includes('moodChart')
+            );
+            cacheKeys.forEach(key => localStorage.removeItem(key));
+          }
+        });
+      }
+      
       // Check if we need to force fresh data loading (bypass all caching)
       const forceFreshUntil = localStorage.getItem('force_fresh_data_until');
       const currentTime = Date.now();
