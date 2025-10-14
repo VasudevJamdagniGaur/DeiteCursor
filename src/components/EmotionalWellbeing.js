@@ -1529,6 +1529,102 @@ export default function EmotionalWellbeing() {
     }
   };
 
+  const handleCheckOct8Data = async () => {
+    console.log('🔍 CHECKING OCT 8 DATA: Investigating what data exists...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      const oct8Id = '2025-10-08';
+      
+      // Check Firestore mood data
+      console.log('🔍 CHECKING: Looking for mood data in Firestore...');
+      const moodRef = doc(db, `users/${user.uid}/days/${oct8Id}/moodChart/daily`);
+      const moodSnap = await getDoc(moodRef);
+      
+      if (moodSnap.exists()) {
+        const moodData = moodSnap.data();
+        console.log('✅ CHECKING: Found mood data in Firestore:', moodData);
+        alert(`✅ Found mood data for October 8th:\n\nHappiness: ${moodData.happiness}%\nEnergy: ${moodData.energy}%\nAnxiety: ${moodData.anxiety}%\nStress: ${moodData.stress}%`);
+      } else {
+        console.log('❌ CHECKING: No mood data in Firestore');
+        
+        // Check for chat messages
+        console.log('🔍 CHECKING: Looking for chat messages...');
+        const messagesResult = await firestoreService.getChatMessagesNew(user.uid, oct8Id);
+        
+        if (messagesResult.success && messagesResult.messages.length > 0) {
+          console.log('✅ CHECKING: Found', messagesResult.messages.length, 'chat messages');
+          alert(`Found ${messagesResult.messages.length} chat messages for October 8th, but no mood data.\n\nClick "Fix Oct 8th Data" to generate mood analysis from your chat!`);
+        } else {
+          console.log('❌ CHECKING: No chat messages found');
+          alert('No chat messages found for October 8th.\n\nDid you chat with Deite on that day?');
+        }
+      }
+    } catch (error) {
+      console.error('❌ CHECKING: Error:', error);
+      alert('Error checking data: ' + error.message);
+    }
+  };
+
+  const handleForceAnalysisForOct8 = async () => {
+    console.log('🔬 OCT 8 ANALYSIS: Starting manual emotional analysis for October 8th...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      const oct8Id = '2025-10-08';
+      console.log('🔬 OCT 8 ANALYSIS: Date ID:', oct8Id);
+
+      // Get October 8th messages
+      const messagesResult = await firestoreService.getChatMessagesNew(user.uid, oct8Id);
+      console.log('🔬 OCT 8 ANALYSIS: Messages result:', messagesResult);
+
+      if (!messagesResult.success || messagesResult.messages.length === 0) {
+        alert('No messages found for October 8th. Did you chat with Deite on that day?');
+        return;
+      }
+
+      console.log('🔬 OCT 8 ANALYSIS: Found', messagesResult.messages.length, 'messages');
+      console.log('🔬 OCT 8 ANALYSIS: Sample message:', messagesResult.messages[0]);
+
+      // Run emotional analysis
+      console.log('🔬 OCT 8 ANALYSIS: Calling analyzeEmotionalScores...');
+      const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesResult.messages);
+      console.log('🔬 OCT 8 ANALYSIS: Results:', emotionalScores);
+
+      if (emotionalScores && emotionalScores.happiness !== undefined) {
+        // Save the emotional data
+        console.log('🔬 OCT 8 ANALYSIS: Saving emotional data...');
+        const saveResult = await emotionalAnalysisService.saveEmotionalData(user.uid, oct8Id, emotionalScores);
+        
+        if (saveResult.success) {
+          console.log('✅ OCT 8 ANALYSIS: Emotional data saved successfully!');
+          
+          // Force refresh the mood chart
+          await loadFreshDataOnly();
+          
+          alert(`✅ October 8th Analysis Complete!\n\nHappiness: ${emotionalScores.happiness}%\nEnergy: ${emotionalScores.energy}%\nAnxiety: ${emotionalScores.anxiety}%\nStress: ${emotionalScores.stress}%\n\nThe mood chart should now show real data for October 8th!`);
+        } else {
+          console.error('❌ OCT 8 ANALYSIS: Failed to save:', saveResult.error);
+          alert('❌ Failed to save emotional data: ' + saveResult.error);
+        }
+      } else {
+        console.error('❌ OCT 8 ANALYSIS: Invalid emotional scores:', emotionalScores);
+        alert('❌ Failed to generate emotional analysis. Check console for details.');
+      }
+    } catch (error) {
+      console.error('❌ OCT 8 ANALYSIS: Error:', error);
+      alert('❌ Analysis failed: ' + error.message);
+    }
+  };
+
   const handleForceAnalysis = async () => {
     console.log('🔬 FORCE ANALYSIS: Starting manual emotional analysis for today...');
     const user = getCurrentUser();
@@ -3104,6 +3200,34 @@ Return in this JSON format:
             </span>
           </button>
         )}
+
+        {/* October 8th Data Check Button */}
+        <button
+          onClick={handleCheckOct8Data}
+          className="flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+          }}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span className="text-sm font-medium hidden xs:block">
+            Check Oct 8th
+          </span>
+        </button>
+
+        {/* October 8th Analysis Button - Temporary fix for missing data */}
+        <button
+          onClick={handleForceAnalysisForOct8}
+          className="flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+          }}
+        >
+          <Brain className="w-4 h-4" />
+          <span className="text-sm font-medium hidden xs:block">
+            Fix Oct 8th Data
+          </span>
+        </button>
       </div>
 
       {/* Content - Mobile Optimized */}
