@@ -167,20 +167,23 @@ Write a personal journal entry that reflects this person's day and feelings:`;
       console.log('💾 Saving reflection...');
       console.log('🔍 SAVE DEBUG: userId:', userId, 'dateId:', dateId, 'reflection length:', reflection?.length);
       
-      // Simplified reflection data structure
+      // Analyze reflection for mood and insights
+      const analysis = this.analyzeReflection(reflection);
+      
+      // Use new structure for saving reflections
       const reflectionData = {
         summary: reflection,
-        date: dateId,
-        userId: userId,
-        timestamp: new Date().toISOString(),
+        mood: analysis.mood.toLowerCase(),
+        score: analysis.score,
+        insights: analysis.insights,
         source: 'auto'
       };
       
       console.log('🔍 SAVE DEBUG: Reflection data:', reflectionData);
       
-      // Save to Firestore with simplified structure
-      const result = await firestoreService.saveDayReflection(userId, dateId, reflectionData);
-      console.log('✅ Reflection saved successfully to Firestore');
+      // Save to Firestore with new structure
+      const result = await firestoreService.saveReflectionNew(userId, dateId, reflectionData);
+      console.log('✅ Reflection saved successfully to Firestore (new structure)');
       
       // Also save to localStorage as backup
       localStorage.setItem(`reflection_${dateId}`, reflection);

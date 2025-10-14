@@ -175,19 +175,57 @@ class FirestoreService {
     try {
       console.log('📅 FIRESTORE: Getting all reflection days for calendar...');
       
-      const reflectionDaysRef = collection(this.db, `users/${uid}/dayReflections`);
-      const snapshot = await getDocs(reflectionDaysRef);
+      // First try the new structure: users/{uid}/days/{dateId}/reflection/meta
+      const daysRef = collection(this.db, `users/${uid}/days`);
+      const snapshot = await getDocs(daysRef);
       
       const reflectionDays = [];
-      snapshot.forEach((doc) => {
-        reflectionDays.push({
-          id: doc.id,
-          date: doc.id,
-          ...doc.data()
-        });
-      });
       
-      console.log('📅 FIRESTORE: Found', reflectionDays.length, 'reflection days');
+      // Check each day for reflection data
+      for (const doc of snapshot.docs) {
+        const dayData = doc.data();
+        const dateId = doc.id;
+        
+        // Check if this day has reflection data in the new structure
+        try {
+          const reflectionRef = doc(this.db, `users/${uid}/days/${dateId}/reflection/meta`);
+          const reflectionSnap = await getDoc(reflectionRef);
+          
+          if (reflectionSnap.exists()) {
+            console.log('📅 FIRESTORE: Found reflection for', dateId);
+            reflectionDays.push({
+              id: dateId,
+              date: dateId,
+              ...dayData,
+              hasReflection: true
+            });
+          }
+        } catch (reflectionError) {
+          console.log('📅 FIRESTORE: No reflection subcollection for', dateId);
+        }
+      }
+      
+      console.log('📅 FIRESTORE: Found', reflectionDays.length, 'reflection days in new structure');
+      
+      // If no reflections found in new structure, try old structure as fallback
+      if (reflectionDays.length === 0) {
+        console.log('📅 FIRESTORE: No reflections in new structure, trying old structure...');
+        const reflectionDaysRef = collection(this.db, `users/${uid}/dayReflections`);
+        const oldSnapshot = await getDocs(reflectionDaysRef);
+        
+        oldSnapshot.forEach((doc) => {
+          reflectionDays.push({
+            id: doc.id,
+            date: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        console.log('📅 FIRESTORE: Found', reflectionDays.length, 'reflection days in old structure');
+      }
+      
+      console.log('📅 FIRESTORE: Total reflection days:', reflectionDays.length);
+      console.log('📅 FIRESTORE: Sample reflection days:', reflectionDays.slice(0, 3));
       return { success: true, reflectionDays };
     } catch (error) {
       console.error('❌ FIRESTORE: Error getting reflection days:', error);
