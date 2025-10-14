@@ -1,6 +1,6 @@
 class ChatService {
   constructor() {
-    this.baseURL = 'https://yb06vm2daob785-11434.proxy.runpod.net/';
+    this.baseURL = 'https://ey2yvoq090rvrv-11434.proxy.runpod.net/';
   }
 
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {
