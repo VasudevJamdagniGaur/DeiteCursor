@@ -2747,8 +2747,12 @@ Return in this JSON format:
             {/* Pattern Analysis Results */}
             {!patternLoading && (
               <>
-                {/* Data Status Banner */}
-                {!hasEnoughData && patternAnalysis && (
+                {/* Data Status Banner - Only show if no trigger data exists */}
+                {!hasEnoughData && patternAnalysis && !(
+                  (triggers.stress && triggers.stress.length > 0) ||
+                  (triggers.joy && triggers.joy.length > 0) ||
+                  (triggers.distraction && triggers.distraction.length > 0)
+                ) && (
                   <div className={`mb-6 p-4 rounded-lg border`}
                     style={isDarkMode ? {
                       backgroundColor: "rgba(253, 214, 99, 0.08)",
