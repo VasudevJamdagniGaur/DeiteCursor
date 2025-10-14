@@ -77,7 +77,7 @@ class HabitAnalysisService {
     // Get all chat days in the period
     for (let i = 0; i < days; i++) {
       const dateId = getDateIdDaysAgo(i);
-      const messagesResult = await firestoreService.getMessages(uid, dateId);
+      const messagesResult = await firestoreService.getChatMessagesNew(uid, dateId);
       
       if (messagesResult.success && messagesResult.messages.length > 0) {
         const dayConversation = {

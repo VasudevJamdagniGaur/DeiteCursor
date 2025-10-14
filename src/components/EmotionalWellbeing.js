@@ -546,13 +546,14 @@ export default function EmotionalWellbeing() {
     }
   }, [highlightsPeriod, loadCachedHighlightsData]);
 
-  const loadHabitAnalysis = async () => {
+  const loadHabitAnalysis = async (forceRefresh = false) => {
     const user = getCurrentUser();
     if (!user) return;
 
     try {
-      const analysis = await habitAnalysisService.getHabitAnalysis(user.uid, true);
+      const analysis = await habitAnalysisService.getHabitAnalysis(user.uid, !forceRefresh);
       setHabitAnalysis(analysis);
+      console.log('📊 Habit analysis loaded:', analysis);
     } catch (error) {
       console.error('Error loading habit analysis:', error);
     }
@@ -3178,6 +3179,24 @@ Return in this JSON format:
                     <p className={`text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                       💬 Keep chatting with Deite to unlock your personalized habits and insights!
                     </p>
+                  </div>
+
+                  {/* Refresh Button */}
+                  <div className="mt-3 text-center">
+                    <button
+                      onClick={async () => {
+                        console.log('🔄 Refreshing habit analysis...');
+                        await loadHabitAnalysis(true);
+                        console.log('✅ Habit analysis refreshed!');
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${
+                        isDarkMode 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
+                    >
+                      🔄 Refresh Message Count
+                    </button>
                   </div>
                 </div>
               ) : (
