@@ -145,21 +145,25 @@ class FirestoreService {
    */
   async getAllChatDays(uid) {
     try {
-      const chatsRef = collection(this.db, `users/${uid}/chats`);
-      const q = query(chatsRef, orderBy('date', 'desc'));
-      const snapshot = await getDocs(q);
+      console.log('📅 FIRESTORE: Getting all chat days for calendar...');
+      
+      const daysRef = collection(this.db, `users/${uid}/days`);
+      const snapshot = await getDocs(daysRef);
       
       const chatDays = [];
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         chatDays.push({
           id: doc.id,
+          date: doc.id,
           ...doc.data()
         });
       });
-
+      
+      console.log('📅 FIRESTORE: Found', chatDays.length, 'chat days');
+      console.log('📅 FIRESTORE: Sample chat days:', chatDays.slice(0, 3));
       return { success: true, chatDays };
     } catch (error) {
-      console.error('Error getting all chat days:', error);
+      console.error('❌ FIRESTORE: Error getting chat days:', error);
       return { success: false, error: error.message, chatDays: [] };
     }
   }

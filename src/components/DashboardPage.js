@@ -34,14 +34,22 @@ export default function DashboardPage() {
         const chatResult = await firestoreService.getAllChatDays(user.uid);
         if (chatResult.success) {
           console.log('📅 DASHBOARD: Loaded chat days:', chatResult.chatDays);
+          console.log('📅 DASHBOARD: Chat days count:', chatResult.chatDays.length);
+          console.log('📅 DASHBOARD: Sample chat day:', chatResult.chatDays[0]);
           setChatDays(chatResult.chatDays);
+        } else {
+          console.error('📅 DASHBOARD: Failed to load chat days:', chatResult.error);
         }
 
         // Load reflection days
         const reflectionResult = await firestoreService.getAllReflectionDays(user.uid);
         if (reflectionResult.success) {
           console.log('📅 DASHBOARD: Loaded reflection days:', reflectionResult.reflectionDays);
+          console.log('📅 DASHBOARD: Reflection days count:', reflectionResult.reflectionDays.length);
+          console.log('📅 DASHBOARD: Sample reflection day:', reflectionResult.reflectionDays[0]);
           setReflectionDays(reflectionResult.reflectionDays);
+        } else {
+          console.error('📅 DASHBOARD: Failed to load reflection days:', reflectionResult.error);
         }
       } catch (error) {
         console.error('📅 DASHBOARD: Error loading calendar data:', error);

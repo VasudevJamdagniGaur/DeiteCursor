@@ -80,27 +80,39 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
   const hasChatActivity = (date) => {
     if (!date || !chatDays || chatDays.length === 0) return false;
     
-    // Format date as YYYYMMDD to match dateId format
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateId = `${year}${month}${day}`;
-    
-    // Check if this dateId exists in chatDays
-    return chatDays.some(chatDay => chatDay.date === dateId || chatDay.id === dateId);
-  };
-
-  const hasReflection = (date) => {
-    if (!date || !reflectionDays || reflectionDays.length === 0) return false;
-    
-    // Format date as YYYY-MM-DD to match reflection date format
+    // Format date as YYYY-MM-DD to match dateId format (same as getDateId function)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateId = `${year}-${month}-${day}`;
     
+    console.log('🔍 CALENDAR DEBUG: Checking chat activity for date:', dateId);
+    console.log('🔍 CALENDAR DEBUG: Available chat days:', chatDays.map(d => d.date || d.id));
+    
+    // Check if this dateId exists in chatDays
+    const hasActivity = chatDays.some(chatDay => chatDay.date === dateId || chatDay.id === dateId);
+    console.log('🔍 CALENDAR DEBUG: Has chat activity:', hasActivity);
+    
+    return hasActivity;
+  };
+
+  const hasReflection = (date) => {
+    if (!date || !reflectionDays || reflectionDays.length === 0) return false;
+    
+    // Format date as YYYY-MM-DD to match reflection date format (same as getDateId function)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateId = `${year}-${month}-${day}`;
+    
+    console.log('🔍 CALENDAR DEBUG: Checking reflection for date:', dateId);
+    console.log('🔍 CALENDAR DEBUG: Available reflection days:', reflectionDays.map(d => d.date || d.id));
+    
     // Check if this dateId exists in reflectionDays
-    return reflectionDays.some(reflectionDay => reflectionDay.date === dateId || reflectionDay.id === dateId);
+    const hasReflectionData = reflectionDays.some(reflectionDay => reflectionDay.date === dateId || reflectionDay.id === dateId);
+    console.log('🔍 CALENDAR DEBUG: Has reflection:', hasReflectionData);
+    
+    return hasReflectionData;
   };
 
   const days = getDaysInMonth(currentMonth);
