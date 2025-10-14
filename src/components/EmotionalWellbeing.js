@@ -1529,6 +1529,77 @@ export default function EmotionalWellbeing() {
     }
   };
 
+  const handleScanAllDays = async () => {
+    console.log('🔍 SCANNING ALL DAYS: Looking for days with chat but no mood data...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      // Get all days from the last 30 days
+      const daysToCheck = [];
+      const today = new Date();
+      
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateId = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        daysToCheck.push(dateId);
+      }
+
+      console.log('🔍 SCANNING: Checking', daysToCheck.length, 'days for missing mood data...');
+      
+      const daysWithChat = [];
+      const daysWithMoodData = [];
+      const daysNeedingAnalysis = [];
+
+      // Check each day
+      for (const dateId of daysToCheck) {
+        console.log(`🔍 SCANNING: Checking ${dateId}...`);
+        
+        // Check for chat messages
+        const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+        const hasChat = messagesResult.success && messagesResult.messages.length > 0;
+        
+        // Check for mood data
+        const moodRef = doc(db, `users/${user.uid}/days/${dateId}/moodChart/daily`);
+        const moodSnap = await getDoc(moodRef);
+        const hasMoodData = moodSnap.exists();
+        
+        if (hasChat) {
+          daysWithChat.push(dateId);
+          console.log(`✅ SCANNING: ${dateId} has ${messagesResult.messages.length} chat messages`);
+        }
+        
+        if (hasMoodData) {
+          daysWithMoodData.push(dateId);
+          console.log(`✅ SCANNING: ${dateId} has mood data`);
+        }
+        
+        if (hasChat && !hasMoodData) {
+          daysNeedingAnalysis.push(dateId);
+          console.log(`⚠️ SCANNING: ${dateId} needs mood analysis!`);
+        }
+      }
+
+      console.log('📊 SCANNING RESULTS:');
+      console.log('Days with chat:', daysWithChat.length);
+      console.log('Days with mood data:', daysWithMoodData.length);
+      console.log('Days needing analysis:', daysNeedingAnalysis.length);
+
+      if (daysNeedingAnalysis.length === 0) {
+        alert(`✅ All good!\n\nFound ${daysWithChat.length} days with chat data.\nAll days already have mood data generated.`);
+      } else {
+        alert(`Found ${daysNeedingAnalysis.length} days that need mood analysis:\n\n${daysNeedingAnalysis.join(', ')}\n\nClick "Fix All Missing Data" to generate mood analysis for all these days!`);
+      }
+    } catch (error) {
+      console.error('❌ SCANNING: Error:', error);
+      alert('Error scanning days: ' + error.message);
+    }
+  };
+
   const handleCheckOct8Data = async () => {
     console.log('🔍 CHECKING OCT 8 DATA: Investigating what data exists...');
     const user = getCurrentUser();
@@ -1567,6 +1638,121 @@ export default function EmotionalWellbeing() {
     } catch (error) {
       console.error('❌ CHECKING: Error:', error);
       alert('Error checking data: ' + error.message);
+    }
+  };
+
+  const handleFixAllMissingData = async () => {
+    console.log('🔧 FIXING ALL MISSING DATA: Starting comprehensive mood data generation...');
+    const user = getCurrentUser();
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+
+    try {
+      // First, scan to find all days that need analysis
+      const daysToCheck = [];
+      const today = new Date();
+      
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateId = date.toISOString().split('T')[0];
+        daysToCheck.push(dateId);
+      }
+
+      console.log('🔧 FIXING: Scanning', daysToCheck.length, 'days...');
+      
+      const daysNeedingAnalysis = [];
+
+      // Find all days that need analysis
+      for (const dateId of daysToCheck) {
+        const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+        const hasChat = messagesResult.success && messagesResult.messages.length > 0;
+        
+        if (hasChat) {
+          const moodRef = doc(db, `users/${user.uid}/days/${dateId}/moodChart/daily`);
+          const moodSnap = await getDoc(moodRef);
+          const hasMoodData = moodSnap.exists();
+          
+          if (!hasMoodData) {
+            daysNeedingAnalysis.push({ dateId, messageCount: messagesResult.messages.length });
+          }
+        }
+      }
+
+      if (daysNeedingAnalysis.length === 0) {
+        alert('✅ All days already have mood data! No fixes needed.');
+        return;
+      }
+
+      console.log('🔧 FIXING: Found', daysNeedingAnalysis.length, 'days needing analysis:', daysNeedingAnalysis.map(d => d.dateId));
+
+      // Confirm with user
+      const confirmFix = window.confirm(`Found ${daysNeedingAnalysis.length} days that need mood analysis:\n\n${daysNeedingAnalysis.map(d => `${d.dateId} (${d.messageCount} messages)`).join('\n')}\n\nThis will generate mood data for all these days. Continue?`);
+      
+      if (!confirmFix) {
+        console.log('🔧 FIXING: User cancelled');
+        return;
+      }
+
+      // Process each day
+      let successCount = 0;
+      let errorCount = 0;
+      const results = [];
+
+      for (const { dateId, messageCount } of daysNeedingAnalysis) {
+        try {
+          console.log(`🔧 FIXING: Processing ${dateId} (${messageCount} messages)...`);
+          
+          // Get messages for this day
+          const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+          
+          if (messagesResult.success && messagesResult.messages.length > 0) {
+            // Generate emotional analysis
+            const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesResult.messages);
+            
+            if (emotionalScores && emotionalScores.happiness !== undefined) {
+              // Save the emotional data
+              const saveResult = await emotionalAnalysisService.saveEmotionalData(user.uid, dateId, emotionalScores);
+              
+              if (saveResult.success) {
+                successCount++;
+                results.push(`✅ ${dateId}: H:${emotionalScores.happiness} E:${emotionalScores.energy} A:${emotionalScores.anxiety} S:${emotionalScores.stress}`);
+                console.log(`✅ FIXING: ${dateId} completed successfully`);
+              } else {
+                errorCount++;
+                results.push(`❌ ${dateId}: Save failed - ${saveResult.error}`);
+                console.error(`❌ FIXING: ${dateId} save failed:`, saveResult.error);
+              }
+            } else {
+              errorCount++;
+              results.push(`❌ ${dateId}: Analysis failed - invalid scores`);
+              console.error(`❌ FIXING: ${dateId} analysis failed - invalid scores:`, emotionalScores);
+            }
+          } else {
+            errorCount++;
+            results.push(`❌ ${dateId}: No messages found`);
+            console.error(`❌ FIXING: ${dateId} no messages found`);
+          }
+        } catch (error) {
+          errorCount++;
+          results.push(`❌ ${dateId}: Error - ${error.message}`);
+          console.error(`❌ FIXING: ${dateId} error:`, error);
+        }
+      }
+
+      // Show results
+      console.log('🔧 FIXING: Complete!', successCount, 'successful,', errorCount, 'failed');
+      
+      // Force refresh the mood chart
+      await loadFreshDataOnly();
+      
+      alert(`🔧 Fix Complete!\n\n✅ Successfully processed: ${successCount} days\n❌ Failed: ${errorCount} days\n\nResults:\n${results.join('\n')}\n\nThe mood chart should now show real data for all processed days!`);
+      
+    } catch (error) {
+      console.error('❌ FIXING: Error:', error);
+      alert('Error fixing missing data: ' + error.message);
     }
   };
 
@@ -3200,6 +3386,34 @@ Return in this JSON format:
             </span>
           </button>
         )}
+
+        {/* Scan All Days Button */}
+        <button
+          onClick={handleScanAllDays}
+          className="flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
+          }}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span className="text-sm font-medium hidden xs:block">
+            Scan All Days
+          </span>
+        </button>
+
+        {/* Fix All Missing Data Button */}
+        <button
+          onClick={handleFixAllMissingData}
+          className="flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+          }}
+        >
+          <Zap className="w-4 h-4" />
+          <span className="text-sm font-medium hidden xs:block">
+            Fix All Missing Data
+          </span>
+        </button>
 
         {/* October 8th Data Check Button */}
         <button
