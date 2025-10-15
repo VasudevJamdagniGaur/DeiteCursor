@@ -248,11 +248,23 @@ export default function EmotionalWellbeing() {
 
   const loadCachedHighlightsData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('highlights', '3months', userId);
-    const cachedData = loadFromCache(cacheKey, 45); // 45 minutes cache
+    const cachedData = loadFromCache(cacheKey, 24 * 60); // 24 hours cache (persist across sessions)
     
     if (cachedData) {
       console.log('⚡ Setting cached highlights data instantly');
       setHighlights(cachedData.highlights || {});
+      
+      // Check if it's a new day since last update
+      const lastUpdateDate = cachedData.lastUpdateDate;
+      const today = new Date().toDateString();
+      
+      if (lastUpdateDate !== today) {
+        console.log('📅 New day detected since last highlights update, will refresh in background');
+        // Don't return early - let it load fresh data in background
+      } else {
+        console.log('📅 Same day as last highlights update, using cached data');
+        return; // Use cached data, no need to refresh
+      }
     }
   }, []);
 
@@ -310,9 +322,11 @@ export default function EmotionalWellbeing() {
     const freshData = await loadHighlightsDataInternal();
     if (freshData) {
       const cacheKey = getCacheKey('highlights', '3months', user.uid);
+      const today = new Date().toDateString();
       saveToCache(cacheKey, {
         highlights: freshData.highlights,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        lastUpdateDate: today // Track the date when highlights were last updated
       });
     }
   };
@@ -364,12 +378,33 @@ export default function EmotionalWellbeing() {
     setIsLoadingFresh(true);
 
     try {
-      await Promise.all([
+      const user = getCurrentUser();
+      const promises = [
         loadFreshEmotionalData(),
         loadFreshBalanceData(),
-        loadFreshPatternAnalysis(),
-        loadFreshHighlightsData()
-      ]);
+        loadFreshPatternAnalysis()
+      ];
+      
+      // Only load fresh highlights if it's a new day or no cached data exists
+      const cacheKey = getCacheKey('highlights', '3months', user.uid);
+      const cachedData = loadFromCache(cacheKey, 24 * 60);
+      
+      if (!cachedData) {
+        console.log('📅 No cached highlights data, including in fresh data load');
+        promises.push(loadFreshHighlightsData());
+      } else {
+        const lastUpdateDate = cachedData.lastUpdateDate;
+        const today = new Date().toDateString();
+        
+        if (lastUpdateDate !== today) {
+          console.log('📅 New day detected, including highlights in fresh data load');
+          promises.push(loadFreshHighlightsData());
+        } else {
+          console.log('📅 Same day, skipping highlights from fresh data load');
+        }
+      }
+      
+      await Promise.all(promises);
     } catch (error) {
       console.error('❌ Error loading fresh data:', error);
     } finally {
@@ -542,7 +577,25 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     if (user) {
       loadCachedHighlightsData(user.uid, highlightsPeriod);
-      loadFreshHighlightsData();
+      
+      // Only load fresh data if it's a new day or no cached data exists
+      const cacheKey = getCacheKey('highlights', '3months', user.uid);
+      const cachedData = loadFromCache(cacheKey, 24 * 60);
+      
+      if (!cachedData) {
+        console.log('📅 No cached highlights data, loading fresh data');
+        loadFreshHighlightsData();
+      } else {
+        const lastUpdateDate = cachedData.lastUpdateDate;
+        const today = new Date().toDateString();
+        
+        if (lastUpdateDate !== today) {
+          console.log('📅 New day detected, refreshing highlights data');
+          loadFreshHighlightsData();
+        } else {
+          console.log('📅 Same day, using cached highlights data');
+        }
+      }
     }
   }, [highlightsPeriod, loadCachedHighlightsData]);
 
