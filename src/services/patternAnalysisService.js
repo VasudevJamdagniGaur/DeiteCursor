@@ -18,10 +18,12 @@ class PatternAnalysisService {
    */
   async analyzePatterns(uid, days = 7) {
     console.log(`🔍 Starting pattern analysis for ${days} days...`);
+    console.log(`🔍 User ID: ${uid}`);
     
     try {
       // Fetch chat data for the specified period
       const chatData = await this.fetchChatDataForPeriod(uid, days);
+      console.log(`📊 Chat data summary: ${chatData.totalMessages} messages across ${chatData.activeDays} days`);
       
       // Check if we have enough data
       if (!this.hasEnoughData(chatData, days)) {
@@ -85,22 +87,49 @@ class PatternAnalysisService {
       }
     };
 
-    // Get all chat days in the period
-    for (let i = 0; i < days; i++) {
-      const dateId = getDateIdDaysAgo(i);
-      const messagesResult = await firestoreService.getMessages(uid, dateId);
+    try {
+      // First, get all available chat days to see what data we have
+      console.log('🔍 Getting all available chat days...');
+      const allChatDaysResult = await firestoreService.getAllChatDays(uid);
       
-      if (messagesResult.success && messagesResult.messages.length > 0) {
-        const dayConversation = {
-          date: dateId,
-          messages: messagesResult.messages,
-          messageCount: messagesResult.messages.length
-        };
-        
-        chatData.conversations.push(dayConversation);
-        chatData.totalMessages += messagesResult.messages.length;
-        chatData.activeDays++;
+      if (!allChatDaysResult.success) {
+        console.log('❌ Failed to get chat days:', allChatDaysResult.error);
+        return chatData;
       }
+      
+      console.log('📊 Available chat days:', allChatDaysResult.chatDays.length);
+      
+      // Filter to only the last N days
+      const cutoffDate = getDateIdDaysAgo(days - 1);
+      const recentChatDays = allChatDaysResult.chatDays.filter(day => {
+        return day.date >= cutoffDate;
+      });
+      
+      console.log(`📅 Found ${recentChatDays.length} chat days in the last ${days} days`);
+      
+      // Get messages for each recent chat day
+      for (const chatDay of recentChatDays) {
+        console.log(`🔍 Getting messages for ${chatDay.date}...`);
+        const messagesResult = await firestoreService.getChatMessagesNew(uid, chatDay.date);
+        
+        if (messagesResult.success && messagesResult.messages.length > 0) {
+          console.log(`✅ Found ${messagesResult.messages.length} messages on ${chatDay.date}`);
+          const dayConversation = {
+            date: chatDay.date,
+            messages: messagesResult.messages,
+            messageCount: messagesResult.messages.length
+          };
+          
+          chatData.conversations.push(dayConversation);
+          chatData.totalMessages += messagesResult.messages.length;
+          chatData.activeDays++;
+        } else {
+          console.log(`❌ No messages found on ${chatDay.date}`);
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching chat data:', error);
     }
 
     console.log(`✅ Fetched ${chatData.totalMessages} messages across ${chatData.activeDays} active days`);
@@ -389,6 +418,44 @@ IMPORTANT:
       console.log('✅ Analysis cached successfully');
     } catch (error) {
       console.error('❌ Error caching analysis:', error);
+    }
+  }
+
+  /**
+   * Test method to debug chat data fetching
+   */
+  async testChatDataFetching(uid, days = 30) {
+    console.log(`🧪 Testing chat data fetching for ${days} days...`);
+    
+    try {
+      // Test getting all chat days
+      const allChatDaysResult = await firestoreService.getAllChatDays(uid);
+      console.log('🧪 All chat days result:', allChatDaysResult);
+      
+      if (allChatDaysResult.success) {
+        console.log(`🧪 Found ${allChatDaysResult.chatDays.length} total chat days`);
+        
+        // Show recent chat days
+        const cutoffDate = getDateIdDaysAgo(days - 1);
+        const recentChatDays = allChatDaysResult.chatDays.filter(day => {
+          return day.date >= cutoffDate;
+        });
+        
+        console.log(`🧪 Recent chat days (last ${days} days):`, recentChatDays.map(d => d.date));
+        
+        // Test fetching messages for the most recent day
+        if (recentChatDays.length > 0) {
+          const mostRecentDay = recentChatDays[0];
+          console.log(`🧪 Testing message fetch for ${mostRecentDay.date}...`);
+          const messagesResult = await firestoreService.getChatMessagesNew(uid, mostRecentDay.date);
+          console.log(`🧪 Messages result for ${mostRecentDay.date}:`, messagesResult);
+        }
+      }
+      
+      return allChatDaysResult;
+    } catch (error) {
+      console.error('🧪 Error testing chat data fetching:', error);
+      return { success: false, error: error.message };
     }
   }
 

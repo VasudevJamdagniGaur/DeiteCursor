@@ -108,7 +108,7 @@ export default function EmotionalWellbeing() {
   const [triggers, setTriggers] = useState({});
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
-  const [patternPeriod] = useState(365); // Fixed to 365 days (1 year) to capture all available data
+  const [patternPeriod] = useState(30); // Fixed to 30 days (this month) to focus on recent data
   const [highlightsPeriod] = useState('3months'); // Always show last 3 months
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
@@ -1317,7 +1317,7 @@ export default function EmotionalWellbeing() {
   };
 
   const loadPatternAnalysisInternal = async () => {
-    console.log(`🔍 Loading pattern analysis for all available data (up to ${patternPeriod} days)...`);
+    console.log(`🔍 Loading pattern analysis for this month (${patternPeriod} days)...`);
     setPatternLoading(true);
     
     try {
