@@ -391,35 +391,35 @@ class ChatService {
       
       let prompt;
       if (dayType === 'best') {
-        prompt = `On ${date}, this person had their best mood day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. Create a mini-story explaining what made this day great. Write 2-3 sentences that tell what likely happened and how it made them feel throughout the day.
+        prompt = `On ${date}, this person had their best mood day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. Write a simple explanation of what probably made this day great. Keep it casual and realistic.
 
-Format like this example:
-"You felt upbeat and motivated because you finally completed an important task you'd been putting off. High energy and happiness carried through the day, making even small activities feel rewarding."
+Write 2-3 sentences like this example:
+"You woke up feeling good and had a productive morning. Maybe you finished something important or got good news. The rest of the day just felt easier and more positive."
 
 Focus on:
-- A specific achievement, breakthrough, or positive event
-- How that led to sustained good feelings
-- The ripple effect on the rest of the day
+- Something specific that probably happened
+- How it made them feel
+- Why the day stayed good
 
-Write a realistic scenario based on the emotion levels.`;
+Use simple, everyday language.`;
       } else {
-        prompt = `On ${date}, this person had their most challenging day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. Create a mini-story explaining what made this day difficult. Write 2-3 sentences that tell what likely happened and how it affected them throughout the day.
+        prompt = `On ${date}, this person had their most challenging day in the ${period} with happiness at ${happiness}%, energy at ${energy}%, stress at ${stress}%, and anxiety at ${anxiety}%. Write a simple explanation of what probably made this day tough. Keep it casual and realistic.
 
-Format like this example:
-"The day felt tough as stress from upcoming deadlines combined with anxious thoughts about the outcome. These worries overshadowed your mood, making it harder to stay positive and focused."
+Write 2-3 sentences like this example:
+"The day started off stressful with deadlines and worries. Maybe something didn't go as planned or there was pressure from work. It was hard to shake off the negative feelings."
 
 Focus on:
-- A specific stressor, challenge, or difficult situation
-- How that created ongoing emotional impact
-- The effect on their overall mood and day
+- Something specific that probably happened
+- How it affected their mood
+- Why the day felt difficult
 
-Write a realistic scenario based on the emotion levels.`;
+Use simple, everyday language.`;
       }
 
       const messages = [
         {
           role: 'system',
-          content: 'You are an empathetic emotional wellness assistant. Create brief, story-like explanations that connect specific events to emotional patterns. Write 2-3 sentences that tell what likely happened and how it affected their day. Be realistic and personal, avoiding generic emotion descriptions.'
+          content: 'You help people understand their emotions in simple, everyday language. Write short explanations that sound like how a normal person would describe their day. Keep it casual and realistic, avoid fancy words or overly emotional language.'
         },
         {
           role: 'user',
@@ -467,11 +467,11 @@ Write a realistic scenario based on the emotion levels.`;
 
     } catch (error) {
       console.error(`❌ Error generating ${dayType} day description:`, error);
-      // Return fallback mini-story descriptions
+      // Return fallback descriptions
       if (dayType === 'best') {
-        return "You felt upbeat and motivated because you accomplished meaningful tasks that brought you satisfaction. High energy and happiness carried through the day, making even routine activities feel rewarding and enjoyable.";
+        return "You woke up feeling good and had a productive day. Maybe you finished something important or got good news. The rest of the day just felt easier and more positive.";
       } else {
-        return "The day felt challenging as stress from various responsibilities combined with some anxious thoughts about the future. These pressures made it harder to maintain your usual positive outlook and focus throughout the day.";
+        return "The day started off stressful with deadlines and worries. Maybe something didn't go as planned or there was pressure from work. It was hard to shake off the negative feelings.";
       }
     }
   }

@@ -56,25 +56,26 @@ class ReflectionService {
   }
 
   async generateAISummary(userMessages, aiMessages) {
-    console.log('🤖 Starting AI journal summary generation...');
+    console.log('🤖 Starting AI day summary generation...');
     
     // Create a conversation context for the AI
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
-    const reflectionPrompt = `You are an empathetic AI assistant helping someone reflect on their day. Based on the conversation below, write a thoughtful, personal journal entry in first person that captures the essence of what they shared and experienced.
+    const reflectionPrompt = `You are helping someone write a simple summary of their day. Based on the conversation below, write a short, casual summary that sounds like how a normal person would describe their day.
 
 Guidelines:
 - Write in first person ("I felt...", "Today I...")
-- Keep it warm, personal, and reflective
-- Focus on emotions, insights, and meaningful moments discussed
+- Keep it simple and casual, like talking to a friend
+- Focus on what actually happened and how they felt
 - 2-3 sentences maximum
-- Make it sound like a real person writing in their journal
+- Use everyday language, not fancy words
+- Sound like a normal person, not a poet or writer
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a personal journal entry that reflects this person's day and feelings:`;
+Write a simple, casual summary of this person's day:`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
@@ -115,13 +116,13 @@ Write a personal journal entry that reflects this person's day and feelings:`;
         }
 
         const data = await response.json();
-        console.log(`✅ RunPod response received for journal generation with ${model}`);
+        console.log(`✅ RunPod response received for day summary with ${model}`);
         
         // Accept multiple possible fields from providers
         const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
         if (typeof text === 'string' && text.trim()) {
           const summary = text.trim();
-          console.log('📖 Generated journal summary:', summary);
+          console.log('📖 Generated day summary:', summary);
           return summary;
         } else {
           console.error(`❌ Invalid response format from ${model}:`, data);
@@ -143,13 +144,13 @@ Write a personal journal entry that reflects this person's day and feelings:`;
     const firstUser = userMessages[0] || '';
     const base = (firstUser !== lastUser) ? `${firstUser} ... ${lastUser}` : lastUser;
     const trimmed = base.slice(0, 220);
-    return `Today I reflected on my day with Deite. I shared about: “${trimmed}${base.length > 220 ? '...' : ''}”. It was helpful to pause, notice my feelings, and consider what matters next.`;
+    return `Today I chatted with Deite about: "${trimmed}${base.length > 220 ? '...' : ''}". It was nice to talk through my day and get some perspective.`;
   }
 
   buildConversationContext(userMessages, aiMessages) {
     let context = '';
     
-    // Build a detailed conversation flow for better journal summaries
+    // Build a detailed conversation flow for better day summaries
     userMessages.forEach((userMsg, index) => {
       context += `User: "${userMsg}"\n`;
       if (aiMessages[index]) {

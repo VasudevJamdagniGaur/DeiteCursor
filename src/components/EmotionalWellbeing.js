@@ -1037,7 +1037,7 @@ export default function EmotionalWellbeing() {
 
     try {
       // Generate AI descriptions for best and challenging days
-      console.log('🤖 Generating AI mini-story descriptions for highlights...');
+      console.log('🤖 Generating AI descriptions for highlights...');
       console.log('🤖 Best day data:', bestDay);
       console.log('🤖 Worst day data:', worstDay);
       
