@@ -113,6 +113,7 @@ export default function EmotionalWellbeing() {
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
   const [habitAnalysis, setHabitAnalysis] = useState(null);
+  const [habitLoading, setHabitLoading] = useState(false);
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedDateDetails, setSelectedDateDetails] = useState(null);
@@ -654,12 +655,15 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     if (!user) return;
 
+    setHabitLoading(true);
     try {
       const analysis = await habitAnalysisService.getHabitAnalysis(user.uid, forceRefresh);
       setHabitAnalysis(analysis);
       console.log('📊 Habit analysis loaded:', analysis);
     } catch (error) {
       console.error('Error loading habit analysis:', error);
+    } finally {
+      setHabitLoading(false);
     }
   };
 
@@ -3154,49 +3158,174 @@ Return in this JSON format:
                     </div>
                   </div>
                 ))
-              ) : habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
+              ) : habitLoading ? (
                 <>
-                  {/* Personalized Habits Display */}
-                  {habitAnalysis.habits.map((habit, index) => (
-                    <div key={index} className={`p-4 rounded-xl transition-all duration-300 hover:scale-105 ${
-                      isDarkMode ? 'bg-gray-800/40 border border-gray-700/30' : 'bg-white/40 border border-gray-200/30'
-                    }`}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                            {habit.title}
-                          </h4>
-                          <p className={`text-sm mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {habit.description}
-                          </p>
-                          <div className="flex items-center space-x-2 mb-3">
-                            <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                              {habit.frequency}
+                  {/* Loading State */}
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse"
+                      style={isDarkMode ? {
+                        backgroundColor: "rgba(42, 42, 45, 0.6)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      } : {
+                        backgroundColor: "rgba(255, 255, 255, 0.6)",
+                        border: "1px solid rgba(0, 0, 0, 0.08)",
+                      }}
+                    >
+                      <BookOpen className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                        Personalized Guidance
+                      </h3>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Generating your custom habits...
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Loading Skeleton */}
+                  <div className="grid grid-cols-1 gap-4 mb-6">
+                    {[1, 2, 3].map((index) => (
+                      <div
+                        key={index}
+                        className="p-5 rounded-xl animate-pulse"
+                        style={isDarkMode ? {
+                          backgroundColor: "rgba(138, 180, 248, 0.08)",
+                          border: "1px solid rgba(138, 180, 248, 0.15)",
+                        } : {
+                          backgroundColor: "rgba(138, 180, 248, 0.08)",
+                          border: "1px solid rgba(138, 180, 248, 0.15)",
+                        }}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div
+                            className="w-10 h-10 rounded-full"
+                            style={{
+                              backgroundColor: "rgba(138, 180, 248, 0.2)",
+                            }}
+                          />
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className={`h-5 w-3/4 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                              <div className="flex space-x-2">
+                                <div className={`h-6 w-16 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                                <div className={`h-6 w-20 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                              </div>
                             </div>
-                            <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                              {habit.category?.replace('_', ' ').toUpperCase()}
-                            </div>
-                          </div>
-                          <div className={`text-xs p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/30 text-green-300' : 'bg-gray-50 text-green-600'}`}>
-                            <strong>Why this helps:</strong> {habit.why}
+                            <div className={`h-4 w-full rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                            <div className={`h-4 w-2/3 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
+                            <div className={`h-16 w-full rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
                           </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </>
+              ) : habitAnalysis && habitAnalysis.success && habitAnalysis.habits && habitAnalysis.habits.length > 0 ? (
+                <>
+                  {/* Personalized Habits Header */}
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={isDarkMode ? {
+                        backgroundColor: "rgba(42, 42, 45, 0.6)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      } : {
+                        backgroundColor: "rgba(255, 255, 255, 0.6)",
+                        border: "1px solid rgba(0, 0, 0, 0.08)",
+                      }}
+                    >
+                      <BookOpen className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
                     </div>
-                  ))}
+                    <div>
+                      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                        Personalized Guidance
+                      </h3>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Custom habits based on your conversations
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Personalized Habits Grid */}
+                  <div className="grid grid-cols-1 gap-4 mb-6">
+                    {habitAnalysis.habits.map((habit, index) => (
+                      <div
+                        key={index}
+                        className="group p-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                        style={isDarkMode ? {
+                          backgroundColor: "rgba(138, 180, 248, 0.08)",
+                          border: "1px solid rgba(138, 180, 248, 0.15)",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        } : {
+                          backgroundColor: "rgba(138, 180, 248, 0.08)",
+                          border: "1px solid rgba(138, 180, 248, 0.15)",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                            style={{
+                              backgroundColor: "rgba(138, 180, 248, 0.2)",
+                              boxShadow: "0 0 15px rgba(138, 180, 248, 0.3)",
+                            }}
+                          >
+                            <span className="text-lg font-bold text-blue-400">
+                              {index + 1}
+                            </span>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className={`text-lg font-semibold group-hover:text-blue-300 transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                                {habit.title}
+                              </h4>
+                              <div className="flex items-center space-x-2">
+                                <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                                  {habit.frequency}
+                                </div>
+                                <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                  {habit.category?.replace('_', ' ').toUpperCase()}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <p className={`text-sm mb-3 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {habit.description}
+                            </p>
+                            
+                            <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700/30 text-green-300' : 'bg-gray-50 text-green-600'}`}>
+                              <div className="flex items-start space-x-2">
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                                  style={{ backgroundColor: "rgba(34, 197, 94, 0.2)" }}>
+                                  <span className="text-xs text-green-500">💡</span>
+                                </div>
+                                <div>
+                                  <strong className="text-xs">Why this helps:</strong>
+                                  <p className="text-xs mt-1">{habit.why}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                   
                   {/* Refresh Button */}
-                  <div className="mt-4 text-center">
+                  <div className="text-center">
                     <button
                       onClick={async () => {
                         console.log('🔄 Refreshing personalized habits...');
                         await loadHabitAnalysis(true);
                         console.log('✅ Personalized habits refreshed!');
                       }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${
+                      className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 ${
                         isDarkMode 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                          : 'bg-blue-500 hover:bg-blue-600 text-white'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25' 
+                          : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-blue-500/25'
                       }`}
                     >
                       🔄 Refresh Personalized Habits
