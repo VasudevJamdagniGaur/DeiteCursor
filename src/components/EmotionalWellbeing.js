@@ -236,13 +236,25 @@ export default function EmotionalWellbeing() {
 
   const loadCachedPatternData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('pattern', period, userId);
-    const cachedData = loadFromCache(cacheKey, 60); // 60 minutes cache
+    const cachedData = loadFromCache(cacheKey, 24 * 60); // 24 hours cache (persist across sessions)
     
     if (cachedData) {
       console.log('⚡ Setting cached pattern data instantly');
       setPatternAnalysis(cachedData.patternAnalysis);
       setTriggers(cachedData.triggers || {});
       setHasEnoughData(cachedData.hasEnoughData !== false);
+      
+      // Check if it's a new day since last update
+      const lastUpdateDate = cachedData.lastUpdateDate;
+      const today = new Date().toDateString();
+      
+      if (lastUpdateDate !== today) {
+        console.log('📅 New day detected since last pattern update, will refresh in background');
+        // Don't return early - let it load fresh data in background
+      } else {
+        console.log('📅 Same day as last pattern update, using cached data');
+        return; // Use cached data, no need to refresh
+      }
     }
   }, []);
 
@@ -338,11 +350,13 @@ export default function EmotionalWellbeing() {
     const freshData = await loadPatternAnalysisInternal();
     if (freshData) {
       const cacheKey = getCacheKey('pattern', patternPeriod, user.uid);
+      const today = new Date().toDateString();
       saveToCache(cacheKey, {
         patternAnalysis: freshData.patternAnalysis,
         triggers: freshData.triggers,
         hasEnoughData: freshData.hasEnoughData,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        lastUpdateDate: today // Track the date when pattern analysis was last updated
       });
     }
   };
@@ -381,19 +395,37 @@ export default function EmotionalWellbeing() {
       const user = getCurrentUser();
       const promises = [
         loadFreshEmotionalData(),
-        loadFreshBalanceData(),
-        loadFreshPatternAnalysis()
+        loadFreshBalanceData()
       ];
       
-      // Only load fresh highlights if it's a new day or no cached data exists
-      const cacheKey = getCacheKey('highlights', '3months', user.uid);
-      const cachedData = loadFromCache(cacheKey, 24 * 60);
+      // Only load fresh pattern analysis if it's a new day or no cached data exists
+      const patternCacheKey = getCacheKey('pattern', patternPeriod, user.uid);
+      const patternCachedData = loadFromCache(patternCacheKey, 24 * 60);
       
-      if (!cachedData) {
+      if (!patternCachedData) {
+        console.log('📅 No cached pattern data, including in fresh data load');
+        promises.push(loadFreshPatternAnalysis());
+      } else {
+        const lastUpdateDate = patternCachedData.lastUpdateDate;
+        const today = new Date().toDateString();
+        
+        if (lastUpdateDate !== today) {
+          console.log('📅 New day detected, including pattern analysis in fresh data load');
+          promises.push(loadFreshPatternAnalysis());
+        } else {
+          console.log('📅 Same day, skipping pattern analysis from fresh data load');
+        }
+      }
+      
+      // Only load fresh highlights if it's a new day or no cached data exists
+      const highlightsCacheKey = getCacheKey('highlights', '3months', user.uid);
+      const highlightsCachedData = loadFromCache(highlightsCacheKey, 24 * 60);
+      
+      if (!highlightsCachedData) {
         console.log('📅 No cached highlights data, including in fresh data load');
         promises.push(loadFreshHighlightsData());
       } else {
-        const lastUpdateDate = cachedData.lastUpdateDate;
+        const lastUpdateDate = highlightsCachedData.lastUpdateDate;
         const today = new Date().toDateString();
         
         if (lastUpdateDate !== today) {
@@ -568,7 +600,26 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     if (user) {
       loadCachedPatternData(user.uid, patternPeriod);
-      loadFreshPatternAnalysis();
+      
+      // Only load fresh data if it's a new day or no cached data exists
+      const cacheKey = getCacheKey('pattern', patternPeriod, user.uid);
+      const cachedData = loadFromCache(cacheKey, 24 * 60);
+      
+      if (!cachedData) {
+        console.log('📅 No cached pattern data, loading fresh data');
+        loadFreshPatternAnalysis();
+      } else {
+        const lastUpdateDate = cachedData.lastUpdateDate;
+        const today = new Date().toDateString();
+        
+        if (lastUpdateDate !== today) {
+          console.log('📅 New day detected, refreshing pattern data');
+          loadFreshPatternAnalysis();
+        } else {
+          console.log('📅 Same day, using cached pattern data');
+        }
+      }
+      
       loadHabitAnalysis(false); // Don't force refresh on initial load
     }
   }, [patternPeriod, loadCachedPatternData]);
