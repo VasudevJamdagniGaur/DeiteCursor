@@ -4,8 +4,8 @@ import { getDateIdDaysAgo, getDateId } from '../utils/dateUtils';
 class HabitAnalysisService {
   constructor() {
     this.baseURL = 'https://ey2yvoq090rvrv-11434.proxy.runpod.net/';
-    this.minDaysRequired = 30; // Minimum 30 days for meaningful habit analysis
-    this.minMessagesRequired = 50; // Minimum 50 messages for analysis
+    this.minDaysRequired = 1; // Minimum 1 day for meaningful habit analysis (reduced from 30)
+    this.minMessagesRequired = 1; // Minimum 1 message for analysis (reduced from 50)
   }
 
   /**
@@ -22,11 +22,11 @@ class HabitAnalysisService {
       
       // Check if we have enough data
       if (!this.hasEnoughData(chatData)) {
-        console.log('❌ Not enough chat data for habit analysis');
+        console.log('❌ No chat data available for habit analysis');
         return {
           success: false,
           hasEnoughData: false,
-          message: `Not enough chat data for habit analysis. Need at least ${this.minDaysRequired} days of conversations with ${this.minMessagesRequired} messages.`,
+          message: `No chat data available for habit analysis. Start chatting with Deite to build your personalized habits!`,
           totalMessages: chatData.totalMessages,
           totalDays: chatData.activeDays,
           habits: []
@@ -74,27 +74,46 @@ class HabitAnalysisService {
       }
     };
 
-    // Check up to 365 days back
-    for (let i = 0; i < 365; i++) {
-      const dateId = getDateIdDaysAgo(i);
-      const messagesResult = await firestoreService.getChatMessagesNew(uid, dateId);
+    try {
+      // First, get all available chat days to see what data we have
+      console.log('🔍 Getting all available chat days...');
+      const allChatDaysResult = await firestoreService.getAllChatDays(uid);
       
-      if (messagesResult.success && messagesResult.messages.length > 0) {
-        const dayConversation = {
-          date: dateId,
-          messages: messagesResult.messages,
-          messageCount: messagesResult.messages.length
-        };
+      if (!allChatDaysResult.success) {
+        console.log('❌ Failed to get chat days:', allChatDaysResult.error);
+        return chatData;
+      }
+      
+      console.log('📊 Available chat days:', allChatDaysResult.chatDays.length);
+      
+      // Get messages for each chat day
+      for (const chatDay of allChatDaysResult.chatDays) {
+        console.log(`🔍 Getting messages for ${chatDay.date}...`);
+        const messagesResult = await firestoreService.getChatMessagesNew(uid, chatDay.date);
         
-        chatData.conversations.push(dayConversation);
-        chatData.totalMessages += messagesResult.messages.length;
-        chatData.activeDays++;
-        
-        // Set start date to the earliest found date
-        if (!chatData.dateRange.start) {
-          chatData.dateRange.start = dateId;
+        if (messagesResult.success && messagesResult.messages.length > 0) {
+          console.log(`✅ Found ${messagesResult.messages.length} messages on ${chatDay.date}`);
+          const dayConversation = {
+            date: chatDay.date,
+            messages: messagesResult.messages,
+            messageCount: messagesResult.messages.length
+          };
+          
+          chatData.conversations.push(dayConversation);
+          chatData.totalMessages += messagesResult.messages.length;
+          chatData.activeDays++;
+          
+          // Set start date to the earliest found date
+          if (!chatData.dateRange.start) {
+            chatData.dateRange.start = chatDay.date;
+          }
+        } else {
+          console.log(`❌ No messages found on ${chatDay.date}`);
         }
       }
+      
+    } catch (error) {
+      console.error('❌ Error fetching chat data:', error);
     }
 
     console.log(`✅ Fetched ${chatData.totalMessages} messages across ${chatData.activeDays} active days`);
@@ -143,7 +162,8 @@ class HabitAnalysisService {
    * Check if we have enough data for meaningful analysis
    */
   hasEnoughData(chatData) {
-    return chatData.totalMessages >= this.minMessagesRequired && chatData.activeDays >= this.minDaysRequired;
+    // Always return true if there's any data - we'll generate analysis with whatever is available
+    return chatData.totalMessages > 0 && chatData.activeDays > 0;
   }
 
   /**
