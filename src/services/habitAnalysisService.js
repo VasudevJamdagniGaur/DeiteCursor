@@ -9,16 +9,16 @@ class HabitAnalysisService {
   }
 
   /**
-   * Analyze 3 months of chat history to identify patterns and suggest habits
+   * Analyze all available chat history to identify patterns and suggest habits
    * @param {string} uid - User ID
    * @returns {Object} Analysis results with personalized habits
    */
   async analyzeHabits(uid) {
-    console.log('🔍 Starting 3-month habit analysis...');
+    console.log('🔍 Starting comprehensive habit analysis...');
     
     try {
-      // Fetch 3 months (90 days) of chat data
-      const chatData = await this.fetchChatDataForPeriod(uid, 90);
+      // Fetch all available chat data (up to 365 days)
+      const chatData = await this.fetchAllChatData(uid);
       
       // Check if we have enough data
       if (!this.hasEnoughData(chatData)) {
@@ -39,7 +39,7 @@ class HabitAnalysisService {
       return {
         success: true,
         hasEnoughData: true,
-        period: '3 months',
+        period: 'all available data',
         totalMessages: chatData.totalMessages,
         totalDays: chatData.activeDays,
         habits: habitAnalysis.habits,
@@ -56,6 +56,49 @@ class HabitAnalysisService {
         habits: []
       };
     }
+  }
+
+  /**
+   * Fetch all available chat data (up to 365 days)
+   */
+  async fetchAllChatData(uid) {
+    console.log('📅 Fetching all available chat data...');
+    
+    const chatData = {
+      conversations: [],
+      totalMessages: 0,
+      activeDays: 0,
+      dateRange: {
+        start: null,
+        end: getDateId()
+      }
+    };
+
+    // Check up to 365 days back
+    for (let i = 0; i < 365; i++) {
+      const dateId = getDateIdDaysAgo(i);
+      const messagesResult = await firestoreService.getChatMessagesNew(uid, dateId);
+      
+      if (messagesResult.success && messagesResult.messages.length > 0) {
+        const dayConversation = {
+          date: dateId,
+          messages: messagesResult.messages,
+          messageCount: messagesResult.messages.length
+        };
+        
+        chatData.conversations.push(dayConversation);
+        chatData.totalMessages += messagesResult.messages.length;
+        chatData.activeDays++;
+        
+        // Set start date to the earliest found date
+        if (!chatData.dateRange.start) {
+          chatData.dateRange.start = dateId;
+        }
+      }
+    }
+
+    console.log(`✅ Fetched ${chatData.totalMessages} messages across ${chatData.activeDays} active days`);
+    return chatData;
   }
 
   /**
@@ -363,7 +406,7 @@ IMPORTANT:
   }
 
   /**
-   * Get cached habit analysis if available
+   * Get cached habit analysis if available and not expired
    */
   getCachedHabitAnalysis(uid) {
     try {
@@ -373,11 +416,21 @@ IMPORTANT:
       if (cached) {
         const data = JSON.parse(cached);
         const cacheAge = Date.now() - new Date(data.timestamp).getTime();
-        const maxCacheAge = 7 * 24 * 60 * 60 * 1000; // 7 days
         
-        if (cacheAge < maxCacheAge) {
+        // Check if cache is still valid (not expired and not past 12 AM today)
+        const now = new Date();
+        const cacheDate = new Date(data.timestamp);
+        const isNewDay = now.getDate() !== cacheDate.getDate() || 
+                        now.getMonth() !== cacheDate.getMonth() || 
+                        now.getFullYear() !== cacheDate.getFullYear();
+        
+        // Cache is valid if it's from today and less than 24 hours old
+        if (!isNewDay && cacheAge < 24 * 60 * 60 * 1000) {
           console.log(`✅ Using cached habit analysis (${Math.round(cacheAge / 60000)} minutes old)`);
           return data.analysis;
+        } else {
+          console.log('🔄 Cache expired or new day - will refresh');
+          localStorage.removeItem(cacheKey);
         }
       }
     } catch (error) {
@@ -406,13 +459,13 @@ IMPORTANT:
   }
 
   /**
-   * Main method with caching
+   * Main method with smart caching
    */
-  async getHabitAnalysis(uid, useCache = true) {
-    console.log(`🚀 Getting habit analysis for user ${uid} (cache: ${useCache})`);
+  async getHabitAnalysis(uid, forceRefresh = false) {
+    console.log(`🚀 Getting habit analysis for user ${uid} (forceRefresh: ${forceRefresh})`);
     
-    // Try cache first if enabled
-    if (useCache) {
+    // Try cache first if not forcing refresh
+    if (!forceRefresh) {
       const cached = this.getCachedHabitAnalysis(uid);
       if (cached) {
         return cached;
@@ -420,10 +473,11 @@ IMPORTANT:
     }
 
     // Perform fresh analysis
+    console.log('🔄 Performing fresh habit analysis...');
     const analysis = await this.analyzeHabits(uid);
     
     // Cache successful results
-    if (analysis.success && useCache) {
+    if (analysis.success) {
       this.cacheHabitAnalysis(uid, analysis);
     }
     

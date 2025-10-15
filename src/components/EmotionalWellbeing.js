@@ -534,7 +534,7 @@ export default function EmotionalWellbeing() {
     if (user) {
       loadCachedPatternData(user.uid, patternPeriod);
       loadFreshPatternAnalysis();
-      loadHabitAnalysis();
+      loadHabitAnalysis(false); // Don't force refresh on initial load
     }
   }, [patternPeriod, loadCachedPatternData]);
 
@@ -551,7 +551,7 @@ export default function EmotionalWellbeing() {
     if (!user) return;
 
     try {
-      const analysis = await habitAnalysisService.getHabitAnalysis(user.uid, !forceRefresh);
+      const analysis = await habitAnalysisService.getHabitAnalysis(user.uid, forceRefresh);
       setHabitAnalysis(analysis);
       console.log('📊 Habit analysis loaded:', analysis);
     } catch (error) {
@@ -2056,6 +2056,7 @@ Return in this JSON format:
       localStorage.removeItem(getCacheKey('balance', balancePeriod, user.uid));
       localStorage.removeItem(getCacheKey('pattern', patternPeriod, user.uid));
       localStorage.removeItem(getCacheKey('highlights', '3months', user.uid));
+      localStorage.removeItem(`habit_analysis_${user.uid}`); // Clear habit analysis cache
       console.log('🗑️ Cache cleared for all data types');
       
       // Reset state to force re-render
@@ -2073,7 +2074,7 @@ Return in this JSON format:
       await loadFreshBalanceData();
       await loadFreshPatternAnalysis();
       await loadFreshHighlightsData();
-      await loadHabitAnalysis();
+      await loadHabitAnalysis(true); // Force refresh habit analysis
       
       console.log('✅ All data refreshed from Firestore!');
       alert('✅ Data refreshed successfully!');
