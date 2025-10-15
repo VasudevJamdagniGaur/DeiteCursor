@@ -108,7 +108,7 @@ export default function EmotionalWellbeing() {
   const [triggers, setTriggers] = useState({});
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
-  const [patternPeriod] = useState(90); // Fixed to 90 days (3 months) for pattern analysis
+  const [patternPeriod] = useState(365); // Fixed to 365 days (1 year) to capture all available data
   const [highlightsPeriod] = useState('3months'); // Always show last 3 months
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternAnalysis, setPatternAnalysis] = useState(null);
@@ -1317,7 +1317,7 @@ export default function EmotionalWellbeing() {
   };
 
   const loadPatternAnalysisInternal = async () => {
-    console.log(`🔍 Loading pattern analysis for ${patternPeriod} days...`);
+    console.log(`🔍 Loading pattern analysis for all available data (up to ${patternPeriod} days)...`);
     setPatternLoading(true);
     
     try {
@@ -2869,12 +2869,12 @@ Return in this JSON format:
                     <div className="flex items-center space-x-2">
                       <AlertTriangle className="w-5 h-5" style={{ color: "#FDD663" }} />
                       <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                        {patternAnalysis.message || `Not enough data for ${patternPeriod === 7 ? 'weekly' : 'monthly'} analysis`}
+                        {patternAnalysis.message || `No chat data available for analysis`}
                       </span>
                     </div>
                     {patternAnalysis.totalMessages !== undefined && (
                       <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        Current: {patternAnalysis.totalMessages} messages across {patternAnalysis.totalDays} days. Need at least 3 days of conversations.
+                        Current: {patternAnalysis.totalMessages} messages across {patternAnalysis.totalDays} days. Start chatting to build your emotional patterns!
                       </p>
                     )}
                   </div>
@@ -2894,7 +2894,7 @@ Return in this JSON format:
                       <div className="flex items-center space-x-2">
                         <Brain className="w-5 h-5" style={{ color: "#81C995" }} />
                         <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                          {patternPeriod === 7 ? 'Weekly' : 'Monthly'} Analysis Complete
+                          Analysis Complete
                         </span>
                       </div>
                       <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>

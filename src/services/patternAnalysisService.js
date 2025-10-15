@@ -4,10 +4,10 @@ import { getDateIdDaysAgo, getDateId } from '../utils/dateUtils';
 class PatternAnalysisService {
   constructor() {
     this.baseURL = 'https://ey2yvoq090rvrv-11434.proxy.runpod.net/';
-    this.minDaysRequired = 3; // Minimum days needed for meaningful analysis
-    this.minMessagesRequired = 8; // Minimum total messages needed
-    this.minDaysFor3Months = 7; // Minimum days for 3-month analysis
-    this.minMessagesFor3Months = 15; // Minimum messages for 3-month analysis
+    this.minDaysRequired = 1; // Minimum days needed for meaningful analysis (reduced from 3)
+    this.minMessagesRequired = 1; // Minimum total messages needed (reduced from 8)
+    this.minDaysFor3Months = 1; // Minimum days for 3-month analysis (reduced from 7)
+    this.minMessagesFor3Months = 1; // Minimum messages for 3-month analysis (reduced from 15)
   }
 
   /**
@@ -25,13 +25,11 @@ class PatternAnalysisService {
       
       // Check if we have enough data
       if (!this.hasEnoughData(chatData, days)) {
-        console.log('❌ Not enough chat data for analysis');
-        const minDays = days >= 90 ? this.minDaysFor3Months : this.minDaysRequired;
-        const minMessages = days >= 90 ? this.minMessagesFor3Months : this.minMessagesRequired;
+        console.log('❌ No chat data available for analysis');
         return {
           success: false,
           hasEnoughData: false,
-          message: `Not enough chat data for ${days >= 90 ? '3-month' : days === 7 ? 'weekly' : 'monthly'} analysis. Need at least ${minDays} days of conversations with ${minMessages} messages.`,
+          message: `No chat data available for analysis. Start chatting with Deite to build your emotional patterns!`,
           totalMessages: chatData.totalMessages,
           totalDays: chatData.activeDays,
           triggers: {
@@ -113,11 +111,8 @@ class PatternAnalysisService {
    * Check if we have enough data for meaningful analysis
    */
   hasEnoughData(chatData, days = 7) {
-    if (days >= 90) {
-      // For 3-month analysis, use more lenient requirements
-      return chatData.totalMessages >= this.minMessagesFor3Months && chatData.activeDays >= this.minDaysFor3Months;
-    }
-    return chatData.totalMessages >= this.minMessagesRequired && chatData.activeDays >= this.minDaysRequired;
+    // Always return true if there's any data - we'll generate analysis with whatever is available
+    return chatData.totalMessages > 0 && chatData.activeDays > 0;
   }
 
   /**
@@ -129,7 +124,7 @@ class PatternAnalysisService {
     // Prepare conversation context for analysis
     const conversationContext = this.buildAnalysisContext(chatData);
     
-    const analysisPrompt = `You are an expert emotional intelligence analyst. Analyze the following chat conversations between a user and an AI companion named Deite from the last ${days >= 90 ? '3 months' : days === 7 ? 'week' : 'month'}.
+    const analysisPrompt = `You are an expert emotional intelligence analyst. Analyze the following chat conversations between a user and an AI companion named Deite.
 
 Your task is to identify SPECIFIC, CONCRETE triggers and patterns from the actual conversations. DO NOT use generic categories.
 
@@ -153,7 +148,7 @@ Your task is to identify SPECIFIC, CONCRETE triggers and patterns from the actua
 - If you cannot find specific triggers, provide general but helpful fallbacks based on common patterns
 - Be concrete and actionable, not abstract
 - Each trigger should be something the user can recognize and act upon
-- For 3-month analysis, look for recurring themes and patterns across the entire period
+- Work with whatever data is available - even a single conversation can provide insights
 
 ## Chat Conversations to Analyze:
 ${conversationContext}
@@ -183,7 +178,8 @@ IMPORTANT:
 - Maximum 3-4 items per category
 - If no clear patterns exist, provide helpful general triggers based on common emotional patterns
 - Be specific, not generic
-- Focus on actionable insights that can help improve emotional well-being`;
+- Focus on actionable insights that can help improve emotional well-being
+- Even with limited data, provide meaningful insights`;
 
     try {
       const response = await fetch(`${this.baseURL}api/generate`, {
