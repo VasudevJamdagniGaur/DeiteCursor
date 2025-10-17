@@ -13,7 +13,7 @@ class ChatService {
       const messages = [
         {
           role: 'system',
-          content: 'You are Deite, a warm and emotionally intelligent AI companion. Respond naturally and empathetically to the user.'
+          content: 'You are Deite, a warm and emotionally intelligent AI companion. Keep your responses SHORT and PRECISE - aim for 1-3 sentences maximum. Be empathetic but concise. Avoid lengthy explanations unless specifically asked for details.'
         },
         // Add conversation history
         ...conversationHistory.slice(-5).map(msg => ({
@@ -72,7 +72,11 @@ class ChatService {
           body: {
             model: 'llama3.1',
             prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: true,  // 👈 ALWAYS enable streaming
+            options: {
+              max_tokens: 150,  // Limit response length
+              temperature: 0.7
+            }
           },
           name: 'Ollama Generate API (llama3.1)',
           streaming: true
@@ -82,7 +86,11 @@ class ChatService {
           body: {
             model: 'llama3',
             prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: true,  // 👈 ALWAYS enable streaming
+            options: {
+              max_tokens: 150,  // Limit response length
+              temperature: 0.7
+            }
           },
           name: 'Ollama Generate API (llama3)',
           streaming: true
@@ -92,7 +100,11 @@ class ChatService {
           body: {
             model: 'llama2',
             prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: true,  // 👈 ALWAYS enable streaming
+            options: {
+              max_tokens: 150,  // Limit response length
+              temperature: 0.7
+            }
           },
           name: 'Ollama Generate API (llama2)',
           streaming: true
@@ -103,7 +115,11 @@ class ChatService {
           body: {
             model: availableModels[0],
             prompt: simplePrompt,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: true,  // 👈 ALWAYS enable streaming
+            options: {
+              max_tokens: 150,  // Limit response length
+              temperature: 0.7
+            }
           },
           name: `Ollama Generate API (${availableModels[0]})`,
           streaming: true
@@ -114,7 +130,11 @@ class ChatService {
           body: {
             model: 'llama3.1',
             messages: messages,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: true,  // 👈 ALWAYS enable streaming
+            options: {
+              max_tokens: 150,  // Limit response length
+              temperature: 0.7
+            }
           },
           name: 'Ollama Chat API (llama3.1)',
           streaming: true
@@ -124,7 +144,11 @@ class ChatService {
           body: {
             model: 'llama3',
             messages: messages,
-            stream: true  // 👈 ALWAYS enable streaming
+            stream: true,  // 👈 ALWAYS enable streaming
+            options: {
+              max_tokens: 150,  // Limit response length
+              temperature: 0.7
+            }
           },
           name: 'Ollama Chat API (llama3)',
           streaming: true
@@ -136,7 +160,7 @@ class ChatService {
             model: 'llama3.1',
             messages: messages,
             stream: true,  // 👈 Enable streaming for OpenAI format too
-            max_tokens: 1000
+            max_tokens: 150  // Limit response length
           },
           name: 'OpenAI Compatible API',
           streaming: true
@@ -447,7 +471,7 @@ Use simple, everyday language.`;
           stream: false,
           options: {
             temperature: 0.7,
-            max_tokens: 200
+            max_tokens: 100
           }
         })
       });
