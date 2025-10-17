@@ -16,9 +16,8 @@ export default function DashboardPage() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isLoadingReflection, setIsLoadingReflection] = useState(false);
   const [chatDays, setChatDays] = useState([]);
-  const [reflectionDays, setReflectionDays] = useState([]);
 
-  // Load all chat days and reflection days for calendar indicators
+  // Load all chat days for calendar indicators
   useEffect(() => {
     const loadCalendarData = async () => {
       const user = getCurrentUser();
@@ -41,16 +40,6 @@ export default function DashboardPage() {
           console.error('📅 DASHBOARD: Failed to load chat days:', chatResult.error);
         }
 
-        // Load reflection days
-        const reflectionResult = await firestoreService.getAllReflectionDays(user.uid);
-        if (reflectionResult.success) {
-          console.log('📅 DASHBOARD: Loaded reflection days:', reflectionResult.reflectionDays);
-          console.log('📅 DASHBOARD: Reflection days count:', reflectionResult.reflectionDays.length);
-          console.log('📅 DASHBOARD: Sample reflection day:', reflectionResult.reflectionDays[0]);
-          setReflectionDays(reflectionResult.reflectionDays);
-        } else {
-          console.error('📅 DASHBOARD: Failed to load reflection days:', reflectionResult.error);
-        }
       } catch (error) {
         console.error('📅 DASHBOARD: Error loading calendar data:', error);
       }
@@ -725,7 +714,6 @@ export default function DashboardPage() {
         selectedDate={selectedDate}
         onDateSelect={handleDateSelect}
         chatDays={chatDays}
-        reflectionDays={reflectionDays}
       />
     </div>
   );

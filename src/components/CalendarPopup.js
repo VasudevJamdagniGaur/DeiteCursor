@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays = [], reflectionDays = [] }) => {
+const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays = [] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -96,24 +96,6 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
     return hasActivity;
   };
 
-  const hasReflection = (date) => {
-    if (!date || !reflectionDays || reflectionDays.length === 0) return false;
-    
-    // Format date as YYYY-MM-DD to match reflection date format (same as getDateId function)
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateId = `${year}-${month}-${day}`;
-    
-    console.log('🔍 CALENDAR DEBUG: Checking reflection for date:', dateId);
-    console.log('🔍 CALENDAR DEBUG: Available reflection days:', reflectionDays.map(d => d.date || d.id));
-    
-    // Check if this dateId exists in reflectionDays
-    const hasReflectionData = reflectionDays.some(reflectionDay => reflectionDay.date === dateId || reflectionDay.id === dateId);
-    console.log('🔍 CALENDAR DEBUG: Has reflection:', hasReflectionData);
-    
-    return hasReflectionData;
-  };
 
   const days = getDaysInMonth(currentMonth);
 
@@ -222,18 +204,6 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
                           }}
                         />
                       )}
-                      {/* Purple circle indicator for reflections */}
-                      {hasReflection(date) && (
-                        <div 
-                          className="rounded-full"
-                          style={{
-                            width: '5px',
-                            height: '5px',
-                            backgroundColor: '#A855F7',
-                            boxShadow: '0 0 6px rgba(168, 85, 247, 0.6)',
-                          }}
-                        />
-                      )}
                     </div>
                   )}
                 </div>
@@ -255,16 +225,6 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
               }}
             />
             <span className="text-gray-400">Chat</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div 
-              className="w-2 h-2 rounded-full"
-              style={{
-                backgroundColor: '#A855F7',
-                boxShadow: '0 0 4px rgba(168, 85, 247, 0.6)',
-              }}
-            />
-            <span className="text-gray-400">Reflection</span>
           </div>
         </div>
 
