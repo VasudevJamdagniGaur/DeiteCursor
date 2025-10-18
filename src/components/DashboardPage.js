@@ -265,17 +265,8 @@ export default function DashboardPage() {
       }
       
       if (messagesResult.messages.length === 0) {
-        // Try to list all available dates for debugging
-        console.log('🔍 Checking for any chat days...');
-        const chatDaysResult = await firestoreService.getAllChatDays(user.uid);
-        console.log('🔍 Available chat days:', chatDaysResult.chatDays);
-        
-        let availableDates = '';
-        if (chatDaysResult.success && chatDaysResult.chatDays.length > 0) {
-          availableDates = '\n\nAvailable dates:\n' + chatDaysResult.chatDays.map(d => d.date || d.id).join(', ');
-        }
-        
-        alert('No messages found for this date. Please chat with Deite first!\n\nDate: ' + dateId + '\nPath: users/' + user.uid + '/days/' + dateId + '/messages' + availableDates);
+        console.log('📝 No messages found for date:', dateId);
+        console.log('📝 User can chat with Deite to generate messages for this date');
         setIsLoadingReflection(false);
         return;
       }
