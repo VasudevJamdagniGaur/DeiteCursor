@@ -419,7 +419,8 @@ class FirestoreService {
       await setDoc(messageRef, {
         role: messageData.sender === 'user' ? 'user' : 'assistant',
         text: messageData.text,
-        ts: serverTimestamp()
+        ts: serverTimestamp(),
+        isWhisperSession: messageData.isWhisperSession || false
       });
 
       console.log('💾 FIRESTORE NEW: Message saved with ID:', messageRef.id);

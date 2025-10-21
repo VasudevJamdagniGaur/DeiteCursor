@@ -274,9 +274,20 @@ export default function DashboardPage() {
       console.log('📝 Found', messagesResult.messages.length, 'messages to generate reflection from');
       console.log('📝 First message:', messagesResult.messages[0]);
       
+      // Filter out whisper session messages for reflection generation
+      const nonWhisperMessages = messagesResult.messages.filter(msg => !msg.isWhisperSession);
+      console.log('📝 Filtered to', nonWhisperMessages.length, 'non-whisper messages for reflection');
+      
+      if (nonWhisperMessages.length === 0) {
+        console.log('📝 No non-whisper messages found for reflection generation');
+        alert('No regular chat messages found for this date. Only whisper session messages are available.');
+        setIsLoadingReflection(false);
+        return;
+      }
+      
       // Generate reflection
       console.log('🤖 Generating reflection via AI...');
-      const generatedReflection = await reflectionService.generateReflection(messagesResult.messages);
+      const generatedReflection = await reflectionService.generateReflection(nonWhisperMessages);
       console.log('✅ Reflection generated:', generatedReflection);
       
       // Save reflection

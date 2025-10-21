@@ -28,14 +28,14 @@ class ReflectionService {
     
     console.log('💬 Total messages for reflection:', messages.length);
     
-    // Filter out system messages and get meaningful messages
+    // Filter out system messages, whisper session messages, and get meaningful messages
     const userMessages = messages
-      .filter(msg => msg.sender === 'user')
+      .filter(msg => msg.sender === 'user' && !msg.isWhisperSession)
       .map(msg => msg.text.trim())
       .filter(text => !this.isSimpleGreeting(text) && text.length > 3);
 
     const aiMessages = messages
-      .filter(msg => msg.sender === 'ai')
+      .filter(msg => msg.sender === 'ai' && !msg.isWhisperSession)
       .map(msg => msg.text.trim());
 
     console.log('📝 User messages:', userMessages.length);
