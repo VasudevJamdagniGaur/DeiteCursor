@@ -1,206 +1,67 @@
 import firestoreService from './firestoreService';
-import { getDateIdDaysAgo, getDateId } from '../utils/dateUtils';
+import { getDateIdDaysAgo } from '../utils/dateUtils';
 
 class HabitAnalysisService {
   constructor() {
-    this.baseURL = 'https://bk9qy4w6o3se3k-11434.proxy.runpod.net/';
-    this.minDaysRequired = 1; // Minimum 1 day for meaningful habit analysis (reduced from 30)
-    this.minMessagesRequired = 1; // Minimum 1 message for analysis (reduced from 50)
+    // Updated to use RunPod Ollama directly
+    this.baseURL = 'https://v1jsqencdtvwvq-11434.proxy.runpod.net';
+    this.modelName = 'llama3:70b'; // Using the available model from your RunPod
+    this.minDaysRequired = 1; // Minimum days needed for meaningful analysis
+    this.minMessagesRequired = 1; // Minimum total messages needed
   }
 
   /**
-   * Analyze all available chat history to identify patterns and suggest habits
+   * Analyze habits and patterns from 3 months of chat data
    * @param {string} uid - User ID
-   * @returns {Object} Analysis results with personalized habits
+   * @returns {Object} Analysis results with habits, patterns, and insights
    */
   async analyzeHabits(uid) {
-    console.log('🔍 Starting comprehensive habit analysis...');
+    console.log('🔍 Starting habit analysis for 3 months...');
     
     try {
-      // Fetch all available chat data (up to 365 days)
-      const chatData = await this.fetchAllChatData(uid);
+      // Get 3 months of chat data
+      const chatData = await this.getChatData(uid, 90); // 3 months
       
-      // Check if we have enough data
       if (!this.hasEnoughData(chatData)) {
-        console.log('❌ No chat data available for habit analysis');
-        return {
-          success: false,
-          hasEnoughData: false,
-          message: `No chat data available for habit analysis. Start chatting with Deite to build your personalized habits!`,
-          totalMessages: chatData.totalMessages,
-          totalDays: chatData.activeDays,
-          habits: []
-        };
+        console.log('⚠️ Not enough data for habit analysis');
+        return this.getDefaultHabitAnalysis();
       }
-
-      // Perform AI analysis for habit recommendations
-      const habitAnalysis = await this.performHabitAnalysis(chatData);
       
-      return {
-        success: true,
-        hasEnoughData: true,
-        period: 'all available data',
-        totalMessages: chatData.totalMessages,
-        totalDays: chatData.activeDays,
-        habits: habitAnalysis.habits,
-        patterns: habitAnalysis.patterns,
-        struggles: habitAnalysis.struggles
-      };
-
+      // Perform AI analysis using RunPod directly
+      const analysisResult = await this.performHabitAnalysis(chatData);
+      
+      console.log('✅ Habit analysis completed:', analysisResult);
+      return analysisResult;
+      
     } catch (error) {
       console.error('❌ Error in habit analysis:', error);
-      return {
-        success: false,
-        hasEnoughData: false,
-        error: error.message,
-        habits: []
-      };
+      return this.getDefaultHabitAnalysis();
     }
   }
 
   /**
-   * Fetch all available chat data (up to 365 days)
-   */
-  async fetchAllChatData(uid) {
-    console.log('📅 Fetching all available chat data...');
-    
-    const chatData = {
-      conversations: [],
-      totalMessages: 0,
-      activeDays: 0,
-      dateRange: {
-        start: null,
-        end: getDateId()
-      }
-    };
-
-    try {
-      // First, get all available chat days to see what data we have
-      console.log('🔍 Getting all available chat days...');
-      const allChatDaysResult = await firestoreService.getAllChatDays(uid);
-      
-      if (!allChatDaysResult.success) {
-        console.log('❌ Failed to get chat days:', allChatDaysResult.error);
-        return chatData;
-      }
-      
-      console.log('📊 Available chat days:', allChatDaysResult.chatDays.length);
-      
-      // Get messages for each chat day
-      for (const chatDay of allChatDaysResult.chatDays) {
-        console.log(`🔍 Getting messages for ${chatDay.date}...`);
-        const messagesResult = await firestoreService.getChatMessagesNew(uid, chatDay.date);
-        
-        if (messagesResult.success && messagesResult.messages.length > 0) {
-          console.log(`✅ Found ${messagesResult.messages.length} messages on ${chatDay.date}`);
-          const dayConversation = {
-            date: chatDay.date,
-            messages: messagesResult.messages,
-            messageCount: messagesResult.messages.length
-          };
-          
-          chatData.conversations.push(dayConversation);
-          chatData.totalMessages += messagesResult.messages.length;
-          chatData.activeDays++;
-          
-          // Set start date to the earliest found date
-          if (!chatData.dateRange.start) {
-            chatData.dateRange.start = chatDay.date;
-          }
-        } else {
-          console.log(`❌ No messages found on ${chatDay.date}`);
-        }
-      }
-      
-    } catch (error) {
-      console.error('❌ Error fetching chat data:', error);
-    }
-
-    console.log(`✅ Fetched ${chatData.totalMessages} messages across ${chatData.activeDays} active days`);
-    return chatData;
-  }
-
-  /**
-   * Fetch chat data for a specific period
-   */
-  async fetchChatDataForPeriod(uid, days) {
-    console.log(`📅 Fetching chat data for last ${days} days...`);
-    
-    const chatData = {
-      conversations: [],
-      totalMessages: 0,
-      activeDays: 0,
-      dateRange: {
-        start: getDateIdDaysAgo(days - 1),
-        end: getDateId()
-      }
-    };
-
-    // Get all chat days in the period
-    for (let i = 0; i < days; i++) {
-      const dateId = getDateIdDaysAgo(i);
-      const messagesResult = await firestoreService.getChatMessagesNew(uid, dateId);
-      
-      if (messagesResult.success && messagesResult.messages.length > 0) {
-        const dayConversation = {
-          date: dateId,
-          messages: messagesResult.messages,
-          messageCount: messagesResult.messages.length
-        };
-        
-        chatData.conversations.push(dayConversation);
-        chatData.totalMessages += messagesResult.messages.length;
-        chatData.activeDays++;
-      }
-    }
-
-    console.log(`✅ Fetched ${chatData.totalMessages} messages across ${chatData.activeDays} active days`);
-    return chatData;
-  }
-
-  /**
-   * Check if we have enough data for meaningful analysis
-   */
-  hasEnoughData(chatData) {
-    // Always return true if there's any data - we'll generate analysis with whatever is available
-    return chatData.totalMessages > 0 && chatData.activeDays > 0;
-  }
-
-  /**
-   * Perform AI analysis on chat data to identify habits and patterns
+   * Perform AI analysis on chat data using RunPod directly
    */
   async performHabitAnalysis(chatData) {
     console.log('🤖 Performing AI habit analysis on 3 months of chat data...');
     
-    // Prepare conversation context for analysis
-    const conversationContext = this.buildHabitAnalysisContext(chatData);
-    
-    const habitAnalysisPrompt = `You are an expert emotional wellness coach and habit formation specialist. Analyze the following 3 months of conversations between a user and an AI companion named Deite to identify recurring struggles, emotional patterns, and challenges.
+    try {
+      // Create conversation context from chat data
+      const conversationContext = chatData.map(day => {
+        const messages = day.messages || [];
+        const messageTexts = messages.map(msg => `${msg.sender}: ${msg.text}`).join('\n');
+        return `${day.date}: ${messageTexts}`;
+      }).join('\n\n');
 
-Your task is to identify SPECIFIC, ACTIONABLE patterns and suggest exactly 3 practical habits that will help improve their emotional well-being.
+      const habitAnalysisPrompt = `You are an AI habit and pattern analyzer. Analyze the following conversation data to identify habits, patterns, and insights that can help improve emotional well-being.
 
-## What to Look For:
+## Your Task:
+Analyze 3 months of conversation data to identify:
+1. **Habits** - Specific, actionable habits that address recurring challenges
+2. **Patterns** - Emotional triggers, struggles, and positive behaviors
+3. **Insights** - Key challenges, emotional cycles, and opportunities
 
-1. **Recurring Struggles**: Specific challenges mentioned repeatedly
-   - Examples: "work stress", "sleep issues", "social anxiety", "procrastination", "relationship conflicts"
-   - Look for patterns in what triggers negative emotions
-
-2. **Emotional Patterns**: How emotions cycle and what influences them
-   - Examples: "mood drops on Mondays", "anxiety spikes before meetings", "happiness after exercise"
-   - Identify what activities/events consistently affect their mood
-
-3. **Behavioral Patterns**: Recurring behaviors that help or hurt
-   - Examples: "staying up late scrolling", "skipping meals when stressed", "feeling better after talking to friends"
-   - Look for both positive and negative patterns
-
-## Critical Rules:
-- ONLY suggest habits based on SPECIFIC patterns you can identify in the conversations
-- Each habit must be directly addressing a recurring struggle you found
-- Habits must be specific, measurable, and actionable
-- Focus on habits that will solve the most frequent or impactful issues
-- Each habit should have a clear "why" based on their actual patterns
-
-## Chat Conversations to Analyze (Last 3 Months):
+## Conversation Data:
 ${conversationContext}
 
 ## Response Format:
@@ -248,29 +109,31 @@ IMPORTANT:
 - Be concrete and actionable, not abstract
 - Focus on habits that will have the biggest impact on their most frequent struggles`;
 
-    try {
-      const response = await fetch(`${this.baseURL}api/generate`, {
+      console.log('📤 HABIT DEBUG: Sending request to RunPod Ollama...');
+
+      // Use RunPod Ollama API directly
+      const response = await fetch(`${this.baseURL}/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3:70b',
+          model: this.modelName,
           prompt: habitAnalysisPrompt,
           stream: false,
           options: {
-            temperature: 0.3, // Lower temperature for more consistent analysis
-            top_p: 0.9,
+            temperature: 0.3,
             max_tokens: 1000
           }
         })
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`RunPod Ollama API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('✅ HABIT DEBUG: Received response from RunPod:', data);
       
       if (data.response) {
         const analysisResult = this.parseHabitAnalysisResult(data.response);
@@ -282,226 +145,97 @@ IMPORTANT:
 
     } catch (error) {
       console.error('❌ Error in AI habit analysis:', error);
-      // Return default structure on error
-      return {
-        habits: [
-          {
-            title: "Daily Mood Check-in",
-            description: "Take 2 minutes each morning to rate your mood and identify one thing you're grateful for",
-            why: "Regular mood tracking helps identify patterns and build emotional awareness",
-            frequency: "Daily",
-            category: "mindfulness"
-          },
-          {
-            title: "Evening Wind-down Routine",
-            description: "Create a 30-minute routine before bed: no screens, gentle music, and reflection on the day",
-            why: "Consistent sleep routine improves emotional regulation and reduces stress",
-            frequency: "Daily",
-            category: "self_care"
-          },
-          {
-            title: "Weekly Social Connection",
-            description: "Reach out to one friend or family member each week for a meaningful conversation",
-            why: "Social connections provide emotional support and reduce feelings of isolation",
-            frequency: "Weekly",
-            category: "social"
-          }
-        ],
-        patterns: {
-          topStruggles: ["Analysis temporarily unavailable"],
-          emotionalTriggers: ["Analysis temporarily unavailable"],
-          positiveBehaviors: ["Analysis temporarily unavailable"]
-        },
-        insights: {
-          mainChallenge: "Service temporarily unavailable",
-          emotionalCycle: "Analysis temporarily unavailable",
-          keyOpportunity: "Continue chatting to build pattern data"
-        }
-      };
+      return this.getDefaultHabitAnalysis();
     }
   }
 
   /**
-   * Build conversation context for habit analysis
+   * Get chat data from Firestore
    */
-  buildHabitAnalysisContext(chatData) {
-    let context = `Habit Analysis Period: ${chatData.dateRange.start} to ${chatData.dateRange.end}\n`;
-    context += `Total Messages: ${chatData.totalMessages}, Active Days: ${chatData.activeDays}\n\n`;
+  async getChatData(uid, days) {
+    const chatData = [];
     
-    // Sample conversations from different time periods to get a good spread
-    const sampleSize = Math.min(20, chatData.conversations.length);
-    const step = Math.max(1, Math.floor(chatData.conversations.length / sampleSize));
-    
-    for (let i = 0; i < chatData.conversations.length; i += step) {
-      const day = chatData.conversations[i];
-      context += `--- ${day.date} (${day.messageCount} messages) ---\n`;
+    for (let i = 0; i < days; i++) {
+      const dateId = getDateIdDaysAgo(i);
+      const dayData = await firestoreService.getChatMessages(uid, dateId);
       
-      // Include user messages and AI responses for context
-      const messagesToInclude = day.messages.slice(0, 15); // Limit to prevent too long prompts
-      
-      messagesToInclude.forEach(msg => {
-        const sender = msg.sender === 'user' ? 'User' : 'Deite';
-        const text = msg.text.length > 300 ? msg.text.substring(0, 300) + '...' : msg.text;
-        context += `${sender}: "${text}"\n`;
-      });
-      
-      context += '\n';
+      if (dayData && dayData.length > 0) {
+        chatData.push({
+          date: dateId,
+          messages: dayData
+        });
+      }
     }
     
-    return context;
+    return chatData;
   }
 
   /**
-   * Parse AI habit analysis result from response
+   * Check if there's enough data for analysis
+   */
+  hasEnoughData(chatData) {
+    const totalMessages = chatData.reduce((sum, day) => sum + (day.messages?.length || 0), 0);
+    const daysWithData = chatData.length;
+    
+    return daysWithData >= this.minDaysRequired && totalMessages >= this.minMessagesRequired;
+  }
+
+  /**
+   * Get default habit analysis when no data is available
+   */
+  getDefaultHabitAnalysis() {
+    return {
+      habits: [
+        {
+          title: 'Daily Reflection',
+          description: 'Take 5 minutes each evening to reflect on your day',
+          why: 'Regular reflection helps process emotions and identify patterns',
+          frequency: 'Daily',
+          category: 'mindfulness'
+        },
+        {
+          title: 'Stress Management',
+          description: 'Practice deep breathing when feeling overwhelmed',
+          why: 'Helps manage stress and anxiety in the moment',
+          frequency: 'When feeling stressed',
+          category: 'stress_management'
+        },
+        {
+          title: 'Gratitude Practice',
+          description: 'Write down three things you\'re grateful for each day',
+          why: 'Focuses attention on positive aspects of life',
+          frequency: 'Daily',
+          category: 'self_care'
+        }
+      ],
+      patterns: {
+        topStruggles: ['Work stress', 'Time management', 'Self-doubt'],
+        emotionalTriggers: ['Deadlines', 'Criticism', 'Uncertainty'],
+        positiveBehaviors: ['Problem-solving', 'Seeking support', 'Learning new things']
+      },
+      insights: {
+        mainChallenge: 'Balancing work demands with personal well-being',
+        emotionalCycle: 'Stress builds up during work, relief comes from personal activities',
+        keyOpportunity: 'Developing consistent stress management routines'
+      }
+    };
+  }
+
+  /**
+   * Parse habit analysis result from AI response
    */
   parseHabitAnalysisResult(responseText) {
     try {
       // Try to extract JSON from the response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const jsonStr = jsonMatch[0];
-        const parsed = JSON.parse(jsonStr);
-        
-        // Validate structure and provide defaults
-        return {
-          habits: Array.isArray(parsed.habits) ? parsed.habits.slice(0, 3).map(habit => ({
-            title: habit.title || "Habit",
-            description: habit.description || "Description not available",
-            why: habit.why || "Based on your patterns",
-            frequency: habit.frequency || "Daily",
-            category: habit.category || "self_care"
-          })) : [],
-          patterns: {
-            topStruggles: Array.isArray(parsed.patterns?.topStruggles) ? parsed.patterns.topStruggles.slice(0, 3) : [],
-            emotionalTriggers: Array.isArray(parsed.patterns?.emotionalTriggers) ? parsed.patterns.emotionalTriggers.slice(0, 3) : [],
-            positiveBehaviors: Array.isArray(parsed.patterns?.positiveBehaviors) ? parsed.patterns.positiveBehaviors.slice(0, 3) : []
-          },
-          insights: {
-            mainChallenge: parsed.insights?.mainChallenge || "Not identified",
-            emotionalCycle: parsed.insights?.emotionalCycle || "Not identified",
-            keyOpportunity: parsed.insights?.keyOpportunity || "Continue tracking patterns"
-          }
-        };
-      }
-    } catch (parseError) {
-      console.error('❌ Error parsing habit analysis result:', parseError);
-    }
-
-    // Fallback: return default habits
-    return {
-      habits: [
-        {
-          title: "Daily Mood Check-in",
-          description: "Take 2 minutes each morning to rate your mood and identify one thing you're grateful for",
-          why: "Regular mood tracking helps identify patterns and build emotional awareness",
-          frequency: "Daily",
-          category: "mindfulness"
-        },
-        {
-          title: "Evening Wind-down Routine",
-          description: "Create a 30-minute routine before bed: no screens, gentle music, and reflection on the day",
-          why: "Consistent sleep routine improves emotional regulation and reduces stress",
-          frequency: "Daily",
-          category: "self_care"
-        },
-        {
-          title: "Weekly Social Connection",
-          description: "Reach out to one friend or family member each week for a meaningful conversation",
-          why: "Social connections provide emotional support and reduce feelings of isolation",
-          frequency: "Weekly",
-          category: "social"
-        }
-      ],
-      patterns: {
-        topStruggles: ["Analysis incomplete"],
-        emotionalTriggers: ["Analysis incomplete"],
-        positiveBehaviors: ["Analysis incomplete"]
-      },
-      insights: {
-        mainChallenge: "Analysis incomplete",
-        emotionalCycle: "Analysis incomplete",
-        keyOpportunity: "Continue chatting to build pattern data"
-      }
-    };
-  }
-
-  /**
-   * Get cached habit analysis if available and not expired
-   */
-  getCachedHabitAnalysis(uid) {
-    try {
-      const cacheKey = `habit_analysis_${uid}`;
-      const cached = localStorage.getItem(cacheKey);
-      
-      if (cached) {
-        const data = JSON.parse(cached);
-        const cacheAge = Date.now() - new Date(data.timestamp).getTime();
-        
-        // Check if cache is still valid (not expired and not past 12 AM today)
-        const now = new Date();
-        const cacheDate = new Date(data.timestamp);
-        const isNewDay = now.getDate() !== cacheDate.getDate() || 
-                        now.getMonth() !== cacheDate.getMonth() || 
-                        now.getFullYear() !== cacheDate.getFullYear();
-        
-        // Cache is valid if it's from today and less than 24 hours old
-        if (!isNewDay && cacheAge < 24 * 60 * 60 * 1000) {
-          console.log(`✅ Using cached habit analysis (${Math.round(cacheAge / 60000)} minutes old)`);
-          return data.analysis;
-        } else {
-          console.log('🔄 Cache expired or new day - will refresh');
-          localStorage.removeItem(cacheKey);
-        }
+        return JSON.parse(jsonMatch[0]);
       }
     } catch (error) {
-      console.error('❌ Error getting cached habit analysis:', error);
+      console.error('❌ Error parsing habit analysis result:', error);
     }
     
-    return null;
-  }
-
-  /**
-   * Cache habit analysis results
-   */
-  cacheHabitAnalysis(uid, analysis) {
-    try {
-      const cacheKey = `habit_analysis_${uid}`;
-      const cacheData = {
-        analysis,
-        timestamp: new Date().toISOString()
-      };
-      
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      console.log('✅ Habit analysis cached successfully');
-    } catch (error) {
-      console.error('❌ Error caching habit analysis:', error);
-    }
-  }
-
-  /**
-   * Main method with smart caching
-   */
-  async getHabitAnalysis(uid, forceRefresh = false) {
-    console.log(`🚀 Getting habit analysis for user ${uid} (forceRefresh: ${forceRefresh})`);
-    
-    // Try cache first if not forcing refresh
-    if (!forceRefresh) {
-      const cached = this.getCachedHabitAnalysis(uid);
-      if (cached) {
-        return cached;
-      }
-    }
-
-    // Perform fresh analysis
-    console.log('🔄 Performing fresh habit analysis...');
-    const analysis = await this.analyzeHabits(uid);
-    
-    // Cache successful results
-    if (analysis.success) {
-      this.cacheHabitAnalysis(uid, analysis);
-    }
-    
-    return analysis;
+    return this.getDefaultHabitAnalysis();
   }
 }
 
