@@ -3,9 +3,9 @@ import { getDateIdDaysAgo, getDateId } from '../utils/dateUtils';
 
 class PatternAnalysisService {
   constructor() {
-    // Updated to use RunPod Ollama directly
-    this.baseURL = 'https://v1jsqencdtvwvq-11434.proxy.runpod.net';
-    this.modelName = 'llama3:70b'; // Using the available model from your RunPod
+    // Updated to use CORS proxy server to bypass browser CORS restrictions
+    this.baseURL = 'http://localhost:3001';
+    this.analysisEndpoint = `${this.baseURL}/api/pattern-analysis`;
     this.minDaysRequired = 1; // Minimum days needed for meaningful analysis (reduced from 3)
     this.minMessagesRequired = 1; // Minimum total messages needed (reduced from 8)
     this.minDaysFor3Months = 1; // Minimum days for 3-month analysis (reduced from 7)
@@ -35,7 +35,7 @@ class PatternAnalysisService {
       
       console.log('✅ Pattern analysis completed:', analysisResult);
       return analysisResult;
-      
+
     } catch (error) {
       console.error('❌ Error in pattern analysis:', error);
       return this.getDefaultAnalysis();
@@ -43,90 +43,37 @@ class PatternAnalysisService {
   }
 
   /**
-   * Perform AI analysis on chat data using RunPod directly
+   * Perform AI analysis on chat data using CORS proxy server
    */
   async performAIAnalysis(chatData, days) {
     console.log('🤖 Performing AI analysis on chat data...');
     
     try {
-      // Create conversation context from chat data
-      const conversationContext = chatData.map(day => {
-        const messages = day.messages || [];
-        const messageTexts = messages.map(msg => `${msg.sender}: ${msg.text}`).join('\n');
-        return `${day.date}: ${messageTexts}`;
-      }).join('\n\n');
-
-      const analysisPrompt = `You are an AI emotional pattern analyzer. Analyze the following conversation data and identify emotional triggers, joy sources, and distractions.
-
-## Your Task:
-Analyze the conversation patterns to identify:
-1. **Triggers** - What consistently causes stress, anxiety, or negative emotions
-2. **Joy Sources** - What consistently brings happiness, energy, or positive emotions  
-3. **Distractions** - What consistently pulls attention away from important tasks or goals
-
-## Conversation Data:
-${conversationContext}
-
-## Response Format:
-Return a JSON object with this exact structure:
-
-{
-  "triggers": {
-    "stress": ["specific trigger from conversations", "another specific trigger"],
-    "joy": ["specific joy source from conversations", "another specific source"],
-    "distraction": ["specific distraction from conversations", "another specific distraction"]
-  },
-  "insights": {
-    "primaryStressSource": "most frequently mentioned stress source",
-    "mainJoySource": "most frequently mentioned joy source", 
-    "behavioralPattern": "clear pattern observed from conversations"
-  },
-  "recommendations": [
-    "specific actionable advice based on identified triggers",
-    "another specific recommendation",
-    "third specific recommendation"
-  ]
-}
-
-IMPORTANT: 
-- Maximum 3-4 items per category
-- If no clear patterns exist, provide helpful general triggers based on common emotional patterns
-- Be specific, not generic
-- Focus on actionable insights that can help improve emotional well-being
-- Even with limited data, provide meaningful insights`;
-
-      console.log('📤 PATTERN DEBUG: Sending request to RunPod Ollama...');
-
-      // Use RunPod Ollama API directly
-      const response = await fetch(`${this.baseURL}/api/generate`, {
+      // Use the CORS proxy server
+      const response = await fetch(this.analysisEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: this.modelName,
-          prompt: analysisPrompt,
-          stream: false,
-          options: {
-            temperature: 0.3,
-            max_tokens: 1000
-          }
+          chatData: chatData,
+          days: days
         })
       });
 
       if (!response.ok) {
-        throw new Error(`RunPod Ollama API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Proxy server error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('✅ PATTERN DEBUG: Received response from RunPod:', data);
       
-      if (data.response) {
-        const analysisResult = this.parseAnalysisResult(data.response);
-        console.log('✅ AI analysis completed:', analysisResult);
-        return analysisResult;
+      console.log('✅ PATTERN DEBUG: Received analysis from proxy:', data);
+      
+      if (data.success && data.analysis) {
+        console.log('✅ AI analysis completed:', data.analysis);
+        return data.analysis;
       } else {
-        throw new Error('Invalid response format from API');
+        return this.getDefaultAnalysis();
       }
 
     } catch (error) {
