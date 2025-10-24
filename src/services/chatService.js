@@ -1,6 +1,8 @@
 class ChatService {
   constructor() {
-    this.baseURL = 'https://bk9qy4w6o3se3k-11434.proxy.runpod.net/';
+    // Updated to use the new backend server with warm-up system
+    this.baseURL = 'http://localhost:3001';
+    this.backendChatEndpoint = `${this.baseURL}/api/chat`;
   }
 
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {

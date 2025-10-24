@@ -14,8 +14,8 @@ A Node.js + Express backend server for the Deite AI chat application with integr
 ## Prerequisites
 
 - Node.js (v14 or higher)
-- Ollama installed and running locally
-- `mistral:instruct` model available in Ollama
+- Ollama running on RunPod (https://v1jsqencdtvwvq-11434.proxy.runpod.net/)
+- `llama3:70b` model available in Ollama
 - RunPod RTX6000 pod (or similar GPU environment)
 
 ## Installation
@@ -25,14 +25,14 @@ A Node.js + Express backend server for the Deite AI chat application with integr
    npm install
    ```
 
-2. **Ensure Ollama is running**:
+2. **Verify Ollama is running on RunPod**:
    ```bash
-   ollama serve
+   curl https://v1jsqencdtvwvq-11434.proxy.runpod.net/api/tags
    ```
 
 3. **Verify mistral:instruct model is available**:
    ```bash
-   ollama list
+   curl https://v1jsqencdtvwvq-11434.proxy.runpod.net/api/tags
    ```
 
 ## Usage
@@ -115,22 +115,22 @@ The warm-up system consists of three main components:
 You can modify these settings in `server.js`:
 
 ```javascript
-const OLLAMA_BASE_URL = 'http://localhost:11434';  // Ollama API URL
-const MODEL_NAME = 'mistral:instruct';              // Model to warm up
+const OLLAMA_BASE_URL = 'https://v1jsqencdtvwvq-11434.proxy.runpod.net';  // RunPod Ollama API URL
+const MODEL_NAME = 'llama3:70b';              // Model to warm up
 const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000;         // Ping interval (4 minutes)
 ```
 
 ## Troubleshooting
 
 ### Model not warming up
-- Ensure Ollama is running: `ollama serve`
-- Check if model exists: `ollama list`
-- Verify Ollama API is accessible: `curl http://localhost:11434/api/tags`
+- Ensure Ollama is running on RunPod: `curl https://v1jsqencdtvwvq-11434.proxy.runpod.net/api/tags`
+- Check if model exists: `curl https://v1jsqencdtvwvq-11434.proxy.runpod.net/api/tags`
+- Verify RunPod Ollama API is accessible: `curl https://v1jsqencdtvwvq-11434.proxy.runpod.net/api/tags`
 
 ### Keep-alive ping failures
-- Check Ollama logs for errors
-- Verify GPU memory is sufficient
-- Restart Ollama if needed: `ollama serve`
+- Check RunPod Ollama logs for errors
+- Verify GPU memory is sufficient on RunPod
+- Restart RunPod Ollama instance if needed
 
 ### Server startup issues
 - Check Node.js version: `node --version`

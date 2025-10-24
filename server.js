@@ -10,9 +10,9 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Ollama configuration
-const OLLAMA_BASE_URL = 'http://localhost:11434';
-const MODEL_NAME = 'mistral:instruct';
+// Ollama configuration - Updated for RunPod
+const OLLAMA_BASE_URL = 'https://v1jsqencdtvwvq-11434.proxy.runpod.net';
+const MODEL_NAME = 'llama3:70b'; // Updated to use available model
 const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutes in milliseconds
 
 /**
@@ -64,56 +64,43 @@ class OllamaWarmup {
   }
 
   /**
-   * Preload the model into GPU memory using ollama run command
+   * Preload the model into GPU memory using Ollama API
    * This eliminates the cold start delay for first user requests
+   * Updated for RunPod remote instance
    */
   async preloadModel() {
-    return new Promise((resolve, reject) => {
-      console.log(`🚀 Preloading ${MODEL_NAME} into GPU memory...`);
+    console.log(`🚀 Preloading ${MODEL_NAME} into GPU memory via RunPod...`);
+    
+    try {
+      // Use Ollama API to preload the model by sending a test request
+      const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: MODEL_NAME,
+          prompt: 'Hello',
+          stream: false,
+          options: {
+            temperature: 0.1,
+            max_tokens: 10 // Minimal response to save resources
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Model successfully preloaded into GPU memory via RunPod');
+      return data;
       
-      // Use ollama run command to preload the model
-      // The command runs in background and loads model into GPU memory
-      const ollamaProcess = spawn('ollama', ['run', MODEL_NAME, 'Hello'], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: true
-      });
-
-      let output = '';
-      let errorOutput = '';
-
-      // Capture output for debugging
-      ollamaProcess.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      ollamaProcess.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-
-      // Wait for model to load (typically 20-40 seconds)
-      const timeout = setTimeout(() => {
-        ollamaProcess.kill();
-        reject(new Error('Model preload timeout - Ollama may not be running'));
-      }, 60000); // 60 second timeout
-
-      ollamaProcess.on('close', (code) => {
-        clearTimeout(timeout);
-        
-        if (code === 0 || output.includes('Hello') || output.includes('response')) {
-          console.log('✅ Model successfully preloaded into GPU memory');
-          resolve();
-        } else {
-          console.error('❌ Model preload failed:', errorOutput);
-          reject(new Error(`Ollama process exited with code ${code}`));
-        }
-      });
-
-      ollamaProcess.on('error', (error) => {
-        clearTimeout(timeout);
-        console.error('❌ Failed to start Ollama process:', error.message);
-        reject(error);
-      });
-    });
+    } catch (error) {
+      console.error('❌ Model preload failed:', error.message);
+      throw error;
+    }
   }
 
   /**
