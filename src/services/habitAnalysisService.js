@@ -3,9 +3,7 @@ import { getDateIdDaysAgo } from '../utils/dateUtils';
 
 class HabitAnalysisService {
   constructor() {
-    // Updated to use RunPod Ollama directly
-    this.baseURL = 'https://v1jsqencdtvwvq-11434.proxy.runpod.net';
-    this.modelName = 'llama3:70b'; // Using the available model from your RunPod
+    this.baseURL = 'https://a837ndg5t3vn43-11434.proxy.runpod.net/';
     this.minDaysRequired = 1; // Minimum days needed for meaningful analysis
     this.minMessagesRequired = 1; // Minimum total messages needed
   }

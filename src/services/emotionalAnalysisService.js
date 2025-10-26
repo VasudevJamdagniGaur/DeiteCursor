@@ -1,8 +1,6 @@
 class EmotionalAnalysisService {
   constructor() {
-    // Updated to use CORS proxy server to bypass browser CORS restrictions
-    this.baseURL = 'http://localhost:3001';
-    this.analysisEndpoint = `${this.baseURL}/api/emotional-analysis`;
+    this.baseURL = 'https://a837ndg5t3vn43-11434.proxy.runpod.net/';
   }
 
   async analyzeEmotionalScores(messages) {
