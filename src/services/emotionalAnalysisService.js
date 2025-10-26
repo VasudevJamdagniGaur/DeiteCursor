@@ -12,14 +12,14 @@ class EmotionalAnalysisService {
     try {
       // Use the CORS proxy server
       const response = await fetch(this.analysisEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
           messages: messages
-        })
-      });
+          })
+        });
 
       if (!response.ok) {
         throw new Error(`Proxy server error: ${response.status} ${response.statusText}`);
@@ -31,7 +31,7 @@ class EmotionalAnalysisService {
       
       if (data.success && data.analysis) {
         return data.analysis;
-      } else {
+        } else {
         return this.getDefaultScores();
       }
       
