@@ -539,7 +539,7 @@ export const LaserFlow: React.FC<Props> = ({
       renderer.dispose();
       if (mount.contains(canvas)) mount.removeChild(canvas);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [dpr]);
 
   useEffect(() => {

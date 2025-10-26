@@ -358,8 +358,8 @@ const Shuffle: React.FC<ShuffleProps> = ({
 
   const commonStyle: React.CSSProperties = { textAlign, ...style };
   const classes = `shuffle-parent ${ready ? 'is-ready' : ''} ${className}`;
-  const Tag = (tag || 'p') as keyof JSX.IntrinsicElements;
-  return React.createElement(Tag, { ref: ref as any, className: classes, style: commonStyle }, text);
+  const Tag = (tag || 'p') as string;
+  return React.createElement(Tag as any, { ref: ref as any, className: classes, style: commonStyle }, text);
 };
 
 export default Shuffle;
