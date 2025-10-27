@@ -446,7 +446,7 @@ export default function EmotionalWellbeing() {
     }
   };
 
-  // Load cached data instantly, then fetch fresh data
+  // Load cached data instantly on mount only
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
@@ -495,7 +495,7 @@ export default function EmotionalWellbeing() {
         });
       }
 
-      // Load cached data instantly
+      // Load cached data instantly on initial mount only
       loadCachedData(user.uid);
 
       // CRITICAL: Check for forced fresh data and use it immediately
@@ -517,7 +517,8 @@ export default function EmotionalWellbeing() {
       // Then fetch fresh data in background
       loadFreshData();
     }
-  }, [loadCachedData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   // Listen for localStorage changes and custom events to detect when new emotional data is saved
   useEffect(() => {
@@ -580,7 +581,7 @@ export default function EmotionalWellbeing() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('emotionalDataUpdated', handleCustomEvent);
     };
-  }, [loadCachedData]);
+  }, []); // No dependencies - set up event listeners once
 
   useEffect(() => {
     const user = getCurrentUser();
