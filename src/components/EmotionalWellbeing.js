@@ -517,7 +517,6 @@ export default function EmotionalWellbeing() {
       // Then fetch fresh data in background
       loadFreshData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
 
   // Listen for localStorage changes and custom events to detect when new emotional data is saved
