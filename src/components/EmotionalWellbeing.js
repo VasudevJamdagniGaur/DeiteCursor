@@ -585,6 +585,7 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      console.log('🔄 MOOD CHART: Period changed to', selectedPeriod);
       // Try to load from cache first - ONLY for selectedPeriod
       const hasCache = loadCachedEmotionalData(user.uid, selectedPeriod);
       
@@ -597,11 +598,12 @@ export default function EmotionalWellbeing() {
         // DON'T refresh in background - keep it cached
       }
     }
-  }, [selectedPeriod, loadCachedEmotionalData]);
+  }, [selectedPeriod]); // Only depend on selectedPeriod
 
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      console.log('🔄 BALANCE CHART: Period changed to', balancePeriod);
       // Try to load from cache first
       const hasBalanceCache = loadCachedBalanceData(user.uid, balancePeriod);
       
@@ -613,7 +615,7 @@ export default function EmotionalWellbeing() {
         console.log('⚖️ Using cached balance data for period', balancePeriod, '- instant switch!');
       }
     }
-  }, [balancePeriod, loadCachedBalanceData]);
+  }, [balancePeriod]); // Only depend on balancePeriod
 
   useEffect(() => {
     const user = getCurrentUser();
