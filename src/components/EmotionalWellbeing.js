@@ -218,7 +218,9 @@ export default function EmotionalWellbeing() {
       setWeeklyMoodData(cachedData.weeklyMoodData || []);
       setEmotionalData(cachedData.emotionalData || []);
       setLastCacheUpdate(cachedData.timestamp);
+      return true; // Cache exists
     }
+    return false; // No cache
   }, []);
 
   const loadCachedBalanceData = useCallback((userId, period) => {
@@ -584,8 +586,21 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      loadCachedEmotionalData(user.uid, selectedPeriod);
-      loadFreshEmotionalData();
+      // Try to load from cache first
+      const hasCache = loadCachedEmotionalData(user.uid, selectedPeriod);
+      
+      // Only load fresh data if cache doesn't exist
+      if (!hasCache) {
+        console.log('⚡ No cache for period', selectedPeriod, '- loading fresh data');
+        loadFreshEmotionalData();
+      } else {
+        console.log('⚡ Using cached data for period', selectedPeriod, '- instant switch!');
+        // Refresh data in background after a short delay (update cache without blocking UI)
+        setTimeout(() => {
+          console.log('🔄 Background: Refreshing cache for period', selectedPeriod);
+          loadFreshEmotionalData();
+        }, 500);
+      }
     }
   }, [selectedPeriod, loadCachedEmotionalData]);
 
