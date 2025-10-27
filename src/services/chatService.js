@@ -76,7 +76,7 @@ Assistant:`;
           const requestBody = {
             model: modelToTry,
             prompt: simplePrompt,
-            stream: false,
+            stream: !!onToken, // Enable streaming if callback provided
             options: {
               temperature: 0.7,
               num_predict: 200
@@ -103,35 +103,93 @@ Assistant:`;
             continue; // Try next model
           }
           
-          const data = await response.json();
-          console.log('✅ CHAT DEBUG: Received response from RunPod for', modelToTry);
-          console.log('✅ CHAT DEBUG: Response keys:', Object.keys(data));
-          
-          // Handle different response formats
-          let aiResponse = '';
-          if (data.response) {
-            aiResponse = data.response;
-          } else if (data.text) {
-            aiResponse = data.text;
-          } else if (data.output) {
-            aiResponse = data.output;
-          } else if (typeof data === 'string') {
-            aiResponse = data;
+          // Handle streaming response
+          if (onToken && response.body) {
+            console.log('🌊 CHAT DEBUG: Processing streaming response from', modelToTry);
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+            
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                  console.log('🌊 Streaming completed for', modelToTry);
+                  break;
+                }
+                
+                const chunk = decoder.decode(value, { stream: true });
+                
+                // Parse JSON lines
+                const lines = chunk.split('\n').filter(line => line.trim());
+                
+                for (const line of lines) {
+                  try {
+                    const data = JSON.parse(line);
+                    
+                    if (data.response) {
+                      fullResponse += data.response;
+                      
+                      // Call onToken callback if provided
+                      if (onToken) {
+                        onToken(data.response);
+                      }
+                    }
+                    
+                    if (data.done) {
+                      console.log('🌊 Stream done for', modelToTry, ', full response:', fullResponse);
+                      return fullResponse;
+                    }
+                  } catch (parseError) {
+                    console.log('🌊 Parse error for line:', line);
+                  }
+                }
+              }
+              
+              if (fullResponse) {
+                console.log('✅ Streaming response completed from', modelToTry);
+                return fullResponse;
+              }
+              
+            } catch (streamError) {
+              console.error('❌ Streaming error for', modelToTry, ':', streamError);
+              lastError = streamError;
+              continue; // Try next model
+            }
           } else {
-            console.error('❌ CHAT DEBUG: Unexpected response format:', data);
-            lastError = new Error('Unexpected response format from RunPod API');
-            continue; // Try next model
+            // Handle non-streaming response
+            const data = await response.json();
+            console.log('✅ CHAT DEBUG: Received response from RunPod for', modelToTry);
+            console.log('✅ CHAT DEBUG: Response keys:', Object.keys(data));
+            
+            // Handle different response formats
+            let aiResponse = '';
+            if (data.response) {
+              aiResponse = data.response;
+            } else if (data.text) {
+              aiResponse = data.text;
+            } else if (data.output) {
+              aiResponse = data.output;
+            } else if (typeof data === 'string') {
+              aiResponse = data;
+            } else {
+              console.error('❌ CHAT DEBUG: Unexpected response format:', data);
+              lastError = new Error('Unexpected response format from RunPod API');
+              continue; // Try next model
+            }
+            
+            if (!aiResponse || aiResponse.trim() === '') {
+              console.error('❌ CHAT DEBUG: Empty response from', modelToTry);
+              lastError = new Error('Empty response from AI');
+              continue; // Try next model
+            }
+            
+            console.log('✅ CHAT DEBUG: Successfully got response from', modelToTry);
+            console.log('✅ CHAT DEBUG: AI Response:', aiResponse.substring(0, 100));
+            return aiResponse;
           }
-          
-          if (!aiResponse || aiResponse.trim() === '') {
-            console.error('❌ CHAT DEBUG: Empty response from', modelToTry);
-            lastError = new Error('Empty response from AI');
-            continue; // Try next model
-          }
-          
-          console.log('✅ CHAT DEBUG: Successfully got response from', modelToTry);
-          console.log('✅ CHAT DEBUG: AI Response:', aiResponse.substring(0, 100));
-          return aiResponse;
           
         } catch (modelError) {
           console.error(`❌ Error with model ${modelToTry}:`, modelError);
