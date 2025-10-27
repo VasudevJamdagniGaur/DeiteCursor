@@ -663,6 +663,68 @@ class FirestoreService {
       return { success: false, error: error.message, moodData: [] };
     }
   }
+
+  /**
+   * NEW STRUCTURE: Get ALL mood chart data (Lifetime) - queries all available days
+   */
+  async getAllMoodChartDataNew(uid) {
+    try {
+      console.log('📊 LIFETIME: Fetching ALL available mood chart data...');
+      
+      const moodData = [];
+      
+      // Query the "days" collection to get all available dates
+      const daysRef = collection(this.db, `users/${uid}/days`);
+      const daysSnapshot = await getDocs(daysRef);
+      
+      console.log(`📊 LIFETIME: Found ${daysSnapshot.size} days with data in Firestore`);
+      
+      // Process each day's mood data
+      for (const dayDoc of daysSnapshot.docs) {
+        const dateId = dayDoc.id;
+        
+        try {
+          // Get mood chart data for this day
+          const moodRef = doc(this.db, `users/${uid}/days/${dateId}/moodChart/daily`);
+          const moodSnapshot = await getDoc(moodRef);
+          
+          if (moodSnapshot.exists()) {
+            const data = moodSnapshot.data();
+            
+            // Parse the date to create a proper date object
+            const [year, month, day] = dateId.split('-').map(Number);
+            const targetDate = new Date(year, month - 1, day);
+            
+            const dayData = {
+              date: dateId,
+              day: targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              happiness: data.happiness || 0,
+              anxiety: data.anxiety || 0,
+              stress: data.stress || 0,
+              energy: data.energy || 0
+            };
+            
+            console.log(`📊 LIFETIME: ✅ Found data for ${dateId}: H:${dayData.happiness} E:${dayData.energy} A:${dayData.anxiety} S:${dayData.stress}`);
+            moodData.push(dayData);
+          }
+        } catch (dayError) {
+          console.error(`❌ LIFETIME: Error getting mood data for ${dateId}:`, dayError);
+        }
+      }
+      
+      // Sort by date (oldest first)
+      moodData.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      console.log(`📊 LIFETIME: ✅ Retrieved ${moodData.length} days of mood data`);
+      console.log(`📊 LIFETIME: ✅ First day: ${moodData.length > 0 ? moodData[0].date : 'N/A'}`);
+      console.log(`📊 LIFETIME: ✅ Last day: ${moodData.length > 0 ? moodData[moodData.length - 1].date : 'N/A'}`);
+      
+      return { success: true, moodData };
+    } catch (error) {
+      console.error('❌ LIFETIME: Error getting all mood chart data:', error);
+      return { success: false, error: error.message, moodData: [] };
+    }
+  }
 }
 
 export default new FirestoreService();

@@ -696,21 +696,19 @@ export default function EmotionalWellbeing() {
       // Get AI-generated mood data from new Firebase structure
       let result;
       if (selectedPeriod === 365) {
-        // For lifetime, we need to get all available mood data
-        // First get all emotional data to find the date range
-        const emotionalDataRaw = emotionalAnalysisService.getAllEmotionalData(user.uid);
-        if (emotionalDataRaw.length > 0) {
-          // Find the earliest date with data
-          const sortedData = [...emotionalDataRaw].sort((a, b) => new Date(a.date) - new Date(b.date));
-          const startDate = new Date(sortedData[0].date);
-          const endDate = new Date();
-          const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-          
-          console.log(`📊 LIFETIME: Getting ${daysDiff} days of data from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
-          result = await firestoreService.getMoodChartDataNew(user.uid, daysDiff);
-        } else {
-          // No data available, use default period
+        // For lifetime, get ALL available mood data from the first chat to today
+        console.log('📊 LIFETIME: Fetching ALL available mood chart data from first chat...');
+        result = await firestoreService.getAllMoodChartDataNew(user.uid);
+        
+        if (!result.success || !result.moodData || result.moodData.length === 0) {
+          console.log('📊 LIFETIME: No lifetime data found, trying to get first 30 days');
           result = await firestoreService.getMoodChartDataNew(user.uid, 30);
+        } else {
+          console.log(`📊 LIFETIME: Found ${result.moodData.length} days of data from first chat`);
+          if (result.moodData.length > 0) {
+            const earliestDate = result.moodData[0].date;
+            console.log(`📊 LIFETIME: Data starts from ${earliestDate} - showing complete history`);
+          }
         }
       } else {
         result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
