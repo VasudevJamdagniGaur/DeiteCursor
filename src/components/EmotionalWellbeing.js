@@ -604,15 +604,21 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     if (user) {
       console.log('🔄 BALANCE CHART: Period changed to', balancePeriod);
-      // Try to load from cache first
-      const hasBalanceCache = loadCachedBalanceData(user.uid, balancePeriod);
       
-      // Only load fresh data if cache doesn't exist
-      if (!hasBalanceCache) {
-        console.log('⚖️ No balance cache for period', balancePeriod, '- loading fresh data');
+      // For lifetime, always load fresh data to ensure we get all data from first chat
+      if (balancePeriod === 365) {
+        console.log('⚖️ LIFETIME selected - loading fresh data from first chat date');
         loadFreshBalanceData();
       } else {
-        console.log('⚖️ Using cached balance data for period', balancePeriod, '- instant switch!');
+        // For 7 or 30 days, try cache first
+        const hasBalanceCache = loadCachedBalanceData(user.uid, balancePeriod);
+        
+        if (!hasBalanceCache) {
+          console.log('⚖️ No balance cache for period', balancePeriod, '- loading fresh data');
+          loadFreshBalanceData();
+        } else {
+          console.log('⚖️ Using cached balance data for period', balancePeriod, '- instant switch!');
+        }
       }
     }
   }, [balancePeriod]); // Only depend on balancePeriod
@@ -820,6 +826,9 @@ export default function EmotionalWellbeing() {
       return { moodBalance: [], topEmotions: [] };
     }
 
+    console.log('⚖️ USER ID:', user.uid);
+    console.log('⚖️ BALANCE PERIOD:', balancePeriod);
+
     try {
       // Use the same data source as the mood chart for consistency
       let result;
@@ -843,10 +852,14 @@ export default function EmotionalWellbeing() {
       }
 
       console.log('⚖️ Balance chart data result:', result);
+      console.log('⚖️ Balance chart - success:', result.success);
+      console.log('⚖️ Balance chart - moodData length:', result.moodData?.length);
+      console.log('⚖️ Balance chart - first few days:', result.moodData?.slice(0, 3));
 
       let balanceData;
       if (result.success && result.moodData && result.moodData.length > 0) {
         console.log('⚖️ Processing balance data from Firebase:', result.moodData.length, 'days');
+        console.log('⚖️ Balance chart - Sample data:', result.moodData[0]);
         
         // Apply emotion rules to balance data (NO 200% cap)
         const processedMoodData = result.moodData.map(day => {
@@ -1141,13 +1154,36 @@ export default function EmotionalWellbeing() {
     if (data.length > 0) {
       console.log('🔄 Using Firebase data directly for balance chart');
       
-      const moodBalance = data.map(dayData => {
+      const moodBalance = data.map((dayData, index) => {
         const date = new Date(dayData.date);
         
-        // Calculate balance for this specific day
-        const positiveScore = Math.round((dayData.happiness + dayData.energy) / 2);
-        const negativeScore = Math.round((dayData.anxiety + dayData.stress) / 2);
-        const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
+        // Calculate balance percentages for this specific day
+        // Positive = (happiness + energy) / total
+        // Negative = (anxiety + stress) / total
+        // Neutral = remainder
+        const total = dayData.happiness + dayData.energy + dayData.anxiety + dayData.stress;
+        
+        let positiveScore, negativeScore, neutralScore;
+        
+        if (total > 0) {
+          // Calculate as percentages of total emotional energy
+          const positiveTotal = dayData.happiness + dayData.energy;
+          const negativeTotal = dayData.anxiety + dayData.stress;
+          
+          positiveScore = Math.round((positiveTotal / total) * 100);
+          negativeScore = Math.round((negativeTotal / total) * 100);
+          neutralScore = 100 - positiveScore - negativeScore;
+        } else {
+          // Default values if no data
+          positiveScore = 40;
+          negativeScore = 25;
+          neutralScore = 35;
+        }
+        
+        // Log first few items for debugging
+        if (index < 3) {
+          console.log(`⚖️ Balance Day ${index}: ${dayData.date} - P:${positiveScore} N:${neutralScore} Neg:${negativeScore} (Total:${total}, H:${dayData.happiness} E:${dayData.energy} A:${dayData.anxiety} S:${dayData.stress})`);
+        }
         
         return {
           day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
