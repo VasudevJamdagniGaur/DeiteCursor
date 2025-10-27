@@ -1,6 +1,21 @@
 class ChatService {
   constructor() {
     this.baseURL = 'https://b5z7d285vvdqfz-11434.proxy.runpod.net/';
+    this.modelName = 'llama3:70b';
+  }
+
+  async checkModelsAvailable() {
+    try {
+      const response = await fetch(`${this.baseURL}api/tags`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Available models:', data.models?.map(m => m.name) || []);
+        return data.models || [];
+      }
+    } catch (error) {
+      console.error('❌ Could not check available models:', error);
+    }
+    return [];
   }
 
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {
@@ -71,27 +86,70 @@ Keep responses SHORT and PRECISE (1-3 sentences max). Be empathetic but concise.
         return msg.content;
       }).join('\n\n') + '\n\nAssistant:';
 
-      console.log('📤 CHAT DEBUG: Sending request to RunPod Ollama...');
+      // Try different model names in order of preference
+      const modelOptions = ['llama3:70b', 'llama3.1:70b', 'llama3:8b', 'llama3'];
+      const apiUrl = `${this.baseURL}api/generate`;
+      
+      let lastError = null;
+      let response = null;
+      let modelName = null;
+      
+      console.log('📤 CHAT DEBUG: Full API URL:', apiUrl);
+      
+      for (const currentModel of modelOptions) {
+        console.log('📤 CHAT DEBUG: Trying model:', currentModel);
+        
+        try {
+          const requestBody = {
+            model: currentModel,
+            prompt: simplePrompt,
+            stream: !!onToken,
+            options: {
+              temperature: 0.7,
+              max_tokens: 200
+            }
+          };
+          
+          console.log('📤 CHAT DEBUG: Request body preview:', {
+            model: currentModel,
+            prompt_length: simplePrompt.length,
+            stream: !!onToken
+          });
+          
+          response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+          });
 
-      // Use RunPod Ollama API directly
-      const response = await fetch(`${this.baseURL}api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama3:70b',
-          prompt: simplePrompt,
-          stream: !!onToken, // Enable streaming if onToken callback provided
-          options: {
-            temperature: 0.7,
-            max_tokens: 200
+          console.log('📥 CHAT DEBUG: Response status for', currentModel, ':', response.status);
+          console.log('📥 CHAT DEBUG: Response ok:', response.ok);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ CHAT DEBUG: Error response body:', errorText);
+            lastError = new Error(`Model ${currentModel} failed: ${response.status} ${response.statusText} - ${errorText}`);
+            continue; // Try next model
           }
-        })
-      });
+          
+          // If we got here, the request was successful
+          modelName = currentModel;
+          console.log('✅ CHAT DEBUG: Successfully using model:', modelName);
+          break;
 
-      if (!response.ok) {
-        throw new Error(`RunPod Ollama API error: ${response.status} ${response.statusText}`);
+        } catch (modelError) {
+          console.error(`❌ Error with model ${currentModel}:`, modelError);
+          lastError = modelError;
+          continue; // Try next model
+        }
+      }
+      
+      // Check if any model succeeded
+      if (!response || !modelName) {
+        console.error('❌ CHAT DEBUG: All models failed. Last error:', lastError);
+        throw lastError || new Error('All models failed - check if Ollama models are loaded on RunPod instance');
       }
 
       if (onToken && response.body) {
