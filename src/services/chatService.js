@@ -40,32 +40,23 @@ class ChatService {
 ${conversationContext}Human: ${userMessage}
 Assistant:`;
 
-      // Try different models in order of preference
+      // Try different models in order of preference - prioritize llama3:70b
       const apiUrl = `${this.baseURL}api/generate`;
-      const modelOptions = ['llama3:8b', 'llama3', 'llama3.1:8b', 'llama3.1'];
+      const modelOptions = ['llama3:70b', 'llama3:8b', 'llama3', 'llama2'];
       
-      let selectedModel = modelOptions[0];
       let lastError = null;
       
-      // First, try to get available models
+      // First, check available models on the server
+      let availableModels = [];
       try {
         const tagsResponse = await fetch(`${this.baseURL}api/tags`);
         if (tagsResponse.ok) {
           const tagsData = await tagsResponse.json();
-          const availableModels = tagsData.models?.map(m => m.name) || [];
+          availableModels = tagsData.models?.map(m => m.name) || [];
           console.log('📋 Available models on server:', availableModels);
-          
-          // Use first available model from our preferred list
-          for (const preferredModel of modelOptions) {
-            if (availableModels.includes(preferredModel) || availableModels.some(m => m.includes(preferredModel))) {
-              selectedModel = preferredModel;
-              console.log('✅ Selected model:', selectedModel);
-              break;
-            }
-          }
         }
       } catch (tagsError) {
-        console.log('⚠️ Could not check available models, using default:', selectedModel);
+        console.log('⚠️ Could not check available models, will try all model options');
       }
       
       console.log('📤 CHAT DEBUG: Full API URL:', apiUrl);
@@ -73,6 +64,12 @@ Assistant:`;
       
       // Try models in order until one succeeds
       for (const modelToTry of modelOptions) {
+        // Skip models that we know aren't available
+        if (availableModels.length > 0 && !availableModels.some(m => m.includes(modelToTry.split(':')[0]))) {
+          console.log('⏭️ Skipping model', modelToTry, '- not available');
+          continue;
+        }
+        
         console.log('📤 CHAT DEBUG: Trying model:', modelToTry);
         
         try {
