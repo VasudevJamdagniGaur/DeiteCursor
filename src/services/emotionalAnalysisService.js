@@ -64,4 +64,4 @@ class EmotionalAnalysisService {
   }
 }
 
-export default EmotionalAnalysisService;
+export default new EmotionalAnalysisService();
