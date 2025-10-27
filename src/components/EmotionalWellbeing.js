@@ -231,10 +231,9 @@ export default function EmotionalWellbeing() {
       console.log('⚡ Setting cached balance data instantly');
       setMoodBalance(cachedData.moodBalance || []);
       setTopEmotions(cachedData.topEmotions || []);
-    } else {
-      // If no cached data, trigger fresh data load
-      console.log('⚡ No cached balance data, will load fresh data');
+      return true; // Cache exists
     }
+    return false; // No cache
   }, []);
 
   const loadCachedPatternData = useCallback((userId, period) => {
@@ -586,7 +585,7 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      // Try to load from cache first
+      // Try to load from cache first - ONLY for selectedPeriod
       const hasCache = loadCachedEmotionalData(user.uid, selectedPeriod);
       
       // Only load fresh data if cache doesn't exist
@@ -595,11 +594,7 @@ export default function EmotionalWellbeing() {
         loadFreshEmotionalData();
       } else {
         console.log('⚡ Using cached data for period', selectedPeriod, '- instant switch!');
-        // Refresh data in background after a short delay (update cache without blocking UI)
-        setTimeout(() => {
-          console.log('🔄 Background: Refreshing cache for period', selectedPeriod);
-          loadFreshEmotionalData();
-        }, 500);
+        // DON'T refresh in background - keep it cached
       }
     }
   }, [selectedPeriod, loadCachedEmotionalData]);
@@ -607,8 +602,16 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      loadCachedBalanceData(user.uid, balancePeriod);
-      loadFreshBalanceData();
+      // Try to load from cache first
+      const hasBalanceCache = loadCachedBalanceData(user.uid, balancePeriod);
+      
+      // Only load fresh data if cache doesn't exist
+      if (!hasBalanceCache) {
+        console.log('⚖️ No balance cache for period', balancePeriod, '- loading fresh data');
+        loadFreshBalanceData();
+      } else {
+        console.log('⚖️ Using cached balance data for period', balancePeriod, '- instant switch!');
+      }
     }
   }, [balancePeriod, loadCachedBalanceData]);
 
