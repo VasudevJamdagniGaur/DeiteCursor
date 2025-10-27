@@ -824,18 +824,19 @@ export default function EmotionalWellbeing() {
       // Use the same data source as the mood chart for consistency
       let result;
       if (balancePeriod === 365) {
-        // For lifetime, get all available mood data
-        const emotionalDataRaw = emotionalAnalysisService.getAllEmotionalData(user.uid);
-        if (emotionalDataRaw.length > 0) {
-          const sortedData = [...emotionalDataRaw].sort((a, b) => new Date(a.date) - new Date(b.date));
-          const startDate = new Date(sortedData[0].date);
-          const endDate = new Date();
-          const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-          
-          console.log(`⚖️ LIFETIME: Getting ${daysDiff} days of balance data from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
-          result = await firestoreService.getMoodChartDataNew(user.uid, daysDiff);
-        } else {
+        // For lifetime, get ALL available mood data from the first chat to today
+        console.log('⚖️ LIFETIME: Fetching ALL available balance data from first chat...');
+        result = await firestoreService.getAllMoodChartDataNew(user.uid);
+        
+        if (!result.success || !result.moodData || result.moodData.length === 0) {
+          console.log('⚖️ LIFETIME: No lifetime data found, trying to get first 30 days');
           result = await firestoreService.getMoodChartDataNew(user.uid, 30);
+        } else {
+          console.log(`⚖️ LIFETIME: Found ${result.moodData.length} days of balance data from first chat`);
+          if (result.moodData.length > 0) {
+            const earliestDate = result.moodData[0].date;
+            console.log(`⚖️ LIFETIME: Balance data starts from ${earliestDate} - showing complete history`);
+          }
         }
       } else {
         result = await firestoreService.getMoodChartDataNew(user.uid, balancePeriod);
