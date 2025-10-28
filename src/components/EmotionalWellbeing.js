@@ -314,13 +314,13 @@ export default function EmotionalWellbeing() {
     }
   };
 
-  const loadFreshBalanceData = async () => {
+  const loadFreshBalanceData = async (period = balancePeriod) => {
     const user = getCurrentUser();
     if (!user) return;
 
-    const freshData = await loadBalanceDataInternal();
+    const freshData = await loadBalanceDataInternal(period);
     if (freshData) {
-      const cacheKey = getCacheKey('balance', balancePeriod, user.uid);
+      const cacheKey = getCacheKey('balance', period, user.uid);
       saveToCache(cacheKey, {
         moodBalance: freshData.moodBalance,
         topEmotions: freshData.topEmotions,
@@ -397,7 +397,7 @@ export default function EmotionalWellbeing() {
       const user = getCurrentUser();
       const promises = [
         loadFreshEmotionalData(),
-        loadFreshBalanceData()
+        loadFreshBalanceData(balancePeriod)
       ];
       
       // Only load fresh pattern analysis if it's a new day or no cached data exists
@@ -608,14 +608,14 @@ export default function EmotionalWellbeing() {
       // For lifetime, always load fresh data to ensure we get all data from first chat
       if (balancePeriod === 365) {
         console.log('⚖️ LIFETIME selected - loading fresh data from first chat date');
-        loadFreshBalanceData();
+        loadFreshBalanceData(balancePeriod);
       } else {
         // For 7 or 30 days, try cache first
         const hasBalanceCache = loadCachedBalanceData(user.uid, balancePeriod);
         
         if (!hasBalanceCache) {
           console.log('⚖️ No balance cache for period', balancePeriod, '- loading fresh data');
-          loadFreshBalanceData();
+          loadFreshBalanceData(balancePeriod);
         } else {
           console.log('⚖️ Using cached balance data for period', balancePeriod, '- instant switch!');
         }
@@ -817,8 +817,8 @@ export default function EmotionalWellbeing() {
     return null;
   };
 
-  const loadBalanceDataInternal = async () => {
-    console.log(`⚖️ Loading balance data for ${balancePeriod === 365 ? 'lifetime' : balancePeriod + ' days'}...`);
+  const loadBalanceDataInternal = async (period = balancePeriod) => {
+    console.log(`⚖️ Loading balance data for ${period === 365 ? 'lifetime' : period + ' days'}...`);
     
     const user = getCurrentUser();
     if (!user) {
@@ -827,12 +827,12 @@ export default function EmotionalWellbeing() {
     }
 
     console.log('⚖️ USER ID:', user.uid);
-    console.log('⚖️ BALANCE PERIOD:', balancePeriod);
+    console.log('⚖️ BALANCE PERIOD:', period);
 
     try {
       // Use the same data source as the mood chart for consistency
       let result;
-      if (balancePeriod === 365) {
+      if (period === 365) {
         // For lifetime, get ALL available mood data from the first chat to today
         console.log('⚖️ LIFETIME: Fetching ALL available balance data from first chat...');
         result = await firestoreService.getAllMoodChartDataNew(user.uid);
@@ -848,7 +848,7 @@ export default function EmotionalWellbeing() {
           }
         }
       } else {
-        result = await firestoreService.getMoodChartDataNew(user.uid, balancePeriod);
+        result = await firestoreService.getMoodChartDataNew(user.uid, period);
       }
 
       console.log('⚖️ Balance chart data result:', result);
@@ -884,10 +884,10 @@ export default function EmotionalWellbeing() {
           };
         });
         
-        balanceData = processBalanceDataInternal(processedMoodData);
+        balanceData = processBalanceDataInternal(processedMoodData, period);
       } else {
         console.log('⚖️ No balance data found, creating empty time series');
-        balanceData = processBalanceDataInternal([]);
+        balanceData = processBalanceDataInternal([], period);
       }
       
       // Set state and return data for caching
@@ -897,7 +897,7 @@ export default function EmotionalWellbeing() {
       return balanceData;
     } catch (error) {
       console.error('❌ Error loading balance data:', error);
-      const emptyBalanceData = processBalanceDataInternal([]);
+      const emptyBalanceData = processBalanceDataInternal([], period);
       setMoodBalance(emptyBalanceData.moodBalance);
       setTopEmotions(emptyBalanceData.topEmotions);
       return emptyBalanceData;
@@ -1166,8 +1166,8 @@ export default function EmotionalWellbeing() {
     return highlightsData;
   };
 
-  const processBalanceDataInternal = (data) => {
-    console.log(`🔄 Processing balance data: ${data.length} entries for ${balancePeriod === 365 ? 'lifetime' : balancePeriod + ' days'}`);
+  const processBalanceDataInternal = (data, period = balancePeriod) => {
+    console.log(`🔄 Processing balance data: ${data.length} entries for ${period === 365 ? 'lifetime' : period + ' days'}`);
     
     // If we have data, use it directly (it's already from Firebase with proper date range)
     if (data.length > 0) {
@@ -1232,7 +1232,7 @@ export default function EmotionalWellbeing() {
     
     // Fallback: Create date range for the balance period when no data
     const dateRange = [];
-    if (balancePeriod === 365) {
+    if (period === 365) {
       // For lifetime with no data, show last 30 days as fallback
       for (let i = 29; i >= 0; i--) {
         const date = new Date();
@@ -1241,7 +1241,7 @@ export default function EmotionalWellbeing() {
       }
     } else {
       // For specific day periods
-      for (let i = balancePeriod - 1; i >= 0; i--) {
+      for (let i = period - 1; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
         dateRange.push(date.toISOString().split('T')[0]);
@@ -1510,7 +1510,7 @@ export default function EmotionalWellbeing() {
       // Reload all data in background
       console.log('📥 Loading fresh data from Firestore...');
       await loadFreshEmotionalData();
-      await loadFreshBalanceData();
+      await loadFreshBalanceData(balancePeriod);
       await loadFreshPatternAnalysis();
       await loadFreshHighlightsData();
       await loadHabitAnalysis();
@@ -2253,7 +2253,7 @@ Return in this JSON format:
       
       // Reload all data
       await loadFreshEmotionalData();
-      await loadFreshBalanceData();
+      await loadFreshBalanceData(balancePeriod);
       await loadFreshPatternAnalysis();
       await loadFreshHighlightsData();
       await loadHabitAnalysis(true); // Force refresh habit analysis
