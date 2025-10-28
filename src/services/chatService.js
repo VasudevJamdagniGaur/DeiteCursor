@@ -206,6 +206,43 @@ Assistant:`;
       throw error;
     }
   }
+
+  async generateDayDescription(dayData, type, periodText) {
+    try {
+      console.log(`🤖 Generating ${type} day description for`, dayData.date);
+      
+      const prompt = `You are Deite — a compassionate AI therapist and emotional analyst.
+You are analyzing a user's emotional wellbeing based on their daily reflections, moods, and emotional summaries.
+
+${type === 'best' ? `
+Analyze the BEST MOOD DAY and explain why this day felt so positive.
+- Focus on what made it special: achievements, positive connections, self-growth, calmness, or healing
+- Be specific about the emotional cause
+- Avoid generic phrases like "this was likely due to" or "you might have felt"
+- Use direct reasoning: "You felt emotionally elevated because you overcame self-doubt during your project presentation, proving to yourself that persistence pays off."
+` : `
+Analyze the MOST CHALLENGING DAY and explain why it was emotionally difficult.
+- Identify emotional triggers, inner conflicts, or moments of overwhelm
+- Offer gentle insight into their coping process or emotional growth
+- Avoid robotic summaries like "multiple pressures" — make it sound human, like a therapist's reflection
+- Be specific about the emotional cause
+`}
+
+Date: ${dayData.date || 'Unknown'}
+Mood: ${dayData.happiness}% happiness, ${dayData.energy}% energy
+Stress: ${dayData.stress}% stress, ${dayData.anxiety}% anxiety
+
+${dayData.summary ? `Summary from that day: ${dayData.summary}` : 'No daily summary available for this day.'}
+
+Keep the response warm, natural, and empathetic (3-5 sentences). Focus on meaning and emotional cause, not numbers.`;
+
+      const response = await this.sendMessage(prompt);
+      return response.trim();
+    } catch (error) {
+      console.error(`❌ Error generating ${type} day description:`, error);
+      return `You experienced ${type === 'best' ? 'a significantly positive day' : 'a challenging emotional period'} during ${periodText}. Reflect on what contributed to this experience and how it relates to your ongoing emotional journey.`;
+    }
+  }
 }
 
 export default new ChatService();

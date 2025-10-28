@@ -946,7 +946,26 @@ export default function EmotionalWellbeing() {
           };
         });
         
-        const highlightsData = await processHighlightsDataInternal(processedMoodData, user.uid);
+        // ✅ NEW: Fetch reflections for all days to enrich AI analysis
+        console.log('📖 Fetching reflections for each day to enrich highlights...');
+        const enrichedData = await Promise.all(
+          processedMoodData.map(async (day) => {
+            try {
+              const reflectionResult = await firestoreService.getReflectionNew(user.uid, day.date);
+              return {
+                ...day,
+                summary: reflectionResult.reflection || null
+              };
+            } catch (error) {
+              console.log(`⚠️ No reflection found for ${day.date}`);
+              return { ...day, summary: null };
+            }
+          })
+        );
+        
+        console.log('✅ Enriched highlights data with reflections:', enrichedData);
+        
+        const highlightsData = await processHighlightsDataInternal(enrichedData, user.uid);
         setHighlights(highlightsData);
         return { highlights: highlightsData };
       } else {
