@@ -1089,6 +1089,8 @@ export default function EmotionalWellbeing() {
 
     console.log('🏆 Best day found:', bestDay.date, '- Happiness:', bestDay.happiness, 'Energy:', bestDay.energy);
     console.log('🏆 Worst day found:', worstDay.date, '- Anxiety:', worstDay.anxiety, 'Stress:', worstDay.stress);
+    console.log('📝 Best day summary:', bestDay.summary);
+    console.log('📝 Worst day summary:', worstDay.summary);
 
     let highlightsData;
 
@@ -1101,6 +1103,8 @@ export default function EmotionalWellbeing() {
       const periodText = 'the last 3 months';
       
       console.log('🚀 Calling RunPod AI for mini-stories...');
+      console.log('🚀 Best day being sent to AI:', JSON.stringify(bestDay));
+      console.log('🚀 Worst day being sent to AI:', JSON.stringify(worstDay));
       const [bestDayDescription, worstDayDescription] = await Promise.all([
         chatService.generateDayDescription(bestDay, 'best', periodText),
         chatService.generateDayDescription(worstDay, 'challenging', periodText)
