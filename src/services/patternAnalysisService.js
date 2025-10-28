@@ -275,21 +275,21 @@ class PatternAnalysisService {
     
     // Common stress patterns
     if (highStressDays.length >= moodData.length * 0.3) {
-      triggers.push('Work-related pressure and deadlines — you consistently experienced elevated stress (60%+ on many days), suggesting that professional demands are a significant emotional trigger. Consider setting clearer boundaries and incorporating buffer time into your schedule.');
+      triggers.push('Work pressure and deadlines');
     }
     
     if (highAnxietyDays.length >= moodData.length * 0.3) {
-      triggers.push('Uncertainty and worries about the future — your anxiety peaked frequently (60%+) across the period, indicating that uncertainty or anticipatory stress weighs heavily. Practice grounding techniques when anxiety rises.');
+      triggers.push('Uncertainty about the future');
     }
     
     if (lowHappinessDays.length >= moodData.length * 0.3 && highStressDays.length > 0) {
-      triggers.push('Stress-energy depletion — when stress levels increased (60%+), your happiness often dropped below 40%, showing that high stress directly impacts your emotional wellbeing and robs you of joy.');
+      triggers.push('Stress-energy depletion');
     }
 
     // Analyze stress/anxiety correlations
     const stressAnxietyCombined = moodData.filter(d => (d.stress || 0) >= 50 && (d.anxiety || 0) >= 50);
     if (stressAnxietyCombined.length >= moodData.length * 0.2) {
-      triggers.push('Overwhelm from combined pressures — on 20%+ of days, both stress and anxiety were elevated simultaneously (50%+ each). This pattern suggests that when multiple pressures converge, you experience emotional overwhelm. Recognize these moments and practice breathing exercises or take strategic breaks.');
+      triggers.push('Overwhelm from combined pressures');
     }
 
     // If no strong patterns, provide general insights
@@ -298,11 +298,11 @@ class PatternAnalysisService {
       const avgAnxiety = moodData.reduce((sum, d) => sum + (d.anxiety || 0), 0) / moodData.length;
       
       if (avgStress >= 45) {
-        triggers.push('Moderate but consistent stress levels — your average stress (40%+) suggests that ongoing pressure, though manageable, is a regular part of your emotional landscape. Pay attention to what specific situations elevate your stress.');
+        triggers.push('Ongoing pressure and demands');
       }
       
       if (avgAnxiety >= 45) {
-        triggers.push('Persistent worries — elevated average anxiety (40%+) indicates that worry is a recurring emotional state. Consider journaling about your concerns or discussing them with trusted others.');
+        triggers.push('Persistent worries and concerns');
       }
     }
 
@@ -323,21 +323,21 @@ class PatternAnalysisService {
     
     // Analyze positive patterns
     if (highHappinessDays.length >= moodData.length * 0.25) {
-      boosters.push('Authentic achievements and progress — you frequently experienced high happiness (70%+) on 25%+ of days, suggesting that meaningful accomplishments, personal growth, or pursuing goals brings you genuine joy. You thrive when making progress toward what matters to you.');
+      boosters.push('Achievements and meaningful progress');
     }
     
     if (highEnergyDays.length >= moodData.length * 0.25) {
-      boosters.push('Physical vitality and engagement — your energy peaked (70%+) regularly, indicating that being physically active, pursuing interests, or feeling mentally stimulated energizes you. Activities that bring vitality into your life consistently uplift your mood.');
+      boosters.push('Physical vitality and active pursuits');
     }
     
     if (lowStressDays.length >= moodData.length * 0.3 && lowAnxietyDays.length >= moodData.length * 0.3) {
-      boosters.push('Calm and peace — on many days, both stress and anxiety stayed low (30% or less), showing that peaceful moments and low-pressure environments are a consistent source of wellbeing. You recharge through calm, quiet, or unstructured time.');
+      boosters.push('Calm and peaceful moments');
     }
 
     // Find correlation between high happiness and low stress
     const peacefulDays = moodData.filter(d => (d.happiness || 0) >= 60 && (d.stress || 0) <= 30 && (d.anxiety || 0) <= 30);
     if (peacefulDays.length >= moodData.length * 0.2) {
-      boosters.push('Emotional balance — on 20%+ of days, you experienced happiness (60%+) alongside low stress and anxiety (30% or less). This reveals that when you can reduce pressure and worry, happiness naturally emerges. Peace is a genuine boost for your mood.');
+      boosters.push('Emotional balance and harmony');
     }
 
     // If no strong patterns, analyze average positive emotions
@@ -346,11 +346,11 @@ class PatternAnalysisService {
       const avgEnergy = moodData.reduce((sum, d) => sum + (d.energy || 0), 0) / moodData.length;
       
       if (avgHappiness >= 55 && avgEnergy >= 55) {
-        boosters.push('Steady positive emotional energy — your consistent happiness (55%+) and energy (55%+) indicate that you have a solid foundation of wellbeing. Continue nurturing the relationships, activities, and routines that sustain this positive baseline.');
+        boosters.push('Steady positive energy');
       }
       
       if (avgHappiness >= 60) {
-        boosters.push('Natural optimism and contentment — your average happiness (60%+) suggests that positive thinking, gratitude, or supportive relationships consistently bring you joy. These sources of happiness are reliable boosters for your emotional state.');
+        boosters.push('Natural optimism and contentment');
       }
     }
 
@@ -370,15 +370,15 @@ class PatternAnalysisService {
     
     // Analyze distraction patterns
     if (lowEnergyHighStress.length >= moodData.length * 0.2) {
-      distractions.push('Stress-induced energy depletion — on 20%+ of days, high stress (50%+) coincided with low energy (40% or less), showing that when stress spikes, your energy tanks. This pattern suggests that stress isn\'t just mentally draining but physically depleting. Consider setting clearer boundaries to protect your energy reserves.');
+      distractions.push('Stress-induced energy depletion');
     }
     
     if (highStressLowHappiness.length >= moodData.length * 0.25) {
-      distractions.push('Stress hijacks happiness — elevated stress (60%+) frequently occurred alongside reduced happiness (50% or less) on 25%+ of days. This reveals that stress acts as an emotional hijacker, robbing you of joy even when positive things are happening. Identify stress sources and address them proactively.');
+      distractions.push('Stress hijacks happiness');
     }
     
     if (energyDrops.length >= moodData.length * 0.3) {
-      distractions.push('Chronic low energy — your energy dropped to 35% or below on 30%+ of days, indicating that something is consistently draining your vitality. This could be sleep issues, overcommitment, physical demands, or mental burnout. Look for patterns that precede these energy crashes.');
+      distractions.push('Chronic low energy levels');
     }
 
     // Analyze correlation between stress and energy
@@ -387,7 +387,7 @@ class PatternAnalysisService {
     const avgEnergyOnAllDays = moodData.reduce((sum, d) => sum + (d.energy || 0), 0) / moodData.length;
     
     if (avgEnergyOnStressedDays < avgEnergyOnAllDays - 15 && stressedDays.length >= moodData.length * 0.2) {
-      distractions.push('Stress-energy drain pattern — when stress increases (55%+), your energy consistently drops below its usual level. This creates a cycle where stress depletes energy, leading to more stress. Breaking this cycle requires proactive energy management during stressful periods.');
+      distractions.push('Stress-energy drain cycle');
     }
 
     // If no strong patterns, provide general insights
@@ -396,11 +396,11 @@ class PatternAnalysisService {
       const avgStress = moodData.reduce((sum, d) => sum + (d.stress || 0), 0) / moodData.length;
       
       if (avgEnergy <= 45) {
-        distractions.push('Consistently low energy levels — your average energy stayed at 45% or below, suggesting that fatigue, overcommitment, or lack of restorative activities is impacting your daily functioning. Prioritize sleep, nutrition, and activities that genuinely recharge you.');
+        distractions.push('Fatigue and low vitality');
       }
       
       if (avgStress >= 50 && avgEnergy <= 50) {
-        distractions.push('Stress-energy imbalance — elevated stress (50%+) coexists with lower energy (50% or less), indicating that managing stress while maintaining energy is an ongoing challenge. Build in recovery time and stress-relief practices into your routine.');
+        distractions.push('Stress-energy imbalance');
       }
     }
 
