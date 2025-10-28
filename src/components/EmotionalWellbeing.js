@@ -1147,27 +1147,27 @@ export default function EmotionalWellbeing() {
     console.log('✅ Generated Challenging day description:', worstDayDescription);
 
     const highlightsData = {
-      peak: {
-        title: "Best Mood Day",
-        description: bestDayDescription,
-        date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
-        score: Math.round((bestDay.happiness + bestDay.energy) / 2)
-      },
-      toughestDay: {
-        title: "Challenging Day",
-        description: worstDayDescription,
-        date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
+        peak: {
+          title: "Best Mood Day",
+          description: bestDayDescription,
+          date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
+          score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+        },
+        toughestDay: {
+          title: "Challenging Day",
+          description: worstDayDescription,
+          date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
         score: Math.round((worstDay.happiness + worstDay.energy) / 2)
-      }
-    };
+        }
+      };
 
-    // Save to cache for future use
-    try {
-      console.log('💾 Saving highlights to cache...');
-      await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
-      console.log('✅ Highlights cached successfully');
-    } catch (cacheError) {
-      console.error('❌ Error caching highlights (non-critical):', cacheError);
+      // Save to cache for future use
+      try {
+        console.log('💾 Saving highlights to cache...');
+        await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
+        console.log('✅ Highlights cached successfully');
+      } catch (cacheError) {
+        console.error('❌ Error caching highlights (non-critical):', cacheError);
     }
 
     console.log('✅ Highlights data processed successfully');
@@ -1404,14 +1404,16 @@ export default function EmotionalWellbeing() {
   };
 
   const loadPatternAnalysisInternal = async () => {
-    console.log(`🔍 Loading pattern analysis for this month (${patternPeriod} days)...`);
+    // Use 90 days (3 months) for pattern analysis as per user request
+    const analysisPeriod = 90;
+    console.log(`🔍 Loading pattern analysis for last 3 months (${analysisPeriod} days)...`);
     setPatternLoading(true);
     
     try {
       const user = getCurrentUser();
       const userId = user?.uid || 'anonymous';
       
-      const analysis = await patternAnalysisService.getPatternAnalysis(userId, patternPeriod, true);
+      const analysis = await patternAnalysisService.getPatternAnalysis(userId, analysisPeriod, true);
       console.log('📊 Pattern analysis result:', analysis);
       
       setPatternAnalysis(analysis);
