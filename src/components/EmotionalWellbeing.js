@@ -1051,23 +1051,25 @@ export default function EmotionalWellbeing() {
     }
 
     // Generate highlights based on real data
+    // Best day = highest positive energy (happiness + energy)
     const bestDay = validData.reduce((best, current) => {
       const currentScore = (current.happiness + current.energy) / 2;
       const bestScore = (best.happiness + best.energy) / 2;
       return currentScore > bestScore ? current : best;
     });
 
-    // Find worst day, but ensure it's different from best day
+    // Worst day = lowest positive energy (most challenging day)
+    // This ensures we're finding the actual worst day, not just highest stress day
     let worstDay = validData.reduce((worst, current) => {
-      const currentScore = (current.anxiety + current.stress) / 2;
-      const worstScore = (worst.anxiety + worst.stress) / 2;
-      return currentScore > worstScore ? current : worst;
+      const currentPositiveScore = (current.happiness + current.energy) / 2;
+      const worstPositiveScore = (worst.happiness + worst.energy) / 2;
+      return currentPositiveScore < worstPositiveScore ? current : worst;
     });
 
-    // If best day and worst day are the same, find different days
+    // If best day and worst day are the same, find a different worst day
     if (validData.length > 1 && bestDay.date === worstDay.date) {
       console.log('⚠️ Best day and worst day are the same:', bestDay.date);
-      console.log('⚠️ Finding alternative days from', validData.length, 'valid days');
+      console.log('⚠️ Finding alternative worst day from', validData.length, 'valid days');
       
       // Filter out the best day and find worst from remaining days
       const otherDays = validData.filter(day => day.date !== bestDay.date);
@@ -1075,9 +1077,9 @@ export default function EmotionalWellbeing() {
       
       if (otherDays.length > 0) {
         worstDay = otherDays.reduce((worst, current) => {
-          const currentScore = (current.anxiety + current.stress) / 2;
-          const worstScore = (worst.anxiety + worst.stress) / 2;
-          return currentScore > worstScore ? current : worst;
+          const currentPositiveScore = (current.happiness + current.energy) / 2;
+          const worstPositiveScore = (worst.happiness + worst.energy) / 2;
+          return currentPositiveScore < worstPositiveScore ? current : worst;
         });
         console.log('✅ Found alternative worst day:', worstDay.date);
       } else {
@@ -1118,7 +1120,7 @@ export default function EmotionalWellbeing() {
           title: "Challenging Day",
           description: worstDayDescription,
           date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
-          score: Math.round((worstDay.anxiety + worstDay.stress) / 2)
+          score: Math.round((worstDay.happiness + worstDay.energy) / 2)
         }
       };
 
@@ -1136,7 +1138,7 @@ export default function EmotionalWellbeing() {
       
       // Fallback to original descriptions if AI generation fails
       const bestScore = Math.round((bestDay.happiness + bestDay.energy) / 2);
-      const worstScore = Math.round((worstDay.anxiety + worstDay.stress) / 2);
+      const worstScore = Math.round((worstDay.happiness + worstDay.energy) / 2);
       
       highlightsData = {
         peak: {
@@ -1147,7 +1149,7 @@ export default function EmotionalWellbeing() {
         },
         toughestDay: {
           title: "Challenging Day",
-          description: `You experienced your most challenging day with ${worstScore}% stress and anxiety. This was likely due to multiple pressures, difficult decisions, or overwhelming circumstances.`,
+          description: `You experienced your most challenging day with ${worstScore}% positive energy. This was likely due to multiple pressures, difficult decisions, or overwhelming circumstances.`,
           date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
           score: worstScore
         }

@@ -4,8 +4,52 @@ import { getDateIdDaysAgo } from '../utils/dateUtils';
 class HabitAnalysisService {
   constructor() {
     this.baseURL = 'https://b5z7d285vvdqfz-11434.proxy.runpod.net/';
+    this.modelName = 'llama2'; // Default model name for RunPod
     this.minDaysRequired = 1; // Minimum days needed for meaningful analysis
     this.minMessagesRequired = 1; // Minimum total messages needed
+  }
+
+  /**
+   * Get habit analysis - wrapper for analyzeHabits
+   * @param {string} uid - User ID
+   * @param {boolean} forceRefresh - Force refresh analysis
+   * @returns {Object} Analysis results with habits, patterns, and insights
+   */
+  async getHabitAnalysis(uid, forceRefresh = false) {
+    console.log('🔍 Getting habit analysis...', { uid, forceRefresh });
+    
+    try {
+      // Check cache first if not forcing refresh
+      if (!forceRefresh) {
+        const cacheKey = `habit_analysis_${uid}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          const age = Date.now() - parsed.timestamp;
+          // Use cached data if less than 24 hours old
+          if (age < 24 * 60 * 60 * 1000) {
+            console.log('✅ Using cached habit analysis');
+            return parsed.analysis;
+          }
+        }
+      }
+      
+      // Get fresh analysis
+      const analysis = await this.analyzeHabits(uid);
+      
+      // Cache the result
+      const cacheKey = `habit_analysis_${uid}`;
+      localStorage.setItem(cacheKey, JSON.stringify({
+        analysis,
+        timestamp: Date.now()
+      }));
+      
+      return analysis;
+      
+    } catch (error) {
+      console.error('❌ Error getting habit analysis:', error);
+      return this.getDefaultHabitAnalysis();
+    }
   }
 
   /**
