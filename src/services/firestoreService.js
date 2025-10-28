@@ -471,6 +471,27 @@ class FirestoreService {
   }
 
   /**
+   * Convenience wrapper: Get chat messages (returns messages array directly)
+   * For backward compatibility with habitAnalysisService and patternAnalysisService
+   */
+  async getChatMessages(uid, dateId) {
+    try {
+      console.log('📖 FIRESTORE: Getting chat messages (wrapper)...');
+      const result = await this.getChatMessagesNew(uid, dateId);
+      
+      if (result.success) {
+        return result.messages || [];
+      } else {
+        console.error('❌ FIRESTORE: Error getting chat messages:', result.error);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ FIRESTORE: Error in getChatMessages wrapper:', error);
+      return [];
+    }
+  }
+
+  /**
    * NEW STRUCTURE: Save reflection to /users/{uid}/days/{dateId}/reflection/meta
    */
   async saveReflectionNew(uid, dateId, reflectionData) {
