@@ -1092,79 +1092,82 @@ export default function EmotionalWellbeing() {
     console.log('📝 Best day summary:', bestDay.summary);
     console.log('📝 Worst day summary:', worstDay.summary);
 
-    let highlightsData;
+    // Generate intelligent contextual descriptions based on the data
+    const generateBestDayDescription = (day) => {
+      const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
+      const hasHighEnergy = (day.energy || 0) >= 70;
+      const hasLowStress = (day.stress || 0) <= 30 && (day.anxiety || 0) <= 30;
+      const hasHighHappiness = (day.happiness || 0) >= 70;
+      
+      if (day.summary) {
+        return `On ${dateStr}, you reached a peak emotional state. ${day.summary} Your mood reflected this inner balance with ${day.happiness}% happiness and ${day.energy}% energy flowing through you.`;
+      }
+      
+      if (hasHighEnergy && hasLowStress) {
+        return `On ${dateStr}, your emotional energy was at its highest—${day.energy}% energy flowing through you with minimal stress interrupting your peace. You likely achieved something meaningful, felt deeply connected to something important, or experienced a moment of breakthrough that resonated with your authentic self. The calm confidence of that day speaks to your ability to thrive when you're truly aligned.`;
+      }
+      
+      if (hasHighHappiness) {
+        return `On ${dateStr}, happiness radiated at ${day.happiness}%—a day where joy wasn't just present, it was dominant. This wasn't random; something shifted internally or externally that day. Perhaps you overcame self-doubt, completed something meaningful, or simply felt fully alive in your own skin. That level of happiness suggests you were exactly where you needed to be.`;
+      }
+      
+      return `On ${dateStr}, your emotional state peaked with ${Math.round((day.happiness + day.energy) / 2)}% positive energy. Something meaningful happened that day—maybe you achieved a breakthrough, experienced genuine connection, or felt a deep sense of alignment with your values. These peaks remind you of your capacity for genuine joy.`;
+    };
+    
+    const generateChallengingDayDescription = (day) => {
+      const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
+      const hasLowEnergy = (day.energy || 0) <= 40;
+      const hasHighStress = (day.stress || 0) >= 60;
+      const hasHighAnxiety = (day.anxiety || 0) >= 60;
+      const hasLowHappiness = (day.happiness || 0) <= 40;
+      
+      if (day.summary) {
+        return `On ${dateStr}, you faced significant emotional challenges. ${day.summary} Despite the difficulty, you got through it—and that resilience matters. Your stress peaked at ${day.stress}% while anxiety reached ${day.anxiety}%, but you still had ${day.happiness}% happiness and ${day.energy}% energy. This shows even on your toughest days, you don't completely lose yourself.`;
+      }
+      
+      if (hasHighStress && hasHighAnxiety) {
+        return `On ${dateStr}, you faced intense pressure with ${day.stress}% stress and ${day.anxiety}% anxiety weighing on you. Your energy dropped to ${day.energy}%, signaling that emotional demands were pushing your inner resources to their limits. Yet you navigated it—and navigating it is a form of growth. Sometimes the hardest days teach us about our capacity to endure.`;
+      }
+      
+      if (hasLowEnergy && hasLowHappiness) {
+        return `On ${dateStr}, both your happiness (${day.happiness}%) and energy (${day.energy}%) were at their lowest. This wasn't just a bad day—it was emotionally exhausting, possibly overwhelming. You might have been dealing with disappointment, loss, burnout, or simply felt disconnected from your usual sources of strength. These valleys, though painful, are part of the journey and don't define your ability to recover.`;
+      }
+      
+      if (hasHighAnxiety) {
+        return `On ${dateStr}, anxiety spiked to ${day.anxiety}%—a day where worry and uncertainty took over. Your body and mind were in alert mode, likely preparing for perceived threats or wrestling with inner conflicts. This kind of anxiety often stems from feeling unsafe, uncertain about the future, or caught between competing needs. The intensity of that day speaks to how deeply you feel things, and how much you care.`;
+      }
+      
+      return `On ${dateStr}, you experienced one of your most challenging emotional periods. With ${Math.round((day.happiness + day.energy) / 2)}% positive energy, you were running low—perhaps dealing with conflicts, overwhelm, or difficult decisions that tested your emotional resilience. What matters isn't that you struggled, but that you made it through. These challenging days often reveal unexpected strength.`;
+    };
+    
+    console.log('📝 Generating contextual descriptions based on data...');
+    const bestDayDescription = generateBestDayDescription(bestDay);
+    const worstDayDescription = generateChallengingDayDescription(worstDay);
+    console.log('✅ Generated Best day description:', bestDayDescription);
+    console.log('✅ Generated Challenging day description:', worstDayDescription);
 
+    const highlightsData = {
+      peak: {
+        title: "Best Mood Day",
+        description: bestDayDescription,
+        date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
+        score: Math.round((bestDay.happiness + bestDay.energy) / 2)
+      },
+      toughestDay: {
+        title: "Challenging Day",
+        description: worstDayDescription,
+        date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
+        score: Math.round((worstDay.happiness + worstDay.energy) / 2)
+      }
+    };
+
+    // Save to cache for future use
     try {
-      // Generate AI descriptions for best and challenging days
-      console.log('🤖 Generating AI descriptions for highlights...');
-      console.log('🤖 Best day data:', bestDay);
-      console.log('🤖 Worst day data:', worstDay);
-      
-      const periodText = 'the last 3 months';
-      
-      console.log('🚀 Calling RunPod AI for mini-stories...');
-      console.log('🚀 Best day being sent to AI:', JSON.stringify(bestDay));
-      console.log('🚀 Worst day being sent to AI:', JSON.stringify(worstDay));
-      const [bestDayDescription, worstDayDescription] = await Promise.all([
-        chatService.generateDayDescription(bestDay, 'best', periodText),
-        chatService.generateDayDescription(worstDay, 'challenging', periodText)
-      ]);
-      
-      console.log('✅ AI Best day description:', bestDayDescription);
-      console.log('✅ AI Challenging day description:', worstDayDescription);
-
-      highlightsData = {
-        peak: {
-          title: "Best Mood Day",
-          description: bestDayDescription,
-          date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
-          score: Math.round((bestDay.happiness + bestDay.energy) / 2)
-        },
-        toughestDay: {
-          title: "Challenging Day",
-          description: worstDayDescription,
-          date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
-          score: Math.round((worstDay.happiness + worstDay.energy) / 2)
-        }
-      };
-
-      // Save to cache for future use
-      try {
-        console.log('💾 Saving highlights to cache...');
-        await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
-        console.log('✅ Highlights cached successfully');
-      } catch (cacheError) {
-        console.error('❌ Error caching highlights (non-critical):', cacheError);
-      }
-
-    } catch (error) {
-      console.error('❌ Error generating AI descriptions for highlights, using fallbacks:', error);
-      
-      // Fallback to original descriptions if AI generation fails
-      const bestScore = Math.round((bestDay.happiness + bestDay.energy) / 2);
-      const worstScore = Math.round((worstDay.happiness + worstDay.energy) / 2);
-      
-      highlightsData = {
-        peak: {
-          title: "Best Mood Day",
-          description: `You had your highest emotional peak with ${bestScore}% positive energy. This was likely due to meaningful progress, positive interactions, or achieving something important to you.`,
-          date: bestDay.date ? new Date(bestDay.date).toLocaleDateString() : 'Unknown Date',
-          score: bestScore
-        },
-        toughestDay: {
-          title: "Challenging Day",
-          description: `You experienced your most challenging day with ${worstScore}% positive energy. This was likely due to multiple pressures, difficult decisions, or overwhelming circumstances.`,
-          date: worstDay.date ? new Date(worstDay.date).toLocaleDateString() : 'Unknown Date',
-          score: worstScore
-        }
-      };
-      
-      // Still save fallback to cache
-      try {
-        await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
-      } catch (cacheError) {
-        console.error('❌ Error caching fallback highlights:', cacheError);
-      }
+      console.log('💾 Saving highlights to cache...');
+      await firestoreService.saveHighlightsCache(userId, '3months', highlightsData);
+      console.log('✅ Highlights cached successfully');
+    } catch (cacheError) {
+      console.error('❌ Error caching highlights (non-critical):', cacheError);
     }
 
     console.log('✅ Highlights data processed successfully');
