@@ -128,13 +128,32 @@ export const signInWithGoogle = async () => {
     
     const provider = new GoogleAuthProvider();
     
-    // Set the correct redirect URL based on current domain
+    // CRITICAL FOR MOBILE APP: Always use Firebase hosting domain for redirects
+    // Don't redirect back to localhost - use your Firebase app domain
     const currentOrigin = window.location.origin;
+    const isLocalhost = currentOrigin.includes('localhost') || 
+                        currentOrigin.includes('127.0.0.1') ||
+                        /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(currentOrigin);
+    
+    // For mobile apps, ALWAYS redirect to Firebase hosting domain, not localhost
+    const firebaseAuthDomain = 'deitedatabase.firebaseapp.com';
+    const redirectUrl = isLocalhost 
+      ? `https://${firebaseAuthDomain}` 
+      : currentOrigin;
+    
     console.log('📍 Current origin:', currentOrigin);
+    console.log('📍 Redirect URL will be:', redirectUrl);
+    console.log('📍 Is localhost/IP:', isLocalhost);
+    
+    // Set custom parameters to ensure correct redirect URL
+    provider.setCustomParameters({
+      redirect_uri: redirectUrl
+    });
     
     // Use redirect for mobile devices or when popups are blocked
     if (shouldUseRedirect()) {
       console.log('📱 Using signInWithRedirect for mobile/unsupported browser');
+      console.log('📱 Redirecting back to:', redirectUrl);
       
       // For storage-partitioned environments, we need to provide better error handling
       try {
@@ -184,6 +203,22 @@ export const signInWithGoogle = async () => {
       console.log('⚠️ Popup blocked, attempting redirect instead...');
       try {
         const provider = new GoogleAuthProvider();
+        
+        // Use Firebase domain for redirect
+        const firebaseAuthDomain = 'deitedatabase.firebaseapp.com';
+        const currentOrigin = window.location.origin;
+        const isLocalhost = currentOrigin.includes('localhost') || 
+                            currentOrigin.includes('127.0.0.1') ||
+                            /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(currentOrigin);
+        
+        const redirectUrl = isLocalhost 
+          ? `https://${firebaseAuthDomain}` 
+          : currentOrigin;
+        
+        provider.setCustomParameters({
+          redirect_uri: redirectUrl
+        });
+        
         await signInWithRedirect(auth, provider);
         return {
           success: true,
