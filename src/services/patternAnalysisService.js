@@ -189,7 +189,8 @@ class PatternAnalysisService {
         hasEnoughData: moodDataResult.moodData.length >= 7,
         triggers: analysis.triggers,
         patterns: analysis.patterns,
-        analysis: analysis.summary
+        analysis: analysis.summary,
+        guidanceTips: analysis.guidanceTips || []
       };
 
     } catch (error) {
@@ -277,7 +278,8 @@ class PatternAnalysisService {
     // Identify patterns
     const patterns = this.identifyPatterns(validData);
 
-    return {
+    // Generate personalized guidance tips based on analysis
+    const analysisResult = {
       triggers: {
         stress: stressTriggers,
         joy: joyBoosters,
@@ -285,6 +287,13 @@ class PatternAnalysisService {
       },
       patterns,
       summary: `Analyzed ${validData.length} days of emotional data`
+    };
+    
+    const guidanceTips = this.generatePersonalizedGuidance(analysisResult, validData);
+
+    return {
+      ...analysisResult,
+      guidanceTips
     };
   }
 
@@ -677,6 +686,163 @@ class PatternAnalysisService {
     const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
     const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
     return variance;
+  }
+
+  /**
+   * Generate personalized guidance tips based on actual data patterns
+   * @param {Object} analysisResult - Result from analyzePatternsFromMoodData
+   * @param {Array} moodData - Array of mood data entries
+   * @returns {Array} Array of actionable guidance tips with specific data references
+   */
+  generatePersonalizedGuidance(analysisResult, moodData) {
+    const tips = [];
+    const { triggers, patterns } = analysisResult;
+    
+    // Calculate averages for data-driven tips
+    const avgStress = moodData.reduce((sum, d) => sum + (d.stress || 0), 0) / moodData.length;
+    const avgEnergy = moodData.reduce((sum, d) => sum + (d.energy || 0), 0) / moodData.length;
+    const avgAnxiety = moodData.reduce((sum, d) => sum + (d.anxiety || 0), 0) / moodData.length;
+    const avgHappiness = moodData.reduce((sum, d) => sum + (d.happiness || 0), 0) / moodData.length;
+    
+    // Count low energy days
+    const lowEnergyDays = moodData.filter(d => (d.energy || 0) <= 40).length;
+    const lowEnergyPercentage = (lowEnergyDays / moodData.length) * 100;
+    
+    // Count high stress days
+    const highStressDays = moodData.filter(d => (d.stress || 0) >= 60).length;
+    const highStressPercentage = (highStressDays / moodData.length) * 100;
+    
+    // Count stress-energy drain days
+    const stressEnergyDrainDays = moodData.filter(d => (d.energy || 0) <= 40 && (d.stress || 0) >= 50).length;
+    const stressDrainPercentage = (stressEnergyDrainDays / moodData.length) * 100;
+
+    // Tip 1: Based on stress triggers
+    if (triggers.stress && triggers.stress.length > 0) {
+      const topStressTrigger = triggers.stress[0];
+      if (topStressTrigger.includes('work deadlines') || topStressTrigger.includes('work')) {
+        tips.push({
+          title: 'Schedule Buffer Time for Work Deadlines',
+          description: `You mentioned dealing with work deadlines ${highStressPercentage >= 30 ? `on ${Math.round(highStressPercentage)}% of your days` : 'frequently'}. Block out 30 minutes of buffer time before each deadline to prevent last-minute rushing and reduce stress.`,
+          category: 'productivity'
+        });
+      } else if (topStressTrigger.includes('difficult conversations') || topStressTrigger.includes('arguments')) {
+        tips.push({
+          title: 'Prepare for Difficult Conversations',
+          description: `Your stress spikes during difficult conversations. Before tough talks, write down 2-3 key points you want to communicate and take 3 deep breaths to ground yourself—this helps you stay calm instead of reactive.`,
+          category: 'social'
+        });
+      } else if (topStressTrigger.includes('decisions') || topStressTrigger.includes('uncertain')) {
+        tips.push({
+          title: 'Set a Decision Deadline',
+          description: `You feel overwhelmed when making difficult decisions. Set a time limit (e.g., "I'll decide by Friday at 5pm"), gather the information you need, then commit—prolonging uncertainty adds unnecessary anxiety.`,
+          category: 'productivity'
+        });
+      } else if (topStressTrigger.includes('rushing') || topStressTrigger.includes('running behind')) {
+        tips.push({
+          title: 'Leave 15 Minutes Earlier',
+          description: `You frequently feel rushed and behind schedule. Leave 15 minutes earlier than you think you need—this buffer prevents time pressure stress that drops your energy below 40%.`,
+          category: 'productivity'
+        });
+      }
+    }
+
+    // Tip 2: Based on distractions
+    if (triggers.distraction && triggers.distraction.length > 0) {
+      const topDistraction = triggers.distraction[0];
+      if (topDistraction.includes('scrolling') || topDistraction.includes('social media')) {
+        tips.push({
+          title: 'Use App Timers for Social Media',
+          description: `Your mood data shows scrolling through social media is draining your energy ${lowEnergyPercentage >= 20 ? `on ${Math.round(lowEnergyPercentage)}% of days` : 'frequently'}. Set a 15-minute daily limit per app using your phone's screen time settings—when the timer goes off, put your phone in another room.`,
+          category: 'productivity'
+        });
+      } else if (topDistraction.includes('procrastinating')) {
+        tips.push({
+          title: 'Start with 5 Minutes',
+          description: `You struggle with procrastination, which delays important tasks and increases stress. Commit to just 5 minutes of the task—often, starting is the hardest part, and momentum carries you forward.`,
+          category: 'productivity'
+        });
+      } else if (topDistraction.includes('overthinking') || topDistraction.includes('dwelling')) {
+        tips.push({
+          title: 'Write Down Your Worries',
+          description: `Overthinking is consuming your attention. When you catch yourself dwelling, write down your worry in one sentence, then set a timer for 15 minutes to problem-solve—after that, move to a physical task (walk, organize) to break the mental loop.`,
+          category: 'mindfulness'
+        });
+      } else if (topDistraction.includes('staying up late') || topDistraction.includes('sleep')) {
+        tips.push({
+          title: 'Set a Phone-Free Bedtime Routine',
+          description: `${stressDrainPercentage >= 15 ? `${Math.round(stressDrainPercentage)}% of your days` : 'Your data shows'} you're staying up late, which leads to low energy the next day. Put your phone in another room 30 minutes before bed—charge it there instead of beside you.`,
+          category: 'sleep'
+        });
+      } else if (topDistraction.includes('binge-watching') || topDistraction.includes('tv')) {
+        tips.push({
+          title: 'Use Show Episodes as Breaks, Not Hours',
+          description: `Binge-watching is draining your energy. Watch one episode as a break, then do a 10-minute task (dishes, stretch, organize) before deciding if you want another—this prevents autopilot scrolling and preserves your energy.`,
+          category: 'self_care'
+        });
+      }
+    }
+
+    // Tip 3: Based on low energy patterns
+    if (avgEnergy <= 45 || lowEnergyPercentage >= 20) {
+      if (stressDrainPercentage >= 15) {
+        tips.push({
+          title: 'Take Short Breaks During High-Stress Periods',
+          description: `${Math.round(stressDrainPercentage)}% of your days show stress draining your energy below 40%. When you notice stress climbing, take a 5-minute break (step outside, drink water, stretch) every 90 minutes—this prevents the stress-energy crash.`,
+          category: 'stress_management'
+        });
+      } else {
+        tips.push({
+          title: 'Protect Your Energy Reserves',
+          description: `Your energy averages ${Math.round(avgEnergy)}%, and ${Math.round(lowEnergyPercentage)}% of days drop below 40%. Schedule your most important tasks for when your energy is highest (usually mornings), and say no to non-essential activities that drain you.`,
+          category: 'self_care'
+        });
+      }
+    }
+
+    // Tip 4: Based on joy boosters (counteract what's draining)
+    if (triggers.joy && triggers.joy.length > 0) {
+      const topJoyBooster = triggers.joy[0];
+      if (topJoyBooster.includes('tasks') || topJoyBooster.includes('projects')) {
+        tips.push({
+          title: 'Break Big Tasks into Small Wins',
+          description: `Completing tasks consistently boosts your happiness. Break larger projects into 30-minute chunks—each completion gives you a small win and maintains momentum instead of waiting for the big finish.`,
+          category: 'productivity'
+        });
+      } else if (topJoyBooster.includes('friends') || topJoyBooster.includes('talking')) {
+        tips.push({
+          title: 'Schedule Weekly Connection Time',
+          description: `Talking with friends is one of your biggest sources of joy. Set a recurring weekly 30-minute call or coffee date with a friend—consistent connection prevents social withdrawal and maintains positive energy.`,
+          category: 'social'
+        });
+      } else if (topJoyBooster.includes('walk') || topJoyBooster.includes('outdoor')) {
+        tips.push({
+          title: 'Take a 10-Minute Walk When Stress Rises',
+          description: `Going for walks consistently lifts your mood. When stress hits ${Math.round(avgStress)}% or higher, step outside for a 10-minute walk immediately—the movement and fresh air interrupt the stress cycle.`,
+          category: 'self_care'
+        });
+      }
+    }
+
+    // Tip 5: Based on stress-anxiety patterns
+    if (avgStress >= 50 && avgAnxiety >= 50) {
+      tips.push({
+        title: 'Practice Box Breathing When Anxious',
+        description: `Your stress (${Math.round(avgStress)}%) and anxiety (${Math.round(avgAnxiety)}%) often rise together. When you notice anxiety climbing, try box breathing: inhale 4 counts, hold 4, exhale 4, hold 4—repeat 4 times. This physically calms your nervous system.`,
+        category: 'mindfulness'
+      });
+    }
+
+    // Tip 6: Based on low happiness + high stress
+    if (avgHappiness <= 50 && avgStress >= 50) {
+      tips.push({
+        title: 'Schedule One Joy Activity Daily',
+        description: `Your happiness (${Math.round(avgHappiness)}%) is low while stress (${Math.round(avgStress)}%) stays high. Schedule one specific activity from your joy boosters daily, even if it's just 10 minutes—joy doesn't happen by accident when stress is constant.`,
+        category: 'self_care'
+      });
+    }
+
+    // Return top 3-5 tips (prioritize most data-specific ones)
+    return tips.slice(0, Math.min(tips.length, 5));
   }
 }
 
