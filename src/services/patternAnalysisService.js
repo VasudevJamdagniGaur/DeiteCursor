@@ -332,7 +332,7 @@ class PatternAnalysisService {
       }
     }
 
-    return triggers.length > 0 ? triggers : [];
+    return triggers.length > 0 ? triggers.slice(0, 3) : [];
   }
 
   /**
@@ -418,7 +418,7 @@ class PatternAnalysisService {
       }
     }
 
-    return boosters.length > 0 ? boosters : [];
+    return boosters.length > 0 ? boosters.slice(0, 3) : [];
   }
 
   /**
@@ -468,7 +468,7 @@ class PatternAnalysisService {
       }
     }
 
-    return distractions.length > 0 ? distractions : [];
+    return distractions.length > 0 ? distractions.slice(0, 3) : [];
   }
 
   /**
