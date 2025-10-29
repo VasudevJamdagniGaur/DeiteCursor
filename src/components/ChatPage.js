@@ -733,7 +733,52 @@ export default function ChatPage() {
     loadMessages();
   }, [selectedDateId]);
 
-  const handleBack = () => {
+  const handleBack = async () => {
+    // Show warning dialog if in whisper mode
+    if (isWhisperMode) {
+      const confirmed = window.confirm(
+        '⚠️ WARNING: Leaving this Whisper Session\n\n' +
+        'All chat messages in this session will be permanently deleted and cannot be recovered.\n\n' +
+        'Are you sure you want to leave and delete all messages?'
+      );
+      
+      if (!confirmed) {
+        console.log('🤫 User cancelled leaving whisper session');
+        return; // User cancelled, don't navigate
+      }
+      
+      // User confirmed - delete all whisper session messages
+      console.log('🗑️ User confirmed deletion - removing all whisper session messages...');
+      const user = getCurrentUser();
+      
+      if (user) {
+        try {
+          // Delete all messages from Firestore for this whisper session date
+          const result = await firestoreService.getChatMessagesNew(user.uid, selectedDateId);
+          if (result.success && result.messages && result.messages.length > 0) {
+            console.log(`🗑️ Deleting ${result.messages.length} messages from whisper session...`);
+            // Delete all messages for this date (whisper sessions are temporary)
+            for (const msg of result.messages) {
+              try {
+                await firestoreService.deleteChatMessageNew(user.uid, selectedDateId, msg.id);
+              } catch (deleteError) {
+                console.error(`❌ Error deleting message ${msg.id}:`, deleteError);
+              }
+            }
+            console.log('🗑️ All whisper session messages deleted from Firestore');
+          }
+          
+          // Clear localStorage for this date
+          localStorage.removeItem(`chatMessages_${selectedDateId}`);
+          console.log('🗑️ Cleared localStorage for whisper session');
+        } catch (error) {
+          console.error('❌ Error deleting whisper session messages:', error);
+          // Still navigate even if deletion fails
+        }
+      }
+    }
+    
+    // Navigate back to dashboard
     navigate('/dashboard');
   };
 

@@ -10,7 +10,8 @@ import {
   getDocs,
   serverTimestamp,
   where,
-  increment
+  increment,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDateId } from '../utils/dateUtils';
@@ -488,6 +489,46 @@ class FirestoreService {
     } catch (error) {
       console.error('❌ FIRESTORE: Error in getChatMessages wrapper:', error);
       return [];
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Delete a chat message from /users/{uid}/days/{dateId}/messages/{messageId}
+   */
+  async deleteChatMessageNew(uid, dateId, messageId) {
+    try {
+      console.log('🗑️ FIRESTORE NEW: Deleting chat message...', messageId);
+      const messageRef = doc(this.db, `users/${uid}/days/${dateId}/messages/${messageId}`);
+      await deleteDoc(messageRef);
+      console.log('🗑️ FIRESTORE NEW: Message deleted successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error deleting chat message:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * NEW STRUCTURE: Delete all whisper session messages for a date
+   */
+  async deleteWhisperSessionMessages(uid, dateId) {
+    try {
+      console.log('🗑️ FIRESTORE NEW: Deleting all whisper session messages...');
+      const messagesRef = collection(this.db, `users/${uid}/days/${dateId}/messages`);
+      const q = query(messagesRef, where('isWhisperSession', '==', true));
+      const snapshot = await getDocs(q);
+      
+      const deletePromises = [];
+      snapshot.forEach(docSnap => {
+        deletePromises.push(deleteDoc(docSnap.ref));
+      });
+      
+      await Promise.all(deletePromises);
+      console.log(`🗑️ FIRESTORE NEW: Deleted ${deletePromises.length} whisper session messages`);
+      return { success: true, deletedCount: deletePromises.length };
+    } catch (error) {
+      console.error('❌ FIRESTORE NEW: Error deleting whisper session messages:', error);
+      return { success: false, error: error.message };
     }
   }
 
