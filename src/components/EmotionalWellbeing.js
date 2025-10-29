@@ -2988,30 +2988,6 @@ Return in this JSON format:
                   </div>
                 )}
 
-                {/* Analysis Summary */}
-                {hasEnoughData && patternAnalysis && patternAnalysis.success && (
-                  <div className={`mb-6 p-4 rounded-lg`}
-                    style={isDarkMode ? {
-                      backgroundColor: "rgba(129, 201, 149, 0.08)",
-                      border: "1px solid rgba(129, 201, 149, 0.15)",
-                    } : {
-                      backgroundColor: "rgba(129, 201, 149, 0.08)",
-                      border: "1px solid rgba(129, 201, 149, 0.15)",
-                    }}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Brain className="w-5 h-5" style={{ color: "#81C995" }} />
-                        <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                          Analysis Complete
-                        </span>
-                      </div>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {patternAnalysis.totalMessages} messages • {patternAnalysis.totalDays} active days
-                      </span>
-                    </div>
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <h4 className={`font-medium mb-3 flex items-center space-x-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
