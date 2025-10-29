@@ -30,11 +30,20 @@ const SignupPage = () => {
         }
       } else {
         console.error('❌ Google Sign-In failed:', result.error);
-        alert('Failed to sign in with Google: ' + result.error);
+        
+        // Show user-friendly error message
+        let errorMessage = result.error || 'Failed to sign in with Google';
+        
+        // If it's a storage-partitioned error, provide helpful guidance
+        if (result.code === 'storage-partitioned' || result.useEmailInstead) {
+          errorMessage = 'Your browser\'s privacy settings are preventing Google sign-in. Please use the email/password sign-up option below instead, or adjust your browser settings to allow cookies and storage.';
+        }
+        
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('❌ Error during Google Sign-In:', error);
-      alert('An error occurred during Google Sign-In');
+      alert('An error occurred during Google Sign-In. Please try using email/password sign-up instead.');
     }
   };
 
