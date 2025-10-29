@@ -754,19 +754,12 @@ export default function ChatPage() {
     
     if (user) {
       try {
-        // Delete all messages from Firestore for this whisper session date
-        const result = await firestoreService.getChatMessagesNew(user.uid, selectedDateId);
-        if (result.success && result.messages && result.messages.length > 0) {
-          console.log(`🗑️ Deleting ${result.messages.length} messages from whisper session...`);
-          // Delete all messages for this date (whisper sessions are temporary)
-          for (const msg of result.messages) {
-            try {
-              await firestoreService.deleteChatMessageNew(user.uid, selectedDateId, msg.id);
-            } catch (deleteError) {
-              console.error(`❌ Error deleting message ${msg.id}:`, deleteError);
-            }
-          }
-          console.log('🗑️ All whisper session messages deleted from Firestore');
+        // Use the dedicated method to delete all whisper session messages
+        const result = await firestoreService.deleteWhisperSessionMessages(user.uid, selectedDateId);
+        if (result.success) {
+          console.log(`🗑️ Deleted ${result.deletedCount || 0} whisper session messages from Firestore`);
+        } else {
+          console.error('❌ Error deleting whisper session messages:', result.error);
         }
         
         // Clear localStorage for this date
@@ -778,8 +771,9 @@ export default function ChatPage() {
       }
     }
     
-    // Navigate back to dashboard after deletion
-    navigate('/dashboard');
+    // Always navigate back to dashboard after deletion (even if deletion failed)
+    console.log('🏠 Navigating to dashboard after whisper session deletion...');
+    navigate('/dashboard', { replace: true });
   };
 
   const handleCancelDelete = () => {
