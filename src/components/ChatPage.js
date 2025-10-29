@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -733,53 +734,57 @@ export default function ChatPage() {
     loadMessages();
   }, [selectedDateId]);
 
-  const handleBack = async () => {
-    // Show warning dialog if in whisper mode
+  const handleBack = () => {
+    // Show custom warning modal if in whisper mode
     if (isWhisperMode) {
-      const confirmed = window.confirm(
-        '⚠️ WARNING: Leaving this Whisper Session\n\n' +
-        'All chat messages in this session will be permanently deleted and cannot be recovered.\n\n' +
-        'Are you sure you want to leave and delete all messages?'
-      );
-      
-      if (!confirmed) {
-        console.log('🤫 User cancelled leaving whisper session');
-        return; // User cancelled, don't navigate
-      }
-      
-      // User confirmed - delete all whisper session messages
-      console.log('🗑️ User confirmed deletion - removing all whisper session messages...');
-      const user = getCurrentUser();
-      
-      if (user) {
-        try {
-          // Delete all messages from Firestore for this whisper session date
-          const result = await firestoreService.getChatMessagesNew(user.uid, selectedDateId);
-          if (result.success && result.messages && result.messages.length > 0) {
-            console.log(`🗑️ Deleting ${result.messages.length} messages from whisper session...`);
-            // Delete all messages for this date (whisper sessions are temporary)
-            for (const msg of result.messages) {
-              try {
-                await firestoreService.deleteChatMessageNew(user.uid, selectedDateId, msg.id);
-              } catch (deleteError) {
-                console.error(`❌ Error deleting message ${msg.id}:`, deleteError);
-              }
+      setShowDeleteWarning(true);
+      return; // Don't navigate yet, wait for user confirmation
+    }
+    
+    // Navigate back to dashboard (regular chat)
+    navigate('/dashboard');
+  };
+
+  const handleConfirmDelete = async () => {
+    setShowDeleteWarning(false);
+    
+    // User confirmed - delete all whisper session messages
+    console.log('🗑️ User confirmed deletion - removing all whisper session messages...');
+    const user = getCurrentUser();
+    
+    if (user) {
+      try {
+        // Delete all messages from Firestore for this whisper session date
+        const result = await firestoreService.getChatMessagesNew(user.uid, selectedDateId);
+        if (result.success && result.messages && result.messages.length > 0) {
+          console.log(`🗑️ Deleting ${result.messages.length} messages from whisper session...`);
+          // Delete all messages for this date (whisper sessions are temporary)
+          for (const msg of result.messages) {
+            try {
+              await firestoreService.deleteChatMessageNew(user.uid, selectedDateId, msg.id);
+            } catch (deleteError) {
+              console.error(`❌ Error deleting message ${msg.id}:`, deleteError);
             }
-            console.log('🗑️ All whisper session messages deleted from Firestore');
           }
-          
-          // Clear localStorage for this date
-          localStorage.removeItem(`chatMessages_${selectedDateId}`);
-          console.log('🗑️ Cleared localStorage for whisper session');
-        } catch (error) {
-          console.error('❌ Error deleting whisper session messages:', error);
-          // Still navigate even if deletion fails
+          console.log('🗑️ All whisper session messages deleted from Firestore');
         }
+        
+        // Clear localStorage for this date
+        localStorage.removeItem(`chatMessages_${selectedDateId}`);
+        console.log('🗑️ Cleared localStorage for whisper session');
+      } catch (error) {
+        console.error('❌ Error deleting whisper session messages:', error);
+        // Still navigate even if deletion fails
       }
     }
     
-    // Navigate back to dashboard
+    // Navigate back to dashboard after deletion
     navigate('/dashboard');
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteWarning(false);
+    console.log('🤫 User cancelled leaving whisper session');
   };
 
   const formatTime = (date) => {
@@ -951,6 +956,82 @@ export default function ChatPage() {
           </button>
         </form>
       </div>
+
+      {/* Delete Warning Modal - Custom UI/UX */}
+      {showDeleteWarning && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)'
+          }}
+          onClick={handleCancelDelete}
+        >
+          <div
+            className={`max-w-md w-full rounded-2xl p-6 backdrop-blur-lg transition-all duration-300 ${
+              isDarkMode ? 'border border-gray-600/20' : 'border border-gray-200/30'
+            }`}
+            style={isDarkMode ? {
+              backgroundColor: "rgba(42, 42, 45, 0.95)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+            } : {
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Warning Icon */}
+            <div className="flex items-center justify-center mb-4">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: "rgba(253, 214, 99, 0.2)",
+                }}
+              >
+                <span className="text-4xl">⚠️</span>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className={`text-xl font-bold text-center mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+              Leaving Whisper Session
+            </h3>
+
+            {/* Message */}
+            <p className={`text-sm leading-relaxed text-center mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              All chat messages in this session will be <strong className={isDarkMode ? 'text-red-400' : 'text-red-600'}>permanently deleted</strong> and cannot be recovered.
+            </p>
+
+            <p className={`text-sm leading-relaxed text-center mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Are you sure you want to leave and delete all messages?
+            </p>
+
+            {/* Buttons */}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelDelete}
+                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105 ${
+                  isDarkMode 
+                    ? 'bg-gray-700/50 hover:bg-gray-700/70 text-gray-300' 
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105 text-white"
+                style={{
+                  background: "linear-gradient(135deg, #F28B82 0%, #F5655A 100%)",
+                  boxShadow: "0 4px 16px rgba(242, 139, 130, 0.4)",
+                }}
+              >
+                Delete & Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
