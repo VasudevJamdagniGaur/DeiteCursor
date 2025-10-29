@@ -181,7 +181,7 @@ class PatternAnalysisService {
       }
 
       // Analyze patterns from mood data
-      const analysis = await this.analyzePatternsFromMoodData(moodDataResult.moodData, days);
+      const analysis = await this.analyzePatternsFromMoodData(moodDataResult.moodData, days, uid);
       
       console.log('✅ Pattern analysis completed:', analysis);
       return {
@@ -212,9 +212,10 @@ class PatternAnalysisService {
    * Analyze patterns from mood data to generate triggers, joy boosters, and distractions
    * @param {Array} moodData - Array of mood data entries
    * @param {number} days - Number of days analyzed
+   * @param {string} uid - User ID for fetching reflections
    * @returns {Object} Analysis with triggers, patterns, and summary
    */
-  async analyzePatternsFromMoodData(moodData, days) {
+  async analyzePatternsFromMoodData(moodData, days, uid = null) {
     console.log(`📊 Analyzing patterns from ${moodData.length} days of mood data...`);
 
     if (moodData.length === 0) {
@@ -239,11 +240,36 @@ class PatternAnalysisService {
       };
     }
 
+    // Fetch reflections for joy booster analysis
+    let enrichedData = validData;
+    if (uid) {
+      console.log('📖 Fetching reflections for detailed joy booster analysis...');
+      try {
+        enrichedData = await Promise.all(
+          validData.map(async (day) => {
+            try {
+              const reflectionResult = await firestoreService.getReflectionNew(uid, day.date);
+              return {
+                ...day,
+                summary: reflectionResult.reflection || null
+              };
+            } catch (error) {
+              console.log(`⚠️ No reflection found for ${day.date}`);
+              return { ...day, summary: null };
+            }
+          })
+        );
+        console.log('✅ Enriched mood data with reflections');
+      } catch (error) {
+        console.log('⚠️ Could not fetch reflections, using mood data only');
+      }
+    }
+
     // Analyze stress triggers
     const stressTriggers = this.identifyStressTriggers(validData);
     
-    // Analyze joy boosters
-    const joyBoosters = this.identifyJoyBoosters(validData);
+    // Analyze joy boosters with reflection data
+    const joyBoosters = this.identifyJoyBoosters(validData, enrichedData);
     
     // Analyze distractions
     const distractions = this.identifyDistractions(validData);
@@ -310,47 +336,85 @@ class PatternAnalysisService {
   }
 
   /**
-   * Identify joy boosters from mood data
+   * Identify joy boosters from mood data and reflections
    * @param {Array} moodData - Array of mood data entries
+   * @param {Array} enrichedData - Array of mood data with reflection summaries
    * @returns {Array} Array of joy booster descriptions
    */
-  identifyJoyBoosters(moodData) {
+  identifyJoyBoosters(moodData, enrichedData = null) {
     const boosters = [];
-    const highHappinessDays = moodData.filter(d => (d.happiness || 0) >= 70);
-    const highEnergyDays = moodData.filter(d => (d.energy || 0) >= 70);
-    const lowStressDays = moodData.filter(d => (d.stress || 0) <= 30);
-    const lowAnxietyDays = moodData.filter(d => (d.anxiety || 0) <= 30);
+    const dataWithSummaries = enrichedData || moodData;
     
-    // Analyze positive patterns
-    if (highHappinessDays.length >= moodData.length * 0.25) {
-      boosters.push('Achievements and meaningful progress');
-    }
+    // Get days with high happiness/energy
+    const highHappinessDays = dataWithSummaries.filter(d => (d.happiness || 0) >= 70);
+    const highEnergyDays = dataWithSummaries.filter(d => (d.energy || 0) >= 70);
+    const lowStressDays = dataWithSummaries.filter(d => (d.stress || 0) <= 30);
     
-    if (highEnergyDays.length >= moodData.length * 0.25) {
-      boosters.push('Physical vitality and active pursuits');
-    }
+    // Analyze specific experiences from summaries
+    const daysWithSummaries = dataWithSummaries.filter(d => d.summary && d.summary.trim().length > 0);
+    const happyDaysWithSummary = daysWithSummaries.filter(d => (d.happiness || 0) >= 65);
     
-    if (lowStressDays.length >= moodData.length * 0.3 && lowAnxietyDays.length >= moodData.length * 0.3) {
-      boosters.push('Calm and peaceful moments');
-    }
-
-    // Find correlation between high happiness and low stress
-    const peacefulDays = moodData.filter(d => (d.happiness || 0) >= 60 && (d.stress || 0) <= 30 && (d.anxiety || 0) <= 30);
-    if (peacefulDays.length >= moodData.length * 0.2) {
-      boosters.push('Emotional balance and harmony');
-    }
-
-    // If no strong patterns, analyze average positive emotions
-    if (boosters.length === 0) {
-      const avgHappiness = moodData.reduce((sum, d) => sum + (d.happiness || 0), 0) / moodData.length;
-      const avgEnergy = moodData.reduce((sum, d) => sum + (d.energy || 0), 0) / moodData.length;
+    if (happyDaysWithSummary.length > 0) {
+      // Extract specific moments from summaries
+      const processedSummaries = new Set();
       
-      if (avgHappiness >= 55 && avgEnergy >= 55) {
-        boosters.push('Steady positive energy');
+      happyDaysWithSummary.forEach(day => {
+        const summary = (day.summary || '').toLowerCase();
+        
+        // Look for achievement/accomplishment patterns
+        if ((summary.includes('finished') || summary.includes('completed') || summary.includes('accomplished') || 
+             summary.includes('achieved') || summary.includes('succeeded') || summary.includes('done')) && 
+            !processedSummaries.has('achievement')) {
+          boosters.push('Completing something meaningful gave you a powerful sense of capability and validation.');
+          processedSummaries.add('achievement');
+        }
+        
+        // Look for connection/social patterns
+        if ((summary.includes('friend') || summary.includes('talked') || summary.includes('conversation') || 
+             summary.includes('joked') || summary.includes('laughed') || summary.includes('connected')) && 
+            !processedSummaries.has('connection')) {
+          boosters.push('Meaningful conversations with others helped you feel understood and less alone.');
+          processedSummaries.add('connection');
+        }
+        
+        // Look for calm/peace patterns
+        if ((summary.includes('calm') || summary.includes('peaceful') || summary.includes('quiet') || 
+             summary.includes('relax') || summary.includes('walk') || summary.includes('breath')) && 
+            !processedSummaries.has('peace')) {
+          boosters.push('Taking time for stillness reminded you that peace comes from letting go of pressure, not avoiding activity.');
+          processedSummaries.add('peace');
+        }
+        
+        // Look for progress/growth patterns
+        if ((summary.includes('learned') || summary.includes('understood') || summary.includes('insight') || 
+             summary.includes('realized') || summary.includes('growth') || summary.includes('progress')) && 
+            !processedSummaries.has('growth')) {
+          boosters.push('Discovering something new about yourself or your situation gave you clarity and a sense of forward momentum.');
+          processedSummaries.add('growth');
+        }
+        
+        // Look for control/agency patterns
+        if ((summary.includes('decided') || summary.includes('chose') || summary.includes('set') || 
+             summary.includes('boundary') || summary.includes('control') || summary.includes('manage')) && 
+            !processedSummaries.has('control')) {
+          boosters.push('Making a decision or taking action gave you a sense of control over your own life and circumstances.');
+          processedSummaries.add('control');
+        }
+      });
+    }
+    
+    // Fall back to mood pattern analysis if no specific summaries found
+    if (boosters.length === 0) {
+      if (highHappinessDays.length >= moodData.length * 0.25) {
+        boosters.push('The satisfaction of meaningful accomplishments filled your need to feel capable and recognized.');
       }
       
-      if (avgHappiness >= 60) {
-        boosters.push('Natural optimism and contentment');
+      if (highEnergyDays.length >= moodData.length * 0.25) {
+        boosters.push('Being fully engaged in activities that mattered to you energized both body and mind.');
+      }
+      
+      if (lowStressDays.length >= moodData.length * 0.3) {
+        boosters.push('Moments without pressure allowed you to breathe freely and feel like yourself again.');
       }
     }
 
