@@ -17,15 +17,23 @@ const SignupPage = () => {
     try {
       const result = await signInWithGoogle();
       if (result.success) {
-        console.log('Google Sign-In successful:', result.user);
-        // Navigate to dashboard on successful sign-in
-        navigate('/dashboard');
+        if (result.redirecting) {
+          // User is being redirected to Google - navigation will happen automatically
+          // App.js will handle the redirect result when user returns
+          console.log('🔄 Redirecting to Google sign-in...');
+          // Optionally show a message or loading state
+          return;
+        } else if (result.user) {
+          // Popup sign-in successful (desktop)
+          console.log('✅ Google Sign-In successful:', result.user);
+          navigate('/dashboard');
+        }
       } else {
-        console.error('Google Sign-In failed:', result.error);
+        console.error('❌ Google Sign-In failed:', result.error);
         alert('Failed to sign in with Google: ' + result.error);
       }
     } catch (error) {
-      console.error('Error during Google Sign-In:', error);
+      console.error('❌ Error during Google Sign-In:', error);
       alert('An error occurred during Google Sign-In');
     }
   };
