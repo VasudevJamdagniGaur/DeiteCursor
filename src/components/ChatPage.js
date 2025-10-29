@@ -735,10 +735,26 @@ export default function ChatPage() {
   }, [selectedDateId]);
 
   const handleBack = () => {
-    // Show custom warning modal if in whisper mode
+    // Show custom warning modal if in whisper mode AND there are actual messages
     if (isWhisperMode) {
-      setShowDeleteWarning(true);
-      return; // Don't navigate yet, wait for user confirmation
+      // Filter out welcome message and check if there are any real messages
+      const realMessages = messages.filter(m => 
+        m.id !== 'welcome' && 
+        m.text && 
+        m.text.length > 0
+      );
+      
+      if (realMessages.length > 0) {
+        // User has sent messages - show warning before leaving
+        console.log(`⬅️ Whisper session has ${realMessages.length} messages - showing delete warning`);
+        setShowDeleteWarning(true);
+        return; // Don't navigate yet, wait for user confirmation
+      } else {
+        // No messages sent - just leave without warning
+        console.log('⬅️ Whisper session has no messages - leaving without warning');
+        navigate('/dashboard', { replace: true });
+        return;
+      }
     }
     
     // Navigate back to dashboard (regular chat)
