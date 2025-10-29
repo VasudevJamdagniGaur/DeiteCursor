@@ -1006,7 +1006,7 @@ export default function ChatPage() {
           onClick={handleCancelDelete}
         >
           <div
-            className={`max-w-md w-full rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
+            className={`max-w-md w-full rounded-xl p-6 transition-all duration-300 ${
               isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
             }`}
             style={isDarkMode ? {
@@ -1052,7 +1052,7 @@ export default function ChatPage() {
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelDelete}
-                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 touch-manipulation ${
+                className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 touch-manipulation ${
                   isDarkMode 
                     ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -1062,13 +1062,19 @@ export default function ChatPage() {
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 touch-manipulation text-white"
+                className={`flex-1 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 touch-manipulation ${
+                  isDarkMode 
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-red-500/50' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-red-500/50'
+                }`}
                 style={{
-                  background: "linear-gradient(135deg, #F28B82 0%, #F5655A 100%)",
-                  boxShadow: "0 4px 16px rgba(242, 139, 130, 0.3)",
+                  backgroundColor: isDarkMode 
+                    ? "rgba(242, 139, 130, 0.15)" 
+                    : "rgba(242, 139, 130, 0.1)",
+                  border: "1px solid rgba(242, 139, 130, 0.3)",
                 }}
               >
-                Delete & Leave
+                <span className={isDarkMode ? 'text-red-400' : 'text-red-600'}>Delete & Leave</span>
               </button>
             </div>
           </div>
