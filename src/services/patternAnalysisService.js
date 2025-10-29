@@ -265,14 +265,14 @@ class PatternAnalysisService {
       }
     }
 
-    // Analyze stress triggers
-    const stressTriggers = this.identifyStressTriggers(validData);
+    // Analyze stress triggers with reflection data
+    const stressTriggers = this.identifyStressTriggers(validData, enrichedData);
     
     // Analyze joy boosters with reflection data
     const joyBoosters = this.identifyJoyBoosters(validData, enrichedData);
     
-    // Analyze distractions
-    const distractions = this.identifyDistractions(validData);
+    // Analyze distractions with reflection data
+    const distractions = this.identifyDistractions(validData, enrichedData);
     
     // Identify patterns
     const patterns = this.identifyPatterns(validData);
@@ -289,46 +289,100 @@ class PatternAnalysisService {
   }
 
   /**
-   * Identify stress triggers from mood data
+   * Identify stress triggers from mood data and reflections
    * @param {Array} moodData - Array of mood data entries
-   * @returns {Array} Array of stress trigger descriptions
+   * @param {Array} enrichedData - Array of mood data with reflection summaries
+   * @returns {Array} Array of activity-focused stress trigger descriptions
    */
-  identifyStressTriggers(moodData) {
+  identifyStressTriggers(moodData, enrichedData = null) {
     const triggers = [];
+    const dataWithSummaries = enrichedData || moodData;
+    
+    // Get days with high stress/anxiety
     const highStressDays = moodData.filter(d => (d.stress || 0) >= 60);
     const highAnxietyDays = moodData.filter(d => (d.anxiety || 0) >= 60);
-    const lowHappinessDays = moodData.filter(d => (d.happiness || 0) <= 40);
     
-    // Common stress patterns
-    if (highStressDays.length >= moodData.length * 0.3) {
-      triggers.push('Work pressure and deadlines');
-    }
+    // Analyze specific stress-causing activities from summaries
+    const daysWithSummaries = dataWithSummaries.filter(d => d.summary && d.summary.trim().length > 0);
+    const stressfulDaysWithSummary = daysWithSummaries.filter(d => (d.stress || 0) >= 55 || (d.anxiety || 0) >= 55);
     
-    if (highAnxietyDays.length >= moodData.length * 0.3) {
-      triggers.push('Uncertainty about the future');
-    }
-    
-    if (lowHappinessDays.length >= moodData.length * 0.3 && highStressDays.length > 0) {
-      triggers.push('Stress-energy depletion');
-    }
-
-    // Analyze stress/anxiety correlations
-    const stressAnxietyCombined = moodData.filter(d => (d.stress || 0) >= 50 && (d.anxiety || 0) >= 50);
-    if (stressAnxietyCombined.length >= moodData.length * 0.2) {
-      triggers.push('Overwhelm from combined pressures');
-    }
-
-    // If no strong patterns, provide general insights
-    if (triggers.length === 0) {
-      const avgStress = moodData.reduce((sum, d) => sum + (d.stress || 0), 0) / moodData.length;
-      const avgAnxiety = moodData.reduce((sum, d) => sum + (d.anxiety || 0), 0) / moodData.length;
+    if (stressfulDaysWithSummary.length > 0) {
+      const processedTriggers = new Set();
       
-      if (avgStress >= 45) {
-        triggers.push('Ongoing pressure and demands');
+      stressfulDaysWithSummary.forEach(day => {
+        const summary = (day.summary || '').toLowerCase();
+        
+        // Look for work-related stress activities
+        if ((summary.includes('work') || summary.includes('deadline') || summary.includes('meeting') || 
+             summary.includes('project') || summary.includes('boss') || summary.includes('colleague')) && 
+            !processedTriggers.has('work')) {
+          triggers.push('Dealing with work deadlines or meetings');
+          processedTriggers.add('work');
+        }
+        
+        // Look for conflict-related activities
+        if ((summary.includes('argument') || summary.includes('conflict') || summary.includes('fight') || 
+             summary.includes('disagreement') || summary.includes('tension')) && 
+            !processedTriggers.has('conflict')) {
+          triggers.push('Having difficult conversations or arguments');
+          processedTriggers.add('conflict');
+        }
+        
+        // Look for time pressure activities
+        if ((summary.includes('late') || summary.includes('rushing') || summary.includes('running out') || 
+             summary.includes('time') || summary.includes('busy')) && 
+            !processedTriggers.has('time')) {
+          triggers.push('Rushing or running behind schedule');
+          processedTriggers.add('time');
+        }
+        
+        // Look for decision-making activities
+        if ((summary.includes('decide') || summary.includes('choice') || summary.includes('unsure') || 
+             summary.includes('uncertain') || summary.includes('doubt')) && 
+            !processedTriggers.has('decision')) {
+          triggers.push('Making difficult decisions');
+          processedTriggers.add('decision');
+        }
+        
+        // Look for social/interpersonal activities
+        if ((summary.includes('judge') || summary.includes('criticize') || summary.includes('reject') || 
+             summary.includes('disapprove') || summary.includes('expectation')) && 
+            !processedTriggers.has('social')) {
+          triggers.push('Facing criticism or high expectations from others');
+          processedTriggers.add('social');
+        }
+        
+        // Look for financial concerns
+        if ((summary.includes('money') || summary.includes('bill') || summary.includes('financial') || 
+             summary.includes('payment') || summary.includes('debt')) && 
+            !processedTriggers.has('financial')) {
+          triggers.push('Managing financial obligations or payments');
+          processedTriggers.add('financial');
+        }
+        
+        // Look for multitasking/overload
+        if ((summary.includes('multitask') || summary.includes('overwhelm') || summary.includes('too much') || 
+             summary.includes('many things') || summary.includes('juggling')) && 
+            !processedTriggers.has('overload')) {
+          triggers.push('Juggling multiple tasks at once');
+          processedTriggers.add('overload');
+        }
+      });
+    }
+    
+    // Fall back to activity-based patterns if no specific summaries found
+    if (triggers.length === 0) {
+      if (highStressDays.length >= moodData.length * 0.3) {
+        triggers.push('Working under tight deadlines');
       }
       
-      if (avgAnxiety >= 45) {
-        triggers.push('Persistent worries and concerns');
+      if (highAnxietyDays.length >= moodData.length * 0.3) {
+        triggers.push('Facing uncertain situations or decisions');
+      }
+      
+      const stressAnxietyCombined = moodData.filter(d => (d.stress || 0) >= 50 && (d.anxiety || 0) >= 50);
+      if (stressAnxietyCombined.length >= moodData.length * 0.2) {
+        triggers.push('Handling multiple demanding tasks');
       }
     }
 
@@ -454,49 +508,113 @@ class PatternAnalysisService {
   }
 
   /**
-   * Identify distractions from mood data
+   * Identify distractions from mood data and reflections
    * @param {Array} moodData - Array of mood data entries
-   * @returns {Array} Array of distraction descriptions
+   * @param {Array} enrichedData - Array of mood data with reflection summaries
+   * @returns {Array} Array of activity-focused distraction descriptions
    */
-  identifyDistractions(moodData) {
+  identifyDistractions(moodData, enrichedData = null) {
     const distractions = [];
+    const dataWithSummaries = enrichedData || moodData;
+    
+    // Get days with low energy or high stress-low happiness
     const lowEnergyHighStress = moodData.filter(d => (d.energy || 0) <= 40 && (d.stress || 0) >= 50);
     const highStressLowHappiness = moodData.filter(d => (d.stress || 0) >= 60 && (d.happiness || 0) <= 50);
     const energyDrops = moodData.filter(d => (d.energy || 0) <= 35);
     
-    // Analyze distraction patterns
-    if (lowEnergyHighStress.length >= moodData.length * 0.2) {
-      distractions.push('Stress-induced energy depletion');
-    }
+    // Analyze specific distracting activities from summaries
+    const daysWithSummaries = dataWithSummaries.filter(d => d.summary && d.summary.trim().length > 0);
+    const distractedDaysWithSummary = daysWithSummaries.filter(d => 
+      ((d.energy || 0) <= 40 && (d.stress || 0) >= 50) || 
+      ((d.stress || 0) >= 60 && (d.happiness || 0) <= 50) ||
+      (d.energy || 0) <= 35
+    );
     
-    if (highStressLowHappiness.length >= moodData.length * 0.25) {
-      distractions.push('Stress hijacks happiness');
-    }
-    
-    if (energyDrops.length >= moodData.length * 0.3) {
-      distractions.push('Chronic low energy levels');
-    }
-
-    // Analyze correlation between stress and energy
-    const stressedDays = moodData.filter(d => (d.stress || 0) >= 55);
-    const avgEnergyOnStressedDays = stressedDays.reduce((sum, d) => sum + (d.energy || 0), 0) / (stressedDays.length || 1);
-    const avgEnergyOnAllDays = moodData.reduce((sum, d) => sum + (d.energy || 0), 0) / moodData.length;
-    
-    if (avgEnergyOnStressedDays < avgEnergyOnAllDays - 15 && stressedDays.length >= moodData.length * 0.2) {
-      distractions.push('Stress-energy drain cycle');
-    }
-
-    // If no strong patterns, provide general insights
-    if (distractions.length === 0) {
-      const avgEnergy = moodData.reduce((sum, d) => sum + (d.energy || 0), 0) / moodData.length;
-      const avgStress = moodData.reduce((sum, d) => sum + (d.stress || 0), 0) / moodData.length;
+    if (distractedDaysWithSummary.length > 0) {
+      const processedDistractions = new Set();
       
-      if (avgEnergy <= 45) {
-        distractions.push('Fatigue and low vitality');
+      distractedDaysWithSummary.forEach(day => {
+        const summary = (day.summary || '').toLowerCase();
+        
+        // Look for scrolling/social media activities
+        if ((summary.includes('scroll') || summary.includes('social media') || summary.includes('instagram') || 
+             summary.includes('facebook') || summary.includes('twitter') || summary.includes('tiktok') || 
+             summary.includes('phone') || summary.includes('screen')) && 
+            !processedDistractions.has('scrolling')) {
+          distractions.push('Scrolling through social media endlessly');
+          processedDistractions.add('scrolling');
+        }
+        
+        // Look for procrastination activities
+        if ((summary.includes('procrastinate') || summary.includes('avoid') || summary.includes('delay') || 
+             summary.includes('put off') || summary.includes('postpone')) && 
+            !processedDistractions.has('procrastination')) {
+          distractions.push('Procrastinating on important tasks');
+          processedDistractions.add('procrastination');
+        }
+        
+        // Look for overthinking/worrying activities
+        if ((summary.includes('overthink') || summary.includes('worry') || summary.includes('ruminate') || 
+             summary.includes('overanalyze') || summary.includes('dwell')) && 
+            !processedDistractions.has('overthinking')) {
+          distractions.push('Overthinking or dwelling on problems');
+          processedDistractions.add('overthinking');
+        }
+        
+        // Look for excessive TV/entertainment
+        if ((summary.includes('binge') || summary.includes('tv') || summary.includes('show') || 
+             summary.includes('netflix') || summary.includes('streaming') || summary.includes('watch')) && 
+            !processedDistractions.has('entertainment')) {
+          distractions.push('Binge-watching shows or content');
+          processedDistractions.add('entertainment');
+        }
+        
+        // Look for multitasking
+        if ((summary.includes('multitask') || summary.includes('doing multiple') || 
+             summary.includes('switching between') || summary.includes('juggling')) && 
+            !processedDistractions.has('multitasking')) {
+          distractions.push('Trying to do too many things at once');
+          processedDistractions.add('multitasking');
+        }
+        
+        // Look for late-night activities
+        if ((summary.includes('late night') || summary.includes('staying up') || summary.includes('sleepless') || 
+             summary.includes('insomnia')) && 
+            !processedDistractions.has('late')) {
+          distractions.push('Staying up late or losing sleep');
+          processedDistractions.add('late');
+        }
+        
+        // Look for constant notifications/interruptions
+        if ((summary.includes('notification') || summary.includes('interrupt') || summary.includes('disturb') || 
+             summary.includes('alert') || summary.includes('message')) && 
+            !processedDistractions.has('interruptions')) {
+          distractions.push('Constant notifications or interruptions');
+          processedDistractions.add('interruptions');
+        }
+        
+        // Look for perfectionism
+        if ((summary.includes('perfect') || summary.includes('redo') || summary.includes('redo') || 
+             summary.includes('redoing') || summary.includes('fixing')) && 
+            !processedDistractions.has('perfectionism')) {
+          distractions.push('Getting stuck on perfecting details');
+          processedDistractions.add('perfectionism');
+        }
+      });
+    }
+    
+    // Fall back to activity-based patterns if no specific summaries found
+    if (distractions.length === 0) {
+      if (lowEnergyHighStress.length >= moodData.length * 0.2) {
+        distractions.push('Letting stress drain your energy throughout the day');
       }
       
-      if (avgStress >= 50 && avgEnergy <= 50) {
-        distractions.push('Stress-energy imbalance');
+      if (highStressLowHappiness.length >= moodData.length * 0.25) {
+        distractions.push('Allowing worries to consume your attention');
+      }
+      
+      if (energyDrops.length >= moodData.length * 0.3) {
+        distractions.push('Staying up late or not getting enough rest');
       }
     }
 
