@@ -18,6 +18,20 @@ const SignupPage = () => {
       const result = await signInWithGoogle();
       if (result.success) {
         console.log('Google Sign-In successful:', result.user);
+        
+        // Log if age and gender were retrieved from Google
+        if (result.user.age !== null && result.user.age !== undefined) {
+          console.log('✅ Age retrieved from Google:', result.user.age);
+        } else {
+          console.log('ℹ️ Age not available from Google (user may not have shared this information)');
+        }
+        
+        if (result.user.gender !== null && result.user.gender !== undefined) {
+          console.log('✅ Gender retrieved from Google:', result.user.gender);
+        } else {
+          console.log('ℹ️ Gender not available from Google (user may not have shared this information)');
+        }
+        
         // Navigate to dashboard on successful sign-in
         navigate('/dashboard');
       } else {
