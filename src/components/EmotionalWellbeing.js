@@ -236,6 +236,22 @@ export default function EmotionalWellbeing() {
     return false; // No cache
   }, []);
 
+  // Helper function to check if it's a new day after 12 PM
+  const shouldRefreshForNewDay = useCallback((lastUpdateDate) => {
+    if (!lastUpdateDate) return false;
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentDate = now.toDateString();
+    
+    // If it's after 12 PM AND it's a new day
+    if (currentHour >= 12 && lastUpdateDate !== currentDate) {
+      return true;
+    }
+    
+    return false;
+  }, []);
+
   const loadCachedPatternData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('pattern', period, userId);
     const cachedData = loadFromCache(cacheKey, 24 * 60); // 24 hours cache (persist across sessions)
@@ -246,19 +262,19 @@ export default function EmotionalWellbeing() {
       setTriggers(cachedData.triggers || {});
       setHasEnoughData(cachedData.hasEnoughData !== false);
       
-      // Check if it's a new day since last update
+      // Check if it's a new day after 12 PM
       const lastUpdateDate = cachedData.lastUpdateDate;
-      const today = new Date().toDateString();
       
-      if (lastUpdateDate !== today) {
-        console.log('📅 New day detected since last pattern update, will refresh in background');
+      if (shouldRefreshForNewDay(lastUpdateDate)) {
+        console.log('📅 New day after 12 PM detected, will refresh in background');
         // Don't return early - let it load fresh data in background
       } else {
-        console.log('📅 Same day as last pattern update, using cached data');
-        return; // Use cached data, no need to refresh
+        console.log('📅 Same day or before 12 PM, using cached pattern data');
+        return true; // Use cached data, no need to refresh
       }
     }
-  }, []);
+    return false;
+  }, [shouldRefreshForNewDay]);
 
   const loadCachedHighlightsData = useCallback((userId, period) => {
     const cacheKey = getCacheKey('highlights', '3months', userId);
@@ -268,19 +284,19 @@ export default function EmotionalWellbeing() {
       console.log('⚡ Setting cached highlights data instantly');
       setHighlights(cachedData.highlights || {});
       
-      // Check if it's a new day since last update
+      // Check if it's a new day after 12 PM
       const lastUpdateDate = cachedData.lastUpdateDate;
-      const today = new Date().toDateString();
       
-      if (lastUpdateDate !== today) {
-        console.log('📅 New day detected since last highlights update, will refresh in background');
+      if (shouldRefreshForNewDay(lastUpdateDate)) {
+        console.log('📅 New day after 12 PM detected, will refresh in background');
         // Don't return early - let it load fresh data in background
       } else {
-        console.log('📅 Same day as last highlights update, using cached data');
-        return; // Use cached data, no need to refresh
+        console.log('📅 Same day or before 12 PM, using cached highlights data');
+        return true; // Use cached data, no need to refresh
       }
     }
-  }, []);
+    return false;
+  }, [shouldRefreshForNewDay]);
 
   const loadCachedData = useCallback((userId) => {
     console.log('⚡ Loading all cached data instantly...');
@@ -400,7 +416,7 @@ export default function EmotionalWellbeing() {
         loadFreshBalanceData(balancePeriod)
       ];
       
-      // Only load fresh pattern analysis if it's a new day or no cached data exists
+      // Only load fresh pattern analysis if it's a new day after 12 PM or no cached data exists
       const patternCacheKey = getCacheKey('pattern', patternPeriod, user.uid);
       const patternCachedData = loadFromCache(patternCacheKey, 24 * 60);
       
@@ -409,17 +425,16 @@ export default function EmotionalWellbeing() {
         promises.push(loadFreshPatternAnalysis());
       } else {
         const lastUpdateDate = patternCachedData.lastUpdateDate;
-        const today = new Date().toDateString();
         
-        if (lastUpdateDate !== today) {
-          console.log('📅 New day detected, including pattern analysis in fresh data load');
+        if (shouldRefreshForNewDay(lastUpdateDate)) {
+          console.log('📅 New day after 12 PM detected, including pattern analysis in fresh data load');
           promises.push(loadFreshPatternAnalysis());
         } else {
-          console.log('📅 Same day, skipping pattern analysis from fresh data load');
+          console.log('📅 Same day or before 12 PM, skipping pattern analysis from fresh data load');
         }
       }
       
-      // Only load fresh highlights if it's a new day or no cached data exists
+      // Only load fresh highlights if it's a new day after 12 PM or no cached data exists
       const highlightsCacheKey = getCacheKey('highlights', '3months', user.uid);
       const highlightsCachedData = loadFromCache(highlightsCacheKey, 24 * 60);
       
@@ -428,13 +443,12 @@ export default function EmotionalWellbeing() {
         promises.push(loadFreshHighlightsData());
       } else {
         const lastUpdateDate = highlightsCachedData.lastUpdateDate;
-        const today = new Date().toDateString();
         
-        if (lastUpdateDate !== today) {
-          console.log('📅 New day detected, including highlights in fresh data load');
+        if (shouldRefreshForNewDay(lastUpdateDate)) {
+          console.log('📅 New day after 12 PM detected, including highlights in fresh data load');
           promises.push(loadFreshHighlightsData());
         } else {
-          console.log('📅 Same day, skipping highlights from fresh data load');
+          console.log('📅 Same day or before 12 PM, skipping highlights from fresh data load');
         }
       }
       
@@ -514,10 +528,17 @@ export default function EmotionalWellbeing() {
         }
       }
 
-      // Then fetch fresh data in background
-      loadFreshData();
+      // Only fetch fresh data in background if it's a new day after 12 PM
+      // Otherwise, use cached data (refresh button will force update when needed)
+      const shouldRefresh = shouldRefreshForNewDay(lastCacheUpdate ? new Date(lastCacheUpdate).toDateString() : null);
+      if (shouldRefresh) {
+        console.log('📅 New day after 12 PM detected on mount, refreshing in background');
+        loadFreshData();
+      } else {
+        console.log('📅 Using cached data on mount (same day or before 12 PM)');
+      }
     }
-  }, []); // Run only once on mount
+  }, [shouldRefreshForNewDay]); // Run only once on mount
 
   // Listen for localStorage changes and custom events to detect when new emotional data is saved
   useEffect(() => {
@@ -626,9 +647,9 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      loadCachedPatternData(user.uid, patternPeriod);
+      const hasCache = loadCachedPatternData(user.uid, patternPeriod);
       
-      // Only load fresh data if it's a new day or no cached data exists
+      // Only load fresh data if it's a new day after 12 PM or no cached data exists
       const cacheKey = getCacheKey('pattern', patternPeriod, user.uid);
       const cachedData = loadFromCache(cacheKey, 24 * 60);
       
@@ -637,26 +658,25 @@ export default function EmotionalWellbeing() {
         loadFreshPatternAnalysis();
       } else {
         const lastUpdateDate = cachedData.lastUpdateDate;
-        const today = new Date().toDateString();
         
-        if (lastUpdateDate !== today) {
-          console.log('📅 New day detected, refreshing pattern data');
+        if (shouldRefreshForNewDay(lastUpdateDate)) {
+          console.log('📅 New day after 12 PM detected, refreshing pattern data');
           loadFreshPatternAnalysis();
         } else {
-          console.log('📅 Same day, using cached pattern data');
+          console.log('📅 Same day or before 12 PM, using cached pattern data');
         }
       }
       
       loadHabitAnalysis(false); // Don't force refresh on initial load
     }
-  }, [patternPeriod, loadCachedPatternData]);
+  }, [patternPeriod, loadCachedPatternData, shouldRefreshForNewDay]);
 
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      loadCachedHighlightsData(user.uid, highlightsPeriod);
+      const hasCache = loadCachedHighlightsData(user.uid, highlightsPeriod);
       
-      // Only load fresh data if it's a new day or no cached data exists
+      // Only load fresh data if it's a new day after 12 PM or no cached data exists
       const cacheKey = getCacheKey('highlights', '3months', user.uid);
       const cachedData = loadFromCache(cacheKey, 24 * 60);
       
@@ -665,17 +685,16 @@ export default function EmotionalWellbeing() {
         loadFreshHighlightsData();
       } else {
         const lastUpdateDate = cachedData.lastUpdateDate;
-        const today = new Date().toDateString();
         
-        if (lastUpdateDate !== today) {
-          console.log('📅 New day detected, refreshing highlights data');
+        if (shouldRefreshForNewDay(lastUpdateDate)) {
+          console.log('📅 New day after 12 PM detected, refreshing highlights data');
           loadFreshHighlightsData();
         } else {
-          console.log('📅 Same day, using cached highlights data');
+          console.log('📅 Same day or before 12 PM, using cached highlights data');
         }
       }
     }
-  }, [highlightsPeriod, loadCachedHighlightsData]);
+  }, [highlightsPeriod, loadCachedHighlightsData, shouldRefreshForNewDay]);
 
   const loadHabitAnalysis = async (forceRefresh = false) => {
     const user = getCurrentUser();
