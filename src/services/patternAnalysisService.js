@@ -365,7 +365,7 @@ class PatternAnalysisService {
         if ((summary.includes('finished') || summary.includes('completed') || summary.includes('accomplished') || 
              summary.includes('achieved') || summary.includes('succeeded') || summary.includes('done')) && 
             !processedSummaries.has('achievement')) {
-          boosters.push('Completing something meaningful gave you a powerful sense of capability and validation.');
+          boosters.push('Completing meaningful work');
           processedSummaries.add('achievement');
         }
         
@@ -373,7 +373,7 @@ class PatternAnalysisService {
         if ((summary.includes('friend') || summary.includes('talked') || summary.includes('conversation') || 
              summary.includes('joked') || summary.includes('laughed') || summary.includes('connected')) && 
             !processedSummaries.has('connection')) {
-          boosters.push('Meaningful conversations with others helped you feel understood and less alone.');
+          boosters.push('Meaningful conversations with others');
           processedSummaries.add('connection');
         }
         
@@ -381,7 +381,7 @@ class PatternAnalysisService {
         if ((summary.includes('calm') || summary.includes('peaceful') || summary.includes('quiet') || 
              summary.includes('relax') || summary.includes('walk') || summary.includes('breath')) && 
             !processedSummaries.has('peace')) {
-          boosters.push('Taking time for stillness reminded you that peace comes from letting go of pressure, not avoiding activity.');
+          boosters.push('Taking time for stillness');
           processedSummaries.add('peace');
         }
         
@@ -389,7 +389,7 @@ class PatternAnalysisService {
         if ((summary.includes('learned') || summary.includes('understood') || summary.includes('insight') || 
              summary.includes('realized') || summary.includes('growth') || summary.includes('progress')) && 
             !processedSummaries.has('growth')) {
-          boosters.push('Discovering something new about yourself or your situation gave you clarity and a sense of forward momentum.');
+          boosters.push('Discovering something new about yourself');
           processedSummaries.add('growth');
         }
         
@@ -397,7 +397,7 @@ class PatternAnalysisService {
         if ((summary.includes('decided') || summary.includes('chose') || summary.includes('set') || 
              summary.includes('boundary') || summary.includes('control') || summary.includes('manage')) && 
             !processedSummaries.has('control')) {
-          boosters.push('Making a decision or taking action gave you a sense of control over your own life and circumstances.');
+          boosters.push('Making decisions and taking action');
           processedSummaries.add('control');
         }
       });
@@ -406,15 +406,15 @@ class PatternAnalysisService {
     // Fall back to mood pattern analysis if no specific summaries found
     if (boosters.length === 0) {
       if (highHappinessDays.length >= moodData.length * 0.25) {
-        boosters.push('The satisfaction of meaningful accomplishments filled your need to feel capable and recognized.');
+        boosters.push('Meaningful accomplishments');
       }
       
       if (highEnergyDays.length >= moodData.length * 0.25) {
-        boosters.push('Being fully engaged in activities that mattered to you energized both body and mind.');
+        boosters.push('Being engaged in activities');
       }
       
       if (lowStressDays.length >= moodData.length * 0.3) {
-        boosters.push('Moments without pressure allowed you to breathe freely and feel like yourself again.');
+        boosters.push('Moments without pressure');
       }
     }
 
