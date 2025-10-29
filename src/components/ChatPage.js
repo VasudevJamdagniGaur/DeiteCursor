@@ -735,26 +735,10 @@ export default function ChatPage() {
   }, [selectedDateId]);
 
   const handleBack = () => {
-    // Show custom warning modal if in whisper mode AND there are actual messages
+    // Show custom warning modal if in whisper mode
     if (isWhisperMode) {
-      // Filter out welcome message and check if there are any real messages
-      const realMessages = messages.filter(m => 
-        m.id !== 'welcome' && 
-        m.text && 
-        m.text.length > 0
-      );
-      
-      if (realMessages.length > 0) {
-        // User has sent messages - show warning before leaving
-        console.log(`⬅️ Whisper session has ${realMessages.length} messages - showing delete warning`);
-        setShowDeleteWarning(true);
-        return; // Don't navigate yet, wait for user confirmation
-      } else {
-        // No messages sent - just leave without warning
-        console.log('⬅️ Whisper session has no messages - leaving without warning');
-        navigate('/dashboard', { replace: true });
-        return;
-      }
+      setShowDeleteWarning(true);
+      return; // Don't navigate yet, wait for user confirmation
     }
     
     // Navigate back to dashboard (regular chat)
@@ -1000,45 +984,41 @@ export default function ChatPage() {
           onClick={handleCancelDelete}
         >
           <div
-            className={`max-w-md w-full rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
+            className={`max-w-md w-full rounded-2xl p-6 backdrop-blur-lg transition-all duration-300 ${
               isDarkMode ? 'border border-gray-600/20' : 'border border-gray-200/30'
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(42, 42, 45, 0.6)",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              backgroundColor: "rgba(42, 42, 45, 0.95)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
             } : {
-              backgroundColor: "rgba(255, 255, 255, 0.6)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Warning Icon */}
-            <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center justify-center mb-4">
               <div 
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={isDarkMode ? {
-                  backgroundColor: "rgba(42, 42, 45, 0.6)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                } : {
-                  backgroundColor: "rgba(255, 255, 255, 0.6)",
-                  border: "1px solid rgba(0, 0, 0, 0.08)",
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: "rgba(253, 214, 99, 0.2)",
                 }}
               >
-                <span className="text-2xl">⚠️</span>
+                <span className="text-4xl">⚠️</span>
               </div>
             </div>
 
             {/* Title */}
-            <h3 className={`text-lg font-semibold text-center mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h3 className={`text-xl font-bold text-center mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Leaving Whisper Session
             </h3>
 
             {/* Message */}
-            <p className={`text-sm leading-relaxed text-center mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              All chat messages in this session will be <strong className={isDarkMode ? 'text-gray-200' : 'text-gray-700'}>permanently deleted</strong> and cannot be recovered.
+            <p className={`text-sm leading-relaxed text-center mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              All chat messages in this session will be <strong className={isDarkMode ? 'text-red-400' : 'text-red-600'}>permanently deleted</strong> and cannot be recovered.
             </p>
 
-            <p className={`text-sm leading-relaxed text-center mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`text-sm leading-relaxed text-center mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               Are you sure you want to leave and delete all messages?
             </p>
 
@@ -1046,30 +1026,20 @@ export default function ChatPage() {
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelDelete}
-                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 ${
+                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105 ${
                   isDarkMode 
-                    ? 'text-gray-300' 
-                    : 'text-gray-700'
+                    ? 'bg-gray-700/50 hover:bg-gray-700/70 text-gray-300' 
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                 }`}
-                style={isDarkMode ? {
-                  backgroundColor: "rgba(42, 42, 45, 0.6)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                } : {
-                  backgroundColor: "rgba(255, 255, 255, 0.6)",
-                  border: "1px solid rgba(0, 0, 0, 0.08)",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 text-white"
+                className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105 text-white"
                 style={{
-                  backgroundColor: "rgba(138, 180, 248, 0.3)",
-                  border: "1px solid rgba(138, 180, 248, 0.5)",
-                  boxShadow: "0 4px 16px rgba(138, 180, 248, 0.25)",
+                  background: "linear-gradient(135deg, #F28B82 0%, #F5655A 100%)",
+                  boxShadow: "0 4px 16px rgba(242, 139, 130, 0.4)",
                 }}
               >
                 Delete & Leave

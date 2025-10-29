@@ -533,10 +533,10 @@ export default function EmotionalWellbeing() {
       const shouldRefresh = shouldRefreshForNewDay(lastCacheUpdate ? new Date(lastCacheUpdate).toDateString() : null);
       if (shouldRefresh) {
         console.log('📅 New day after 12 PM detected on mount, refreshing in background');
-        loadFreshData();
+      loadFreshData();
       } else {
         console.log('📅 Using cached data on mount (same day or before 12 PM)');
-      }
+    }
     }
   }, [shouldRefreshForNewDay]); // Run only once on mount
 
@@ -3196,11 +3196,11 @@ Return in this JSON format:
                         <div className="flex items-center justify-between mb-2">
                           <h4 className={`text-lg font-semibold group-hover:text-blue-300 transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                             {tip.title}
-                          </h4>
-                          <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                      </h4>
+                      <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                             {tip.category?.replace('_', ' ').toUpperCase()}
-                          </div>
-                        </div>
+                      </div>
+                    </div>
                         
                         <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           {tip.description}
