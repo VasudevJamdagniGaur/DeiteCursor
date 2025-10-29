@@ -754,7 +754,23 @@ export default function ChatPage() {
     
     if (user) {
       try {
-        // Use the dedicated method to delete all whisper session messages
+        // First, preserve regular messages from localStorage before clearing
+        const storedMessagesKey = `chatMessages_${selectedDateId}`;
+        const storedMessagesJson = localStorage.getItem(storedMessagesKey);
+        let regularMessages = [];
+        
+        if (storedMessagesJson) {
+          try {
+            const allStoredMessages = JSON.parse(storedMessagesJson);
+            // Filter out whisper session messages, keep only regular messages
+            regularMessages = allStoredMessages.filter(m => !m.isWhisperSession);
+            console.log(`💾 Preserving ${regularMessages.length} regular messages in localStorage`);
+          } catch (parseError) {
+            console.error('❌ Error parsing stored messages:', parseError);
+          }
+        }
+        
+        // Use the dedicated method to delete all whisper session messages from Firestore
         const result = await firestoreService.deleteWhisperSessionMessages(user.uid, selectedDateId);
         if (result.success) {
           console.log(`🗑️ Deleted ${result.deletedCount || 0} whisper session messages from Firestore`);
@@ -762,9 +778,15 @@ export default function ChatPage() {
           console.error('❌ Error deleting whisper session messages:', result.error);
         }
         
-        // Clear localStorage for this date
-        localStorage.removeItem(`chatMessages_${selectedDateId}`);
-        console.log('🗑️ Cleared localStorage for whisper session');
+        // Update localStorage: remove whisper messages but keep regular messages
+        if (regularMessages.length > 0) {
+          localStorage.setItem(storedMessagesKey, JSON.stringify(regularMessages));
+          console.log(`💾 Updated localStorage: kept ${regularMessages.length} regular messages, removed whisper messages`);
+        } else {
+          // If no regular messages, just remove the key
+          localStorage.removeItem(storedMessagesKey);
+          console.log('🗑️ Cleared localStorage (no regular messages to preserve)');
+        }
       } catch (error) {
         console.error('❌ Error deleting whisper session messages:', error);
         // Still navigate even if deletion fails

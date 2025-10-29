@@ -459,11 +459,14 @@ class FirestoreService {
           id: doc.id,
           sender: data.role === 'user' ? 'user' : 'ai',
           text: data.text,
-          timestamp: data.ts?.toDate() || new Date()
+          timestamp: data.ts?.toDate() || new Date(),
+          isWhisperSession: data.isWhisperSession || false // Preserve the isWhisperSession flag
         });
       });
 
       console.log('📖 FIRESTORE NEW: Retrieved', messages.length, 'messages');
+      console.log('📖 FIRESTORE NEW: Whisper messages count:', messages.filter(m => m.isWhisperSession).length);
+      console.log('📖 FIRESTORE NEW: Regular messages count:', messages.filter(m => !m.isWhisperSession).length);
       return { success: true, messages };
     } catch (error) {
       console.error('❌ FIRESTORE NEW: Error getting chat messages:', error);
@@ -515,16 +518,45 @@ class FirestoreService {
     try {
       console.log('🗑️ FIRESTORE NEW: Deleting all whisper session messages...');
       const messagesRef = collection(this.db, `users/${uid}/days/${dateId}/messages`);
-      const q = query(messagesRef, where('isWhisperSession', '==', true));
-      const snapshot = await getDocs(q);
+      
+      // First, get ALL messages to verify counts
+      const allMessagesQuery = query(messagesRef, orderBy('ts', 'asc'));
+      const allSnapshot = await getDocs(allMessagesQuery);
+      const totalMessages = allSnapshot.size;
+      let whisperCount = 0;
+      let regularCount = 0;
+      
+      allSnapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.isWhisperSession === true) {
+          whisperCount++;
+        } else {
+          regularCount++;
+        }
+      });
+      
+      console.log(`🗑️ FIRESTORE NEW: Total messages: ${totalMessages} (Whisper: ${whisperCount}, Regular: ${regularCount})`);
+      
+      // Now query and delete ONLY whisper session messages
+      const whisperQuery = query(messagesRef, where('isWhisperSession', '==', true));
+      const whisperSnapshot = await getDocs(whisperQuery);
       
       const deletePromises = [];
-      snapshot.forEach(docSnap => {
-        deletePromises.push(deleteDoc(docSnap.ref));
+      const deletedIds = [];
+      whisperSnapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        // Double-check: only delete if isWhisperSession is explicitly true
+        if (data.isWhisperSession === true) {
+          deletedIds.push(docSnap.id);
+          deletePromises.push(deleteDoc(docSnap.ref));
+        } else {
+          console.warn(`⚠️ FIRESTORE NEW: Skipping message ${docSnap.id} - isWhisperSession is not true:`, data.isWhisperSession);
+        }
       });
       
       await Promise.all(deletePromises);
-      console.log(`🗑️ FIRESTORE NEW: Deleted ${deletePromises.length} whisper session messages`);
+      console.log(`🗑️ FIRESTORE NEW: Deleted ${deletePromises.length} whisper session messages (IDs: ${deletedIds.join(', ')})`);
+      console.log(`🗑️ FIRESTORE NEW: Regular messages preserved: ${regularCount}`);
       return { success: true, deletedCount: deletePromises.length };
     } catch (error) {
       console.error('❌ FIRESTORE NEW: Error deleting whisper session messages:', error);
