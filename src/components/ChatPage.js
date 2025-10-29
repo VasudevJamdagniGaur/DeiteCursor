@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain, Send, ArrowLeft, User } from "lucide-react";
+import { Brain, Send, ArrowLeft, User, AlertTriangle } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
 import reflectionService from '../services/reflectionService';
@@ -259,7 +259,8 @@ export default function ChatPage() {
       id: Date.now(),
       text: userMessageText,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
+      isWhisperSession: isWhisperMode // Ensure flag is set in state
     };
 
     console.log('🎯 CHAT PAGE DEBUG: Created user message:', userMessage);
@@ -300,7 +301,8 @@ export default function ChatPage() {
         text: '',
         sender: 'ai',
         timestamp: new Date(),
-        isStreaming: true
+        isStreaming: true,
+        isWhisperSession: isWhisperMode // Ensure flag is set in state
       };
 
       let currentMessages = [...newMessages, aiMessage];
@@ -735,10 +737,31 @@ export default function ChatPage() {
   }, [selectedDateId]);
 
   const handleBack = () => {
-    // Show custom warning modal if in whisper mode
+    // Show custom warning modal if in whisper mode AND there are whisper session messages
     if (isWhisperMode) {
-      setShowDeleteWarning(true);
-      return; // Don't navigate yet, wait for user confirmation
+      // Check if there are any actual messages (excluding welcome message)
+      // In whisper mode, all messages in the current session are whisper messages
+      const actualMessages = messages.filter(m => 
+        m.id !== 'welcome' && 
+        m.text && 
+        m.text.trim().length > 0
+      );
+      
+      console.log(`🤫 BACK BUTTON: Whisper mode active, found ${actualMessages.length} messages (excluding welcome)`);
+      console.log(`🤫 BACK BUTTON: Total messages in state: ${messages.length}`);
+      console.log(`🤫 BACK BUTTON: Messages:`, messages.map(m => ({ id: m.id, sender: m.sender, textLength: m.text?.length || 0, isWhisper: m.isWhisperSession })));
+      
+      if (actualMessages.length > 0) {
+        // Show warning if there are actual messages to delete
+        console.log(`🤫 Found ${actualMessages.length} whisper session messages - showing deletion warning`);
+        setShowDeleteWarning(true);
+        return; // Don't navigate yet, wait for user confirmation
+      } else {
+        // No messages, just navigate back directly
+        console.log('🤫 No whisper session messages found - navigating directly to dashboard');
+        navigate('/dashboard', { replace: true });
+        return;
+      }
     }
     
     // Navigate back to dashboard (regular chat)
@@ -973,48 +996,51 @@ export default function ChatPage() {
         </form>
       </div>
 
-      {/* Delete Warning Modal - Custom UI/UX */}
+      {/* Delete Warning Modal - Matching EmotionalWellbeing UI/UX */}
       {showDeleteWarning && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(8px)'
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
           }}
           onClick={handleCancelDelete}
         >
           <div
-            className={`max-w-md w-full rounded-2xl p-6 backdrop-blur-lg transition-all duration-300 ${
-              isDarkMode ? 'border border-gray-600/20' : 'border border-gray-200/30'
+            className={`max-w-md w-full rounded-xl p-6 backdrop-blur-lg transition-all duration-300 ${
+              isDarkMode ? 'border border-gray-600/20' : 'bg-white/40 border border-gray-200/30'
             }`}
             style={isDarkMode ? {
-              backgroundColor: "rgba(42, 42, 45, 0.95)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
             } : {
-              backgroundColor: "rgba(255, 255, 255, 0.95)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+              backgroundColor: "rgba(255, 255, 255, 0.6)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Warning Icon */}
             <div className="flex items-center justify-center mb-4">
               <div 
-                className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{
-                  backgroundColor: "rgba(253, 214, 99, 0.2)",
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(42, 42, 45, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                } : {
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
                 }}
               >
-                <span className="text-4xl">⚠️</span>
+                <AlertTriangle className="w-6 h-6" style={{ color: isDarkMode ? "#F28B82" : "#F28B82" }} />
               </div>
             </div>
 
             {/* Title */}
-            <h3 className={`text-xl font-bold text-center mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h3 className={`text-lg font-semibold text-center mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Leaving Whisper Session
             </h3>
 
             {/* Message */}
-            <p className={`text-sm leading-relaxed text-center mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`text-sm leading-relaxed text-center mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               All chat messages in this session will be <strong className={isDarkMode ? 'text-red-400' : 'text-red-600'}>permanently deleted</strong> and cannot be recovered.
             </p>
 
@@ -1026,20 +1052,20 @@ export default function ChatPage() {
             <div className="flex space-x-3">
               <button
                 onClick={handleCancelDelete}
-                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105 ${
+                className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 touch-manipulation ${
                   isDarkMode 
-                    ? 'bg-gray-700/50 hover:bg-gray-700/70 text-gray-300' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105 text-white"
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 touch-manipulation text-white"
                 style={{
                   background: "linear-gradient(135deg, #F28B82 0%, #F5655A 100%)",
-                  boxShadow: "0 4px 16px rgba(242, 139, 130, 0.4)",
+                  boxShadow: "0 4px 16px rgba(242, 139, 130, 0.3)",
                 }}
               >
                 Delete & Leave
