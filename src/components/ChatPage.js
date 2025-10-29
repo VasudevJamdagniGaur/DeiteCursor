@@ -607,6 +607,47 @@ export default function ChatPage() {
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [isLoading, inputMessage, handleSendMessage]);
 
+  // Pre-warm the AI model when ChatPage loads (for both regular chat and whisper sessions)
+  useEffect(() => {
+    const warmUpModel = async () => {
+      try {
+        console.log('🔥 Pre-warming AI model (llama3:70b)...');
+        // Send a minimal request to load model into GPU memory
+        // This reduces first-message delay significantly
+        const warmUpResponse = await fetch(`${chatService.baseURL}api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama3:70b',
+            prompt: 'Hi',
+            stream: false,
+            options: {
+              num_predict: 1, // Minimal response just to load the model
+              temperature: 0.1
+            }
+          })
+        });
+        
+        if (warmUpResponse.ok) {
+          console.log('✅ Model pre-warmed successfully - first message will be faster!');
+        } else {
+          console.log('⚠️ Model warm-up completed (non-critical):', warmUpResponse.status);
+        }
+      } catch (error) {
+        console.log('⚠️ Model warm-up failed (non-critical):', error.message);
+        // Don't throw - this is optional and shouldn't block the UI
+      }
+    };
+    
+    // Warm up after a short delay to not block page render
+    // Works for both regular chat and whisper sessions
+    const warmUpTimeout = setTimeout(warmUpModel, 500);
+    
+    return () => clearTimeout(warmUpTimeout);
+  }, []); // Run once when component mounts
+
   useEffect(() => {
     // Load existing messages or set welcome message
     const loadMessages = async () => {
