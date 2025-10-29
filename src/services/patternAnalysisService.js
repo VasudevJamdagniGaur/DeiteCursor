@@ -365,7 +365,7 @@ class PatternAnalysisService {
         if ((summary.includes('finished') || summary.includes('completed') || summary.includes('accomplished') || 
              summary.includes('achieved') || summary.includes('succeeded') || summary.includes('done')) && 
             !processedSummaries.has('achievement')) {
-          boosters.push('Completing meaningful work');
+          boosters.push('Completing tasks ahead of schedule');
           processedSummaries.add('achievement');
         }
         
@@ -373,7 +373,7 @@ class PatternAnalysisService {
         if ((summary.includes('friend') || summary.includes('talked') || summary.includes('conversation') || 
              summary.includes('joked') || summary.includes('laughed') || summary.includes('connected')) && 
             !processedSummaries.has('connection')) {
-          boosters.push('Meaningful conversations with others');
+          boosters.push('Talking with friends or sharing updates');
           processedSummaries.add('connection');
         }
         
@@ -381,7 +381,13 @@ class PatternAnalysisService {
         if ((summary.includes('calm') || summary.includes('peaceful') || summary.includes('quiet') || 
              summary.includes('relax') || summary.includes('walk') || summary.includes('breath')) && 
             !processedSummaries.has('peace')) {
-          boosters.push('Taking time for stillness');
+          if (summary.includes('walk')) {
+            boosters.push('Going for walks');
+          } else if (summary.includes('music')) {
+            boosters.push('Listening to music');
+          } else {
+            boosters.push('Taking quiet moments to yourself');
+          }
           processedSummaries.add('peace');
         }
         
@@ -389,7 +395,7 @@ class PatternAnalysisService {
         if ((summary.includes('learned') || summary.includes('understood') || summary.includes('insight') || 
              summary.includes('realized') || summary.includes('growth') || summary.includes('progress')) && 
             !processedSummaries.has('growth')) {
-          boosters.push('Discovering something new about yourself');
+          boosters.push('Reading or learning new things');
           processedSummaries.add('growth');
         }
         
@@ -397,8 +403,34 @@ class PatternAnalysisService {
         if ((summary.includes('decided') || summary.includes('chose') || summary.includes('set') || 
              summary.includes('boundary') || summary.includes('control') || summary.includes('manage')) && 
             !processedSummaries.has('control')) {
-          boosters.push('Making decisions and taking action');
+          boosters.push('Setting boundaries or making decisions');
           processedSummaries.add('control');
+        }
+        
+        // Look for specific activities
+        if (summary.includes('music') && !processedSummaries.has('music')) {
+          boosters.push('Listening to music');
+          processedSummaries.add('music');
+        }
+        
+        if (summary.includes('walk') && !processedSummaries.has('walk')) {
+          boosters.push('Going for walks');
+          processedSummaries.add('walk');
+        }
+        
+        if (summary.includes('exercise') && !processedSummaries.has('exercise')) {
+          boosters.push('Exercising or physical activity');
+          processedSummaries.add('exercise');
+        }
+        
+        if (summary.includes('organize') && !processedSummaries.has('organize')) {
+          boosters.push('Organizing your space');
+          processedSummaries.add('organize');
+        }
+        
+        if (summary.includes('outdoor') && !processedSummaries.has('outdoor')) {
+          boosters.push('Spending time outdoors');
+          processedSummaries.add('outdoor');
         }
       });
     }
@@ -406,15 +438,15 @@ class PatternAnalysisService {
     // Fall back to mood pattern analysis if no specific summaries found
     if (boosters.length === 0) {
       if (highHappinessDays.length >= moodData.length * 0.25) {
-        boosters.push('Meaningful accomplishments');
+        boosters.push('Finishing tasks and projects');
       }
       
       if (highEnergyDays.length >= moodData.length * 0.25) {
-        boosters.push('Being engaged in activities');
+        boosters.push('Being productive during the day');
       }
       
       if (lowStressDays.length >= moodData.length * 0.3) {
-        boosters.push('Moments without pressure');
+        boosters.push('Taking breaks and resting');
       }
     }
 
