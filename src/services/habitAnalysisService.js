@@ -4,7 +4,7 @@ import { getDateIdDaysAgo } from '../utils/dateUtils';
 class HabitAnalysisService {
   constructor() {
     this.baseURL = 'https://6g1bhez5txm66t-11434.proxy.runpod.net/';
-    this.modelName = 'llama2'; // Default model name for RunPod
+    this.modelName = 'llama3:70b'; // Preferred model - skip model check
     this.minDaysRequired = 1; // Minimum days needed for meaningful analysis
     this.minMessagesRequired = 1; // Minimum total messages needed
   }

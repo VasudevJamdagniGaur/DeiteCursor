@@ -38,67 +38,59 @@ Respond ONLY with a JSON object in this exact format:
 }`;
 
       const apiUrl = `${this.baseURL}api/generate`;
-      const modelOptions = ['llama3:70b', 'llama3:8b', 'llama3'];
+      const modelToUse = 'llama3:70b'; // Go directly to preferred model
       
-      for (const modelName of modelOptions) {
-        try {
-          console.log('🤖 Trying model for emotional analysis:', modelName);
-          
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: modelName,
-              prompt: prompt,
-              stream: false,
-              options: {
-                temperature: 0.3,
-                num_predict: 300
-              }
-            })
-          });
-          
-          if (!response.ok) {
-            console.log(`⚠️ Model ${modelName} failed, trying next...`);
-            continue;
-          }
-          
-          const data = await response.json();
-          console.log('✅ EMOTIONAL DEBUG: Received response:', data);
-          
-          // Parse the response
-          let responseText = data.response || data.text || data.output || '';
-          
-          // Extract JSON from response
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const emotionalData = JSON.parse(jsonMatch[0]);
-            
-            // Validate the scores
-            if (this.isValidAnalysisResult(emotionalData)) {
-              console.log('✅ Valid emotional analysis:', emotionalData);
-              return emotionalData;
-            } else {
-              console.log('⚠️ Invalid emotional analysis format, using defaults');
-              return this.getDefaultScores();
+      try {
+        console.log('🤖 Using model for emotional analysis:', modelToUse);
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelToUse,
+            prompt: prompt,
+            stream: false,
+            options: {
+              temperature: 0.3,
+              num_predict: 300
             }
+          })
+        });
+        
+        if (!response.ok) {
+          console.error(`❌ Model ${modelToUse} failed:`, response.status, response.statusText);
+          throw new Error(`Emotional analysis failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ EMOTIONAL DEBUG: Received response:', data);
+        
+        // Parse the response
+        let responseText = data.response || data.text || data.output || '';
+        
+        // Extract JSON from response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const emotionalData = JSON.parse(jsonMatch[0]);
+          
+          // Validate the scores
+          if (this.isValidAnalysisResult(emotionalData)) {
+            console.log('✅ Valid emotional analysis:', emotionalData);
+            return emotionalData;
           } else {
-            console.log('⚠️ Could not extract JSON from response');
+            console.log('⚠️ Invalid emotional analysis format, using defaults');
             return this.getDefaultScores();
           }
-          
-        } catch (modelError) {
-          console.error(`❌ Error with model ${modelName}:`, modelError);
-          continue;
+        } else {
+          console.log('⚠️ Could not extract JSON from response');
+          return this.getDefaultScores();
         }
+      } catch (error) {
+        console.error(`❌ Error with model ${modelToUse}:`, error);
+        return this.getDefaultScores();
       }
-      
-      // If all models failed, return default scores
-      console.log('⚠️ All models failed, returning default scores');
-      return this.getDefaultScores();
-      
     } catch (error) {
       console.error('❌ EMOTIONAL DEBUG: Error in analyzeEmotionalScores:', error);
       return this.getDefaultScores();

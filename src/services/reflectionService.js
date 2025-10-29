@@ -83,60 +83,55 @@ Write a simple, casual summary of this person's day:`;
 
     console.log('🌐 Making API call to RunPod for reflection...');
 
-    // Use consistent model names
-    const modelOptions = ['llama3:70b', 'llama3.1:70b', 'llama3:8b', 'llama3'];
+    // Go directly to llama3:70b - skip model check
+    const modelToUse = 'llama3:70b';
     
-    for (const model of modelOptions) {
-      try {
-        console.log(`🔄 Trying model: ${model} for reflection`);
-        
-        const response = await fetch(`${this.baseURL}api/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: model,
-            prompt: reflectionPrompt,
-            stream: false,
-            options: {
-              temperature: 0.7,
-              top_p: 0.9,
-              max_tokens: 150
-            }
-          })
-        });
+    try {
+      console.log(`🔄 Using model: ${modelToUse} for reflection`);
+      
+      const response = await fetch(`${this.baseURL}api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          prompt: reflectionPrompt,
+          stream: false,
+          options: {
+            temperature: 0.7,
+            top_p: 0.9,
+            max_tokens: 150
+          }
+        })
+      });
 
-        console.log(`📥 Response status for ${model}:`, response.status);
+      console.log(`📥 Response status for ${modelToUse}:`, response.status);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`❌ RunPod API Error for ${model}:`, response.status, errorText);
-          continue; // Try next model
-        }
-
-        const data = await response.json();
-        console.log(`✅ RunPod response received for day summary with ${model}`);
-        
-        // Accept multiple possible fields from providers
-        const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
-        if (typeof text === 'string' && text.trim()) {
-          const summary = text.trim();
-          console.log('📖 Generated day summary:', summary);
-          return summary;
-        } else {
-          console.error(`❌ Invalid response format from ${model}:`, data);
-          console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
-          continue; // Try next model
-        }
-      } catch (modelError) {
-        console.error(`💥 Error with model ${model}:`, modelError.message);
-        continue; // Try next model
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ RunPod API Error for ${modelToUse}:`, response.status, errorText);
+        throw new Error(`Reflection generation failed: ${response.status} ${response.statusText}`);
       }
+
+      const data = await response.json();
+      console.log(`✅ RunPod response received for day summary with ${modelToUse}`);
+      
+      // Accept multiple possible fields from providers
+      const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
+      if (typeof text === 'string' && text.trim()) {
+        const summary = text.trim();
+        console.log('📖 Generated day summary:', summary);
+        return summary;
+      } else {
+        console.error(`❌ Invalid response format from ${modelToUse}:`, data);
+        console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
+        throw new Error('Invalid response format from reflection API');
+      }
+    } catch (error) {
+      console.error(`💥 Error with model ${modelToUse}:`, error.message);
+      throw error;
     }
-    
-    // If all models failed, throw error
-    throw new Error('All models failed for reflection generation');
   }
 
   createFallbackSummary(userMessages, aiMessages) {

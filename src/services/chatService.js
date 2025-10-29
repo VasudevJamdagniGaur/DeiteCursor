@@ -21,6 +21,7 @@ class ChatService {
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {
     console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
     console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
+    console.log('🚀 CHAT DEBUG: Using model:', this.modelName);
     
     try {
       // Build a simpler prompt that works with Ollama
@@ -40,166 +41,127 @@ class ChatService {
 ${conversationContext}Human: ${userMessage}
 Assistant:`;
 
-      // Try different models in order of preference - prioritize llama3:70b
+      // Go directly to llama3:70b - skip model check
       const apiUrl = `${this.baseURL}api/generate`;
-      const modelOptions = ['llama3:70b', 'llama3:8b', 'llama3', 'llama2'];
-      
-      let lastError = null;
-      
-      // First, check available models on the server
-      let availableModels = [];
-      try {
-        const tagsResponse = await fetch(`${this.baseURL}api/tags`);
-        if (tagsResponse.ok) {
-          const tagsData = await tagsResponse.json();
-          availableModels = tagsData.models?.map(m => m.name) || [];
-          console.log('📋 Available models on server:', availableModels);
-        }
-      } catch (tagsError) {
-        console.log('⚠️ Could not check available models, will try all model options');
-      }
+      const modelToUse = this.modelName; // llama3:70b
       
       console.log('📤 CHAT DEBUG: Full API URL:', apiUrl);
       console.log('📤 CHAT DEBUG: Prompt length:', simplePrompt.length);
+      console.log('📤 CHAT DEBUG: Using model:', modelToUse);
       
-      // Try models in order until one succeeds
-      for (const modelToTry of modelOptions) {
-        // Skip models that we know aren't available
-        if (availableModels.length > 0 && !availableModels.some(m => m.includes(modelToTry.split(':')[0]))) {
-          console.log('⏭️ Skipping model', modelToTry, '- not available');
-          continue;
+      const requestBody = {
+        model: modelToUse,
+        prompt: simplePrompt,
+        stream: !!onToken, // Enable streaming if callback provided
+        options: {
+          temperature: 0.7,
+          num_predict: 200
         }
-        
-        console.log('📤 CHAT DEBUG: Trying model:', modelToTry);
-        
-        try {
-          const requestBody = {
-            model: modelToTry,
-            prompt: simplePrompt,
-            stream: !!onToken, // Enable streaming if callback provided
-            options: {
-              temperature: 0.7,
-              num_predict: 200
-            }
-          };
-          
-          console.log('📤 CHAT DEBUG: Sending request to:', apiUrl);
-          
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-          });
+      };
+      
+      console.log('📤 CHAT DEBUG: Sending request to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-          console.log('📥 CHAT DEBUG: Response status for', modelToTry, ':', response.status);
-          console.log('📥 CHAT DEBUG: Response ok:', response.ok);
+      console.log('📥 CHAT DEBUG: Response status:', response.status);
+      console.log('📥 CHAT DEBUG: Response ok:', response.ok);
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ CHAT DEBUG: Error response for', modelToTry, ':', errorText);
-            lastError = new Error(`Model ${modelToTry} failed: ${response.status} ${response.statusText}`);
-            continue; // Try next model
-          }
-          
-          // Handle streaming response
-          if (onToken && response.body) {
-            console.log('🌊 CHAT DEBUG: Processing streaming response from', modelToTry);
-            
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullResponse = '';
-            
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                
-                if (done) {
-                  console.log('🌊 Streaming completed for', modelToTry);
-                  break;
-                }
-                
-                const chunk = decoder.decode(value, { stream: true });
-                
-                // Parse JSON lines
-                const lines = chunk.split('\n').filter(line => line.trim());
-                
-                for (const line of lines) {
-                  try {
-                    const data = JSON.parse(line);
-                    
-                    if (data.response) {
-                      fullResponse += data.response;
-                      
-                      // Call onToken callback if provided
-                      if (onToken) {
-                        onToken(data.response);
-                      }
-                    }
-                    
-                    if (data.done) {
-                      console.log('🌊 Stream done for', modelToTry, ', full response:', fullResponse);
-                      return fullResponse;
-                    }
-                  } catch (parseError) {
-                    console.log('🌊 Parse error for line:', line);
-                  }
-                }
-              }
-              
-              if (fullResponse) {
-                console.log('✅ Streaming response completed from', modelToTry);
-                return fullResponse;
-              }
-              
-            } catch (streamError) {
-              console.error('❌ Streaming error for', modelToTry, ':', streamError);
-              lastError = streamError;
-              continue; // Try next model
-            }
-          } else {
-            // Handle non-streaming response
-            const data = await response.json();
-            console.log('✅ CHAT DEBUG: Received response from RunPod for', modelToTry);
-            console.log('✅ CHAT DEBUG: Response keys:', Object.keys(data));
-            
-            // Handle different response formats
-            let aiResponse = '';
-            if (data.response) {
-              aiResponse = data.response;
-            } else if (data.text) {
-              aiResponse = data.text;
-            } else if (data.output) {
-              aiResponse = data.output;
-            } else if (typeof data === 'string') {
-              aiResponse = data;
-            } else {
-              console.error('❌ CHAT DEBUG: Unexpected response format:', data);
-              lastError = new Error('Unexpected response format from RunPod API');
-              continue; // Try next model
-            }
-            
-            if (!aiResponse || aiResponse.trim() === '') {
-              console.error('❌ CHAT DEBUG: Empty response from', modelToTry);
-              lastError = new Error('Empty response from AI');
-              continue; // Try next model
-            }
-            
-            console.log('✅ CHAT DEBUG: Successfully got response from', modelToTry);
-            console.log('✅ CHAT DEBUG: AI Response:', aiResponse.substring(0, 100));
-            return aiResponse;
-          }
-          
-        } catch (modelError) {
-          console.error(`❌ Error with model ${modelToTry}:`, modelError);
-          lastError = modelError;
-          continue; // Try next model
-        }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ CHAT DEBUG: Error response:', errorText);
+        throw new Error(`Model ${modelToUse} failed: ${response.status} ${response.statusText}`);
       }
       
-      // If all models failed, throw the last error
-      throw lastError || new Error('All models failed - check if Ollama models are loaded on RunPod instance');
+      // Handle streaming response
+      if (onToken && response.body) {
+        console.log('🌊 CHAT DEBUG: Processing streaming response from', modelToUse);
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              console.log('🌊 Streaming completed for', modelToUse);
+              break;
+            }
+            
+            const chunk = decoder.decode(value, { stream: true });
+            
+            // Parse JSON lines
+            const lines = chunk.split('\n').filter(line => line.trim());
+            
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line);
+                
+                if (data.response) {
+                  fullResponse += data.response;
+                  
+                  // Call onToken callback if provided
+                  if (onToken) {
+                    onToken(data.response);
+                  }
+                }
+                
+                if (data.done) {
+                  console.log('🌊 Stream done for', modelToUse, ', full response:', fullResponse);
+                  return fullResponse;
+                }
+              } catch (parseError) {
+                console.log('🌊 Parse error for line:', line);
+              }
+            }
+          }
+          
+          if (fullResponse) {
+            console.log('✅ Streaming response completed from', modelToUse);
+            return fullResponse;
+          }
+          
+        } catch (streamError) {
+          console.error('❌ Streaming error for', modelToUse, ':', streamError);
+          throw streamError;
+        }
+      } else {
+        // Handle non-streaming response
+        const data = await response.json();
+        console.log('✅ CHAT DEBUG: Received response from RunPod for', modelToUse);
+        console.log('✅ CHAT DEBUG: Response keys:', Object.keys(data));
+        
+        // Handle different response formats
+        let aiResponse = '';
+        if (data.response) {
+          aiResponse = data.response;
+        } else if (data.text) {
+          aiResponse = data.text;
+        } else if (data.output) {
+          aiResponse = data.output;
+        } else if (typeof data === 'string') {
+          aiResponse = data;
+        } else {
+          console.error('❌ CHAT DEBUG: Unexpected response format:', data);
+          throw new Error('Unexpected response format from RunPod API');
+        }
+        
+        if (!aiResponse || aiResponse.trim() === '') {
+          console.error('❌ CHAT DEBUG: Empty response from', modelToUse);
+          throw new Error('Empty response from AI');
+        }
+        
+        console.log('✅ CHAT DEBUG: Successfully got response from', modelToUse);
+        console.log('✅ CHAT DEBUG: AI Response:', aiResponse.substring(0, 100));
+        return aiResponse;
+      }
       
     } catch (error) {
       console.error('❌ CHAT DEBUG: Error in sendMessage:', error);
