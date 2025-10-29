@@ -408,150 +408,167 @@ export default function ChatPage() {
       setMessages(finalMessagesLocal);
       saveMessages(finalMessagesLocal);
 
-      // Save AI message to Firestore NEW structure
+      // IMPORTANT: Enable input field immediately after AI response is shown
+      // Reflection and emotional analysis will run in background without blocking
+      console.log('🔄 CHAT DEBUG: AI response complete - enabling input field immediately');
+      setIsLoading(false);
+      window.lastLoadingTime = 0; // Reset loading timer
+      
+      // Focus input field immediately
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
+
+      // Save AI message to Firestore NEW structure (in background)
       const user = getCurrentUser();
       if (user && finalMessagesLocal.length > 0) {
-        try {
-          const aiMessage = finalMessagesLocal[finalMessagesLocal.length - 1];
-          if (aiMessage.sender === 'ai') {
-            await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
-              ...aiMessage,
-              isWhisperSession: isWhisperMode
-            });
-            console.log('💾 AI message saved to Firestore NEW structure');
+        // Run in background - don't await
+        (async () => {
+          try {
+            const aiMessage = finalMessagesLocal[finalMessagesLocal.length - 1];
+            if (aiMessage.sender === 'ai') {
+              await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
+                ...aiMessage,
+                isWhisperSession: isWhisperMode
+              });
+              console.log('💾 AI message saved to Firestore NEW structure');
+            }
+          } catch (error) {
+            console.error('❌ Error saving AI message to Firestore:', error);
           }
-        } catch (error) {
-          console.error('❌ Error saving AI message to Firestore:', error);
-        }
+        })();
       }
 
       // Generate and save reflection after the conversation (skip for whisper sessions)
+      // Run in background - don't block user input
       if (!isWhisperMode) {
-        try {
-          console.log('📝 Generating reflection...');
-          console.log('🔍 CHAT DEBUG: finalMessagesLocal type:', typeof finalMessagesLocal, 'length:', finalMessagesLocal?.length);
-          
-          // Ensure we have a valid messages array
-          const messagesToProcess = Array.isArray(finalMessagesLocal) ? finalMessagesLocal : [];
-          console.log('🔍 CHAT DEBUG: Using messages array with length:', messagesToProcess.length);
-          
-          // Generate AI reflection using RunPod llama3:70b
-          let reflection;
+        // Run reflection generation asynchronously - don't await
+        (async () => {
           try {
-            console.log('🤖 Generating AI reflection using RunPod llama3:70b...');
-            reflection = await reflectionService.generateReflection(messagesToProcess);
-            console.log('✅ AI Reflection generated via RunPod:', reflection);
-          } catch (apiError) {
-            console.log('⚠️ AI reflection failed:', apiError.message);
-            throw apiError; // propagate to outer catch; do not inject non-AI text
+            console.log('📝 Generating reflection (background)...');
+            console.log('🔍 CHAT DEBUG: finalMessagesLocal type:', typeof finalMessagesLocal, 'length:', finalMessagesLocal?.length);
+            
+            // Ensure we have a valid messages array
+            const messagesToProcess = Array.isArray(finalMessagesLocal) ? finalMessagesLocal : [];
+            console.log('🔍 CHAT DEBUG: Using messages array with length:', messagesToProcess.length);
+            
+            // Generate AI reflection using RunPod llama3:70b
+            let reflection;
+            try {
+              console.log('🤖 Generating AI reflection using RunPod llama3:70b...');
+              reflection = await reflectionService.generateReflection(messagesToProcess);
+              console.log('✅ AI Reflection generated via RunPod:', reflection);
+            } catch (apiError) {
+              console.log('⚠️ AI reflection failed:', apiError.message);
+              return; // Don't save if generation failed
+            }
+            
+            const user = getCurrentUser();
+            if (user) {
+              // Save to NEW Firestore structure
+              await firestoreService.saveReflectionNew(user.uid, selectedDateId, {
+                summary: reflection,
+                mood: 'neutral',
+                score: 50,
+                insights: []
+              });
+              console.log('💾 Reflection saved to Firestore NEW structure');
+            } else {
+              localStorage.setItem(`reflection_${selectedDateId}`, reflection);
+              console.log('💾 Reflection saved to localStorage');
+            }
+          } catch (reflectionError) {
+            console.error('❌ Error generating reflection (background):', reflectionError);
+            // Don't save fallback - let it fail silently in background
           }
-          
-          const user = getCurrentUser();
-          if (user) {
-            // Save to NEW Firestore structure
-            await firestoreService.saveReflectionNew(user.uid, selectedDateId, {
-              summary: reflection,
-              mood: 'neutral',
-              score: 50,
-              insights: []
-            });
-            console.log('💾 Reflection saved to Firestore NEW structure');
-          } else {
-            localStorage.setItem(`reflection_${selectedDateId}`, reflection);
-            console.log('💾 Reflection saved to localStorage');
-          }
-          
-          // Do not save any non-AI backup text
-          
-        } catch (reflectionError) {
-          console.error('❌ Error generating reflection:', reflectionError);
-          
-          // Force save a fallback reflection
-          const fallbackReflection = `Had a conversation with Deite today at ${new Date().toLocaleString()}. The reflection system is being debugged.`;
-          localStorage.setItem(`reflection_${selectedDateId}`, fallbackReflection);
-          console.log('💾 Fallback reflection saved to localStorage');
-        }
+        })();
       } else {
         console.log('🤫 WHISPER SESSION: Skipping reflection generation');
       }
 
       // Generate and save emotional analysis after the conversation (skip for whisper sessions)
+      // Run in background - don't block user input
       if (!isWhisperMode) {
-        try {
-          console.log('🧠 Generating emotional analysis...');
-          console.log('🔍 CHAT DEBUG: finalMessagesLocal type:', typeof finalMessagesLocal, 'length:', finalMessagesLocal?.length);
-          
-          // Ensure we have a valid messages array and filter out whisper session messages
-          const messagesToProcess = Array.isArray(finalMessagesLocal) ? 
-            finalMessagesLocal.filter(m => !m.isWhisperSession) : [];
-          console.log('🔍 CHAT DEBUG: Using non-whisper messages array with length:', messagesToProcess.length);
-          
-          console.log('🤖 FORCING AI emotional analysis with RunPod...');
-          console.log('🤖 Messages to analyze:', messagesToProcess.map(m => `${m.sender}: ${m.text.slice(0, 50)}...`));
-          
+        // Run emotional analysis asynchronously - don't await
+        (async () => {
           try {
-            const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesToProcess);
-            console.log('✅ AI Emotional analysis generated:', emotionalScores);
-            console.log('🎯 Scores breakdown - H:', emotionalScores.happiness, 'E:', emotionalScores.energy, 'A:', emotionalScores.anxiety, 'S:', emotionalScores.stress);
+            console.log('🧠 Generating emotional analysis (background)...');
+            console.log('🔍 CHAT DEBUG: finalMessagesLocal type:', typeof finalMessagesLocal, 'length:', finalMessagesLocal?.length);
             
-            // Check if scores are all zeros
-            const total = (emotionalScores.happiness || 0) + (emotionalScores.energy || 0) + (emotionalScores.anxiety || 0) + (emotionalScores.stress || 0);
-            if (total === 0) {
-              console.error('❌ CRITICAL: Emotional analysis returned ALL ZEROS - API likely failed');
-              console.error('❌ CRITICAL: This means the RunPod AI server did not generate valid scores');
-              console.error('❌ CRITICAL: Check browser console for "All models failed" error above');
-            }
+            // Ensure we have a valid messages array and filter out whisper session messages
+            const messagesToProcess = Array.isArray(finalMessagesLocal) ? 
+              finalMessagesLocal.filter(m => !m.isWhisperSession) : [];
+            console.log('🔍 CHAT DEBUG: Using non-whisper messages array with length:', messagesToProcess.length);
             
-            const user = getCurrentUser();
-            if (user) {
-              // Save to NEW Firestore structure - moodChart
-              console.log('💾 SAVING AI SCORES TO FIREBASE:', emotionalScores);
-              console.log('💾 User ID:', user.uid, 'Date ID:', selectedDateId);
-              console.log('💾 Firestore path will be: users/' + user.uid + '/days/' + selectedDateId + '/moodChart/daily');
+            console.log('🤖 FORCING AI emotional analysis with RunPod...');
+            console.log('🤖 Messages to analyze:', messagesToProcess.map(m => `${m.sender}: ${m.text.slice(0, 50)}...`));
+            
+            try {
+              const emotionalScores = await emotionalAnalysisService.analyzeEmotionalScores(messagesToProcess);
+              console.log('✅ AI Emotional analysis generated:', emotionalScores);
+              console.log('🎯 Scores breakdown - H:', emotionalScores.happiness, 'E:', emotionalScores.energy, 'A:', emotionalScores.anxiety, 'S:', emotionalScores.stress);
               
-              try {
-                const saveResult = await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
-                console.log('💾 ✅ AI Mood chart saved to Firestore - Result:', saveResult);
-                if (!saveResult.success) {
-                  console.error('❌ CRITICAL: Save failed:', saveResult.error);
-                }
-              } catch (saveError) {
-                console.error('❌ Error saving mood chart:', saveError);
-                console.error('❌ CRITICAL: Save error details:', saveError.message, saveError.code);
+              // Check if scores are all zeros
+              const total = (emotionalScores.happiness || 0) + (emotionalScores.energy || 0) + (emotionalScores.anxiety || 0) + (emotionalScores.stress || 0);
+              if (total === 0) {
+                console.error('❌ CRITICAL: Emotional analysis returned ALL ZEROS - API likely failed');
+                console.error('❌ CRITICAL: This means the RunPod AI server did not generate valid scores');
+                console.error('❌ CRITICAL: Check browser console for "All models failed" error above');
               }
               
-              // Also calculate and save emotional balance
-              try {
-                const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
-                const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
-                const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
-                const neutral = 100 - positive - negative;
+              const user = getCurrentUser();
+              if (user) {
+                // Save to NEW Firestore structure - moodChart
+                console.log('💾 SAVING AI SCORES TO FIREBASE:', emotionalScores);
+                console.log('💾 User ID:', user.uid, 'Date ID:', selectedDateId);
+                console.log('💾 Firestore path will be: users/' + user.uid + '/days/' + selectedDateId + '/moodChart/daily');
                 
-                await firestoreService.saveEmotionalBalanceNew(user.uid, selectedDateId, {
-                  positive: Math.round(positive),
-                  negative: Math.round(negative),
-                  neutral: Math.round(neutral)
-                });
-                console.log('💾 AI Emotional balance saved to Firestore NEW structure');
-              } catch (balanceError) {
-                console.error('❌ Error saving emotional balance:', balanceError);
+                try {
+                  const saveResult = await firestoreService.saveMoodChartNew(user.uid, selectedDateId, emotionalScores);
+                  console.log('💾 ✅ AI Mood chart saved to Firestore - Result:', saveResult);
+                  if (!saveResult.success) {
+                    console.error('❌ CRITICAL: Save failed:', saveResult.error);
+                  }
+                } catch (saveError) {
+                  console.error('❌ Error saving mood chart:', saveError);
+                  console.error('❌ CRITICAL: Save error details:', saveError.message, saveError.code);
+                }
+                
+                // Also calculate and save emotional balance
+                try {
+                  const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
+                  const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+                  const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+                  const neutral = 100 - positive - negative;
+                  
+                  await firestoreService.saveEmotionalBalanceNew(user.uid, selectedDateId, {
+                    positive: Math.round(positive),
+                    negative: Math.round(negative),
+                    neutral: Math.round(neutral)
+                  });
+                  console.log('💾 AI Emotional balance saved to Firestore NEW structure');
+                } catch (balanceError) {
+                  console.error('❌ Error saving emotional balance:', balanceError);
+                }
+              } else {
+                // Fallback for anonymous users
+                try {
+                  const userId = 'anonymous';
+                  await emotionalAnalysisService.saveEmotionalData(userId, selectedDateId, emotionalScores);
+                  console.log('💾 Emotional data saved (anonymous)');
+                } catch (anonError) {
+                  console.error('❌ Error saving anonymous emotional data:', anonError);
+                }
               }
-            } else {
-              // Fallback for anonymous users
-              try {
-                const userId = 'anonymous';
-                await emotionalAnalysisService.saveEmotionalData(userId, selectedDateId, emotionalScores);
-                console.log('💾 Emotional data saved (anonymous)');
-              } catch (anonError) {
-                console.error('❌ Error saving anonymous emotional data:', anonError);
-              }
+            } catch (analysisError) {
+              console.error('❌ Error in emotional analysis (background):', analysisError);
             }
-          } catch (analysisError) {
-            console.error('❌ Error in emotional analysis:', analysisError);
+          } catch (emotionalError) {
+            console.error('❌ Error in emotional analysis section (background):', emotionalError);
           }
-        } catch (emotionalError) {
-          console.error('❌ Error in emotional analysis section:', emotionalError);
-        }
+        })();
       } else {
         console.log('🤫 WHISPER SESSION: Skipping emotional analysis generation');
       }
@@ -570,25 +587,16 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, errorMessage];
       setMessages(finalMessages);
       saveMessages(finalMessages);
-    } finally {
-      console.log('🔄 CHAT DEBUG: Resetting isLoading to false - input should be enabled now');
-      setIsLoading(false);
       
-      // Focus the input field to ensure it's ready for the next message
+      // Enable input even on error
+      setIsLoading(false);
+      window.lastLoadingTime = 0;
+      
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
         }
       }, 100);
-      
-      // Safety timeout to ensure input is always re-enabled
-      setTimeout(() => {
-        setIsLoading(false);
-        console.log('🔄 SAFETY: Force-enabled chat input after timeout');
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 1000);
     }
   };
 
