@@ -70,23 +70,11 @@ const isMobileDevice = () => {
 };
 
 // Check if popups are likely blocked or if we should use redirect
+// Note: We prefer popup first for better UX (popup experience)
 const shouldUseRedirect = () => {
-  // Use redirect for mobile devices or small screens
-  if (isMobileDevice() || window.innerWidth <= 768) {
-    return true;
-  }
-  
-  // Check if we're in a storage-partitioned environment (common on mobile)
-  try {
-    const testKey = '__popup_test__';
-    sessionStorage.setItem(testKey, 'test');
-    sessionStorage.removeItem(testKey);
-    return false; // Popups should work
-  } catch (e) {
-    // sessionStorage is blocked or restricted - use redirect
-    console.warn('⚠️ sessionStorage is restricted, will use redirect');
-    return true;
-  }
+  // For now, we'll try popup first on all devices
+  // Only use redirect as fallback if popup fails
+  return false; // Always try popup first
 };
 
 // Check if we're in a storage-partitioned environment that won't work with redirects
@@ -117,18 +105,12 @@ const isStoragePartitioned = () => {
   }
 };
 
-// Sign in with Google
+// Sign in with Google - Prefers popup (account selection popup) first, falls back to redirect
 export const signInWithGoogle = async () => {
   try {
-    // Check if we're in a storage-partitioned environment that won't work
-    if (isStoragePartitioned()) {
-      console.warn('⚠️ Storage-partitioned environment detected - redirect flow may not work');
-      // Still try, but we'll catch the error and provide a better message
-    }
-    
     const provider = new GoogleAuthProvider();
     
-    // CRITICAL FOR MOBILE APP: Always use Firebase hosting domain for redirects
+    // CRITICAL FOR MOBILE APP: Prepare redirect URL for fallback
     // Don't redirect back to localhost - use your Firebase app domain
     const currentOrigin = window.location.origin;
     const isLocalhost = currentOrigin.includes('localhost') || 
@@ -142,49 +124,16 @@ export const signInWithGoogle = async () => {
       : currentOrigin;
     
     console.log('📍 Current origin:', currentOrigin);
-    console.log('📍 Redirect URL will be:', redirectUrl);
+    console.log('📍 Redirect URL (fallback):', redirectUrl);
     console.log('📍 Is localhost/IP:', isLocalhost);
     
-    // Set custom parameters to ensure correct redirect URL
-    provider.setCustomParameters({
-      redirect_uri: redirectUrl
-    });
-    
-    // Use redirect for mobile devices or when popups are blocked
-    if (shouldUseRedirect()) {
-      console.log('📱 Using signInWithRedirect for mobile/unsupported browser');
-      console.log('📱 Redirecting back to:', redirectUrl);
-      
-      // For storage-partitioned environments, we need to provide better error handling
-      try {
-        await signInWithRedirect(auth, provider);
-        // The redirect will happen, so we return here
-        // The actual result will be handled by getRedirectResult() in App.js
-        return {
-          success: true,
-          redirecting: true,
-          message: 'Redirecting to Google sign-in...'
-        };
-      } catch (redirectError) {
-        // If redirect fails due to storage issues, provide helpful error
-        if (redirectError.code === 'auth/argument-error' || 
-            redirectError.message?.includes('initial state') ||
-            redirectError.message?.includes('storage')) {
-          return {
-            success: false,
-            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please try using email/password sign-up instead, or enable cookies and storage for this site.',
-            code: 'storage-partitioned',
-            useEmailInstead: true
-          };
-        }
-        throw redirectError;
-      }
-    } else {
-      // Use popup for desktop browsers that support it
-      console.log('💻 Using signInWithPopup for desktop');
+    // Try popup first for better UX (opens account selection popup)
+    console.log('🔐 Attempting Google Sign-In with popup (account selection)...');
+    try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
+      console.log('✅ Google Sign-In successful via popup:', user);
       return {
         success: true,
         user: {
@@ -194,55 +143,66 @@ export const signInWithGoogle = async () => {
           photoURL: user.photoURL
         }
       };
-    }
-  } catch (error) {
-    console.error("❌ Error signing in with Google:", error);
-    
-    // If popup fails with a blocked error, try redirect as fallback
-    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-      console.log('⚠️ Popup blocked, attempting redirect instead...');
-      try {
-        const provider = new GoogleAuthProvider();
+    } catch (popupError) {
+      console.log('⚠️ Popup failed, error code:', popupError.code);
+      
+      // If popup is blocked or closed, fall back to redirect
+      if (popupError.code === 'auth/popup-blocked' || 
+          popupError.code === 'auth/popup-closed-by-user' ||
+          popupError.code === 'auth/cancelled-popup-request') {
+        console.log('⚠️ Popup blocked or cancelled, falling back to redirect...');
         
-        // Use Firebase domain for redirect
-        const firebaseAuthDomain = 'deitedatabase.firebaseapp.com';
-        const currentOrigin = window.location.origin;
-        const isLocalhost = currentOrigin.includes('localhost') || 
-                            currentOrigin.includes('127.0.0.1') ||
-                            /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(currentOrigin);
-        
-        const redirectUrl = isLocalhost 
-          ? `https://${firebaseAuthDomain}` 
-          : currentOrigin;
-        
-        provider.setCustomParameters({
+        // Set custom parameters for redirect fallback
+        const redirectProvider = new GoogleAuthProvider();
+        redirectProvider.setCustomParameters({
           redirect_uri: redirectUrl
         });
         
-        await signInWithRedirect(auth, provider);
-        return {
-          success: true,
-          redirecting: true,
-          message: 'Redirecting to Google sign-in...'
-        };
-      } catch (redirectError) {
-        // Check if it's a storage-partitioned error
-        if (redirectError.code === 'auth/argument-error' || 
-            redirectError.message?.includes('initial state') ||
-            redirectError.message?.includes('storage')) {
+        try {
+          await signInWithRedirect(auth, redirectProvider);
+          console.log('📱 Using signInWithRedirect fallback');
+          return {
+            success: true,
+            redirecting: true,
+            message: 'Redirecting to Google sign-in...'
+          };
+        } catch (redirectError) {
+          console.error('❌ Redirect fallback also failed:', redirectError);
+          
+          // Check if it's a storage-partitioned error
+          if (redirectError.code === 'auth/argument-error' || 
+              redirectError.message?.includes('initial state') ||
+              redirectError.message?.includes('storage')) {
+            return {
+              success: false,
+              error: 'Your browser\'s privacy settings are preventing Google sign-in. Please try using email/password sign-up instead, or enable cookies and storage for this site.',
+              code: 'storage-partitioned',
+              useEmailInstead: true
+            };
+          }
+          
           return {
             success: false,
-            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please try using email/password sign-up instead, or enable cookies and storage for this site.',
-            code: 'storage-partitioned',
-            useEmailInstead: true
+            error: redirectError.message || 'Google sign-in failed. Please try using email/password sign-up instead.',
+            code: redirectError.code
           };
         }
+      }
+      
+      // Other popup errors - return the error
+      if (popupError.code === 'auth/popup-closed-by-user') {
         return {
           success: false,
-          error: redirectError.message
+          error: 'Google sign-in was cancelled.',
+          code: popupError.code,
+          cancelled: true
         };
       }
+      
+      throw popupError; // Re-throw to be caught by outer catch
     }
+  } catch (error) {
+    console.error("❌ Error signing in with Google:", error);
     
     // Handle storage-partitioned specific errors
     if (error.code === 'auth/argument-error' || 
@@ -259,7 +219,7 @@ export const signInWithGoogle = async () => {
     
     return {
       success: false,
-      error: error.message,
+      error: error.message || 'An error occurred during Google sign-in. Please try again.',
       code: error.code
     };
   }
