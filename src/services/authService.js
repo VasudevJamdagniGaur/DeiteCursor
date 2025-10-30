@@ -117,7 +117,6 @@ export const signInWithGoogle = async () => {
     
     console.log('📍 Current origin:', currentOrigin);
     console.log('📍 Redirect URL (fallback):', redirectUrl);
-    console.log('📍 Is localhost/IP:', isLocalhost);
     
     // Try popup first for better UX (opens account selection popup)
     console.log('🔐 Attempting Google Sign-In with popup (account selection)...');
