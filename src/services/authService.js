@@ -7,9 +7,27 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  signInWithCredential
 } from "firebase/auth";
 import { auth } from "../firebase/config";
+import { Capacitor } from '@capacitor/core';
+
+// Lazy load Capacitor Firebase Auth (only works in native)
+// We'll import it dynamically when needed to avoid errors in web builds
+const getFirebaseAuthentication = async () => {
+  if (!Capacitor.isNativePlatform()) {
+    return null;
+  }
+  
+  try {
+    const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+    return FirebaseAuthentication;
+  } catch (e) {
+    console.warn('⚠️ Capacitor Firebase Auth not available:', e);
+    return null;
+  }
+};
 
 // Sign up new user
 export const signUpUser = async (email, password, displayName) => {
@@ -105,9 +123,85 @@ const isStoragePartitioned = () => {
   }
 };
 
-// Sign in with Google - Prefers popup (account selection popup) first, falls back to redirect
+// Sign in with Google - Uses Capacitor native auth on mobile, web popup/redirect on browser
 export const signInWithGoogle = async () => {
   try {
+    // CRITICAL: Check if we're in a Capacitor native environment
+    if (Capacitor.isNativePlatform()) {
+      console.log('📱 Detected native platform, attempting Capacitor Firebase Authentication...');
+      
+      // Lazy load the Capacitor plugin
+      const FirebaseAuthentication = await getFirebaseAuthentication();
+      
+      if (FirebaseAuthentication) {
+        console.log('📱 Using Capacitor Firebase Authentication (native)...');
+        
+        try {
+          // Use Capacitor Firebase Authentication plugin
+          const result = await FirebaseAuthentication.signInWithGoogle();
+          
+          console.log('✅ Capacitor Google Sign-In successful:', result);
+          
+          // The Capacitor plugin returns a user object, but we need to sync it with Firebase Auth
+          // The plugin should handle the Firebase auth state automatically
+          // However, we can also manually create a credential if needed
+          
+          // Wait a moment for auth state to update
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Get the current user from Firebase Auth (should be set by the plugin)
+          const user = auth.currentUser;
+          
+          if (user) {
+            return {
+              success: true,
+              user: {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL
+              },
+              popup: false,
+              native: true
+            };
+          } else {
+            // If user is not set, try to get from result
+            if (result.user) {
+              return {
+                success: true,
+                user: {
+                  uid: result.user.uid || result.user.id,
+                  email: result.user.email,
+                  displayName: result.user.displayName,
+                  photoURL: result.user.photoURL || result.user.photoUrl
+                },
+                popup: false,
+                native: true
+              };
+            }
+            
+            throw new Error('User authentication completed but user object not available');
+          }
+        } catch (nativeError) {
+          console.error('❌ Capacitor Google Sign-In failed:', nativeError);
+          
+          // If native auth fails, we can't fall back to web methods
+          return {
+            success: false,
+            error: nativeError.message || 'Google sign-in failed on mobile device. Please try again.',
+            code: nativeError.code || 'native-auth-error',
+            native: true
+          };
+        }
+      } else {
+        console.log('⚠️ Native platform detected but Capacitor Firebase Auth plugin not available');
+        console.log('⚠️ Falling back to web authentication...');
+        // Fall through to web authentication
+      }
+    }
+    
+    // WEB FALLBACK: Use web Firebase Auth (popup/redirect)
+    console.log('🌐 Using web Firebase Authentication...');
     const provider = new GoogleAuthProvider();
     
     // CRITICAL FOR MOBILE APP: Prepare redirect URL for fallback
