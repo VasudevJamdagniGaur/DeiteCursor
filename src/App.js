@@ -6,6 +6,7 @@ import SplashScreen from './components/SplashScreen';
 import LandingPage from './components/LandingPage';
 import WelcomePage from './components/WelcomePage';
 import SignupPage from './components/SignupPage';
+import EmailSignupPage from './components/EmailSignupPage';
 import LoginPage from './components/LoginPage';
 import DashboardPage from './components/DashboardPage';
 import ChatPage from './components/ChatPage';
@@ -51,6 +52,7 @@ function AppContent() {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/signup/email" element={<EmailSignupPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/chat" element={<ChatPage />} />

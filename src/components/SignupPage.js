@@ -236,6 +236,7 @@ const SignupPage = () => {
               border: '1px solid rgba(255, 255, 255, 0.2)',
               backdropFilter: 'blur(10px)',
               }}
+              onClick={() => navigate('/signup/email')}
             >
               Sign up
             </button>
