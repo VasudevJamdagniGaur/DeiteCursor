@@ -134,6 +134,10 @@ export const signInWithGoogle = async () => {
       const user = result.user;
       
       console.log('✅ Google Sign-In successful via popup:', user);
+      console.log('✅ Popup closed - user stays in app, auth state will handle navigation');
+      
+      // Return success without triggering any redirects
+      // The auth state listener in SignupPage will handle navigation to dashboard
       return {
         success: true,
         user: {
@@ -141,7 +145,8 @@ export const signInWithGoogle = async () => {
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL
-        }
+        },
+        popup: true // Indicate this was via popup - no redirect needed
       };
     } catch (popupError) {
       console.log('⚠️ Popup failed, error code:', popupError.code);

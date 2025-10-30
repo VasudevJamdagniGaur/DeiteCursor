@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUpUser, signInWithGoogle } from '../services/authService';
+import { signUpUser, signInWithGoogle, onAuthStateChange, getCurrentUser } from '../services/authService';
 import Shuffle from './ShuffleAdvanced';
 import LaserFlow from './LaserFlow';
 
@@ -11,6 +11,19 @@ const SignupPage = () => {
   
   // Words for the shuffle text animation
   const shuffleWords = ['Feel', 'Reflect', 'Heal', 'Deite'];
+
+  // Listen for auth state changes (handles popup completion on mobile)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((user) => {
+      if (user) {
+        console.log('✅ Auth state changed - user signed in:', user);
+        // Navigate to dashboard when user is authenticated
+        navigate('/dashboard', { replace: true });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -24,9 +37,15 @@ const SignupPage = () => {
           // Optionally show a message or loading state
           return;
         } else if (result.user) {
-          // Popup sign-in successful (desktop)
-          console.log('✅ Google Sign-In successful:', result.user);
-          navigate('/dashboard');
+          // Popup sign-in successful - auth state listener will handle navigation
+          console.log('✅ Google Sign-In successful via popup:', result.user);
+          // Check if user is already authenticated (popup completed)
+          const currentUser = getCurrentUser();
+          if (currentUser) {
+            // Navigate immediately if user is available
+            navigate('/dashboard', { replace: true });
+          }
+          // Otherwise, auth state listener will handle navigation
         }
       } else {
         console.error('❌ Google Sign-In failed:', result.error);
