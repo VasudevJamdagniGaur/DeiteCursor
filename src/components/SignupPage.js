@@ -35,6 +35,8 @@ const SignupPage = () => {
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
     try {
+      // Remember the app origin so the redirect handler can return to the correct domain
+      try { localStorage.setItem('appOrigin', window.location.origin); } catch (_) {}
       const result = await signInWithGoogle();
       if (result.success) {
         if (result.redirecting) {

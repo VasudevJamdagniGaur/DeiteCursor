@@ -111,17 +111,9 @@ export const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     
     // CRITICAL FOR MOBILE APP: Prepare redirect URL for fallback
-    // Don't redirect back to localhost - use your Firebase app domain
+    // Always prefer the current app origin so we return to the correct domain
     const currentOrigin = window.location.origin;
-    const isLocalhost = currentOrigin.includes('localhost') || 
-                        currentOrigin.includes('127.0.0.1') ||
-                        /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(currentOrigin);
-    
-    // For mobile apps, ALWAYS redirect to Firebase hosting domain, not localhost
-    const firebaseAuthDomain = 'deitedatabase.firebaseapp.com';
-    const redirectUrl = isLocalhost 
-      ? `https://${firebaseAuthDomain}` 
-      : currentOrigin;
+    const redirectUrl = currentOrigin;
     
     console.log('📍 Current origin:', currentOrigin);
     console.log('📍 Redirect URL (fallback):', redirectUrl);
@@ -159,9 +151,7 @@ export const signInWithGoogle = async () => {
         
         // Set custom parameters for redirect fallback
         const redirectProvider = new GoogleAuthProvider();
-        redirectProvider.setCustomParameters({
-          redirect_uri: redirectUrl
-        });
+        // Keep parameters minimal and standard; rely on Firebase to return to the same origin
         
         try {
           await signInWithRedirect(auth, redirectProvider);
@@ -236,6 +226,8 @@ export const handleGoogleRedirect = async () => {
   try {
     // Check if we're on the Firebase auth handler page (indicates redirect/popup fallback)
     const isOnAuthHandler = window.location.href.includes('__/auth/handler');
+    const storedAppOrigin = localStorage.getItem('appOrigin');
+    const appOrigin = storedAppOrigin || window.location.origin;
     
     if (isOnAuthHandler) {
       console.log('📍 Detected Firebase auth handler page - attempting to process result');
@@ -246,10 +238,10 @@ export const handleGoogleRedirect = async () => {
       const user = result.user;
       console.log('✅ Google Sign-In successful via redirect/handler:', user);
       
-      // Clear the auth handler URL from browser history if we're on that page
-      if (isOnAuthHandler) {
-        // Replace current URL with clean signup page to prevent refresh issues
-        window.history.replaceState({}, '', '/signup');
+      // If we're on the auth handler page hosted on a different domain, ensure we return to the app domain
+      if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+        window.location.replace(`${appOrigin}/dashboard`);
+        return { success: true, user: { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL } };
       }
       
       return {
@@ -266,8 +258,10 @@ export const handleGoogleRedirect = async () => {
     // If we're on auth handler but no result, it might be a storage-partitioned error
     if (isOnAuthHandler) {
       console.warn('⚠️ On auth handler page but no redirect result - likely storage-partitioned error');
-      // Clear the URL anyway to get back to the app
-      window.history.replaceState({}, '', '/signup');
+      // Navigate back to the app domain signup page
+      if (!window.location.origin.startsWith(appOrigin)) {
+        window.location.replace(`${appOrigin}/signup`);
+      }
       return {
         success: false,
         error: 'Browser storage restrictions prevented sign-in. Please try using email/password sign-up instead.',
@@ -288,10 +282,12 @@ export const handleGoogleRedirect = async () => {
          error.message?.includes('storage'))) {
       console.warn('⚠️ Storage-partitioned environment detected - missing initial state');
       
-      // If we're on the auth handler page, clear the URL
+      // If we're on the auth handler page, navigate back to the app domain
       if (window.location.href.includes('__/auth/handler')) {
         console.log('🔄 Clearing auth handler URL due to storage error');
-        window.history.replaceState({}, '', '/signup');
+        if (!window.location.origin.startsWith(appOrigin)) {
+          window.location.replace(`${appOrigin}/signup`);
+        }
       }
       
       // Check if there's an error in the URL
@@ -316,7 +312,9 @@ export const handleGoogleRedirect = async () => {
     // If we're on auth handler page with any error, try to clear the URL
     if (window.location.href.includes('__/auth/handler')) {
       console.log('🔄 Clearing auth handler URL due to error');
-      window.history.replaceState({}, '', '/signup');
+      if (!window.location.origin.startsWith(appOrigin)) {
+        window.location.replace(`${appOrigin}/signup`);
+      }
     }
     
     // Other errors
