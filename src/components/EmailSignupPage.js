@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { signUpUser } from '../services/authService';
 import LaserFlow from './LaserFlow';
 
 const EmailSignupPage = () => {
   const navigate = useNavigate();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const validate = () => {
+    if (!name.trim()) return 'Please enter your name.';
     if (!email.trim()) return 'Please enter your email.';
     // Basic email check
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Please enter a valid email address.';
@@ -31,7 +36,7 @@ const EmailSignupPage = () => {
     try {
       setIsSubmitting(true);
       setError('');
-      const result = await signUpUser(email.trim(), password, '');
+      const result = await signUpUser(email.trim(), password, name.trim());
       if (result.success) {
         navigate('/dashboard', { replace: true });
       } else {
@@ -132,6 +137,21 @@ const EmailSignupPage = () => {
         <h1 className="text-xl font-semibold mb-6" style={{ color: 'white' }}>Create your account</h1>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
+            <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base"
+              style={{ 
+                fontSize: '16px',
+                minHeight: '48px'
+              }}
+              placeholder="Your full name"
+              autoComplete="name"
+            />
+          </div>
+          <div>
             <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Email</label>
             <input
               type="email"
@@ -149,34 +169,80 @@ const EmailSignupPage = () => {
 
           <div>
             <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base"
-              style={{ 
-                fontSize: '16px',
-                minHeight: '48px'
-              }}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base pr-12"
+                style={{ 
+                  fontSize: '16px',
+                  minHeight: '48px'
+                }}
+                placeholder="At least 8 characters"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#cbd5e1',
+                  cursor: 'pointer'
+                }}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Confirm password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base"
-              style={{ 
-                fontSize: '16px',
-                minHeight: '48px'
-              }}
-              placeholder="Re-enter your password"
-              autoComplete="new-password"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base pr-12"
+                style={{ 
+                  fontSize: '16px',
+                  minHeight: '48px'
+                }}
+                placeholder="Re-enter your password"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#cbd5e1',
+                  cursor: 'pointer'
+                }}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {error && (
