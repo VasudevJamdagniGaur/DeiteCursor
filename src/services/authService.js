@@ -231,12 +231,27 @@ export const signInWithGoogle = async () => {
 };
 
 // Handle redirect result - call this on app initialization
+// Also handles cases where popup falls back to redirect on mobile
 export const handleGoogleRedirect = async () => {
   try {
+    // Check if we're on the Firebase auth handler page (indicates redirect/popup fallback)
+    const isOnAuthHandler = window.location.href.includes('__/auth/handler');
+    
+    if (isOnAuthHandler) {
+      console.log('📍 Detected Firebase auth handler page - attempting to process result');
+    }
+    
     const result = await getRedirectResult(auth);
     if (result && result.user) {
       const user = result.user;
-      console.log('✅ Google Sign-In successful via redirect:', user);
+      console.log('✅ Google Sign-In successful via redirect/handler:', user);
+      
+      // Clear the auth handler URL from browser history if we're on that page
+      if (isOnAuthHandler) {
+        // Replace current URL with clean signup page to prevent refresh issues
+        window.history.replaceState({}, '', '/signup');
+      }
+      
       return {
         success: true,
         user: {
@@ -247,19 +262,39 @@ export const handleGoogleRedirect = async () => {
         }
       };
     }
+    
+    // If we're on auth handler but no result, it might be a storage-partitioned error
+    if (isOnAuthHandler) {
+      console.warn('⚠️ On auth handler page but no redirect result - likely storage-partitioned error');
+      // Clear the URL anyway to get back to the app
+      window.history.replaceState({}, '', '/signup');
+      return {
+        success: false,
+        error: 'Browser storage restrictions prevented sign-in. Please try using email/password sign-up instead.',
+        code: 'storage-partitioned',
+        isNormalLoad: false
+      };
+    }
+    
     // No redirect result - user didn't come from a redirect
     return { success: false, noRedirect: true };
   } catch (error) {
     console.error("❌ Error handling Google redirect:", error);
     
-    // Handle storage-partitioned specific errors
+    // Handle storage-partitioned specific errors (missing initial state)
     if (error.code === 'auth/argument-error' && 
         (error.message?.includes('initial state') || 
          error.message?.includes('sessionStorage') ||
          error.message?.includes('storage'))) {
-      console.warn('⚠️ Storage-partitioned environment detected - redirect flow unavailable');
-      // Don't treat this as a critical error on normal page loads
-      // But do log it so we know it happened
+      console.warn('⚠️ Storage-partitioned environment detected - missing initial state');
+      
+      // If we're on the auth handler page, clear the URL
+      if (window.location.href.includes('__/auth/handler')) {
+        console.log('🔄 Clearing auth handler URL due to storage error');
+        window.history.replaceState({}, '', '/signup');
+      }
+      
+      // Check if there's an error in the URL
       if (window.location.search.includes('error') || window.location.hash.includes('error')) {
         // If there's an error in the URL, this might be a failed redirect
         return {
@@ -269,12 +304,19 @@ export const handleGoogleRedirect = async () => {
           isNormalLoad: false
         };
       }
+      
       return { 
         success: false, 
         noRedirect: true, 
-        isNormalLoad: true,
+        isNormalLoad: !window.location.href.includes('__/auth/handler'),
         warning: 'Storage-partitioned environment detected'
       };
+    }
+    
+    // If we're on auth handler page with any error, try to clear the URL
+    if (window.location.href.includes('__/auth/handler')) {
+      console.log('🔄 Clearing auth handler URL due to error');
+      window.history.replaceState({}, '', '/signup');
     }
     
     // Other errors

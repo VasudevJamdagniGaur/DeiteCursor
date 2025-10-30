@@ -86,48 +86,48 @@ Write a simple, casual summary of this person's day:`;
     // Go directly to llama3:70b - skip model check
     const modelToUse = 'llama3:70b';
     
-    try {
+      try {
       console.log(`🔄 Using model: ${modelToUse} for reflection`);
-      
-      const response = await fetch(`${this.baseURL}api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        
+        const response = await fetch(`${this.baseURL}api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
           model: modelToUse,
-          prompt: reflectionPrompt,
-          stream: false,
-          options: {
-            temperature: 0.7,
-            top_p: 0.9,
-            max_tokens: 150
-          }
-        })
-      });
+            prompt: reflectionPrompt,
+            stream: false,
+            options: {
+              temperature: 0.7,
+              top_p: 0.9,
+              max_tokens: 150
+            }
+          })
+        });
 
       console.log(`📥 Response status for ${modelToUse}:`, response.status);
 
-      if (!response.ok) {
-        const errorText = await response.text();
+        if (!response.ok) {
+          const errorText = await response.text();
         console.error(`❌ RunPod API Error for ${modelToUse}:`, response.status, errorText);
         throw new Error(`Reflection generation failed: ${response.status} ${response.statusText}`);
-      }
+        }
 
-      const data = await response.json();
+        const data = await response.json();
       console.log(`✅ RunPod response received for day summary with ${modelToUse}`);
-      
-      // Accept multiple possible fields from providers
-      const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
-      if (typeof text === 'string' && text.trim()) {
-        const summary = text.trim();
-        console.log('📖 Generated day summary:', summary);
-        return summary;
-      } else {
+        
+        // Accept multiple possible fields from providers
+        const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
+        if (typeof text === 'string' && text.trim()) {
+          const summary = text.trim();
+          console.log('📖 Generated day summary:', summary);
+          return summary;
+        } else {
         console.error(`❌ Invalid response format from ${modelToUse}:`, data);
-        console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
+          console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
         throw new Error('Invalid response format from reflection API');
-      }
+        }
     } catch (error) {
       console.error(`💥 Error with model ${modelToUse}:`, error.message);
       throw error;

@@ -17,6 +17,13 @@ const SignupPage = () => {
     const unsubscribe = onAuthStateChange((user) => {
       if (user) {
         console.log('✅ Auth state changed - user signed in:', user);
+        
+        // If we're stuck on auth handler page, clear it first
+        if (window.location.href.includes('__/auth/handler')) {
+          console.log('🔄 Clearing auth handler URL');
+          window.history.replaceState({}, '', '/signup');
+        }
+        
         // Navigate to dashboard when user is authenticated
         navigate('/dashboard', { replace: true });
       }
