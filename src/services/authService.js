@@ -247,10 +247,10 @@ export const signInWithGoogle = async () => {
         await signInWithRedirect(auth, provider);
         
         console.log('✅ Redirect call completed - page should navigate away now');
-        console.log('👀 If you see this log but page didn't redirect, check:');
-        console.log('   1. Firebase Console Authorized Domains includes:', window.location.origin);
-        console.log('   2. Storage (sessionStorage) is not blocked');
-        console.log('   3. No JavaScript errors preventing redirect');
+        console.log('If you see this log but page did not redirect, check:');
+        console.log('1. Firebase Console Authorized Domains includes:', window.location.origin);
+        console.log('2. Storage (sessionStorage) is not blocked');
+        console.log('3. No JavaScript errors preventing redirect');
         
         // Return immediately - the redirect will happen asynchronously
         // The page will navigate away, so user won't see this return value
