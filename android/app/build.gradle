@@ -1,9 +1,5 @@
-plugins {
-    id 'com.android.application'
-    
-    // Add the Google services Gradle plugin
-    id 'com.google.gms.google-services'
-}
+apply plugin: 'com.android.application'
+// Add the Google services Gradle plugin (applied conditionally below if google-services.json exists)
 
 android {
     namespace "com.deite.app"
@@ -58,5 +54,12 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-// Note: The google-services plugin is now applied via the plugins block above
-// Make sure google-services.json is placed in android/app/ directory
+// Apply Google Services plugin if google-services.json exists
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.exists()) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Firebase features won't work until it's added.")
+}
