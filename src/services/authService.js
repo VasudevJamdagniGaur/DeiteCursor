@@ -140,28 +140,31 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
+    // NATIVE APP: Use Capacitor Firebase Authentication (with google-services.json)
     if (isNativeApp) {
-      console.log('📱 Detected native platform, attempting Capacitor Firebase Authentication...');
+      console.log('📱 Detected native platform - attempting native Google Sign-In...');
       
       // Lazy load the Capacitor plugin
       const FirebaseAuthentication = await getFirebaseAuthentication();
       
       if (FirebaseAuthentication) {
-        console.log('📱 Using Capacitor Firebase Authentication (native)...');
+        console.log('✅ Capacitor Firebase Auth plugin loaded');
+        console.log('🚀 Calling native Google Sign-In...');
         
         try {
           // Use Capacitor Firebase Authentication plugin
           const result = await FirebaseAuthentication.signInWithGoogle();
           
-          console.log('✅ Capacitor Google Sign-In successful:', result);
+          console.log('✅ Native Google Sign-In result received:', result);
           
           // Wait a moment for auth state to update
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Get the current user from Firebase Auth (should be set by the plugin)
           const user = auth.currentUser;
           
           if (user) {
+            console.log('✅ User authenticated via native auth:', user.email);
             return {
               success: true,
               user: {
@@ -173,35 +176,33 @@ export const signInWithGoogle = async () => {
               popup: false,
               native: true
             };
-          } else {
+          } else if (result && result.user) {
             // If user is not set, try to get from result
-            if (result.user) {
-              return {
-                success: true,
-                user: {
-                  uid: result.user.uid || result.user.id,
-                  email: result.user.email,
-                  displayName: result.user.displayName,
-                  photoURL: result.user.photoURL || result.user.photoUrl
-                },
-                popup: false,
-                native: true
-              };
-            }
-            
-            throw new Error('User authentication completed but user object not available');
+            console.log('✅ Using user from result object');
+            return {
+              success: true,
+              user: {
+                uid: result.user.uid || result.user.id,
+                email: result.user.email,
+                displayName: result.user.displayName,
+                photoURL: result.user.photoURL || result.user.photoUrl
+              },
+              popup: false,
+              native: true
+            };
+          } else {
+            console.warn('⚠️ Native auth completed but no user object available');
+            // Fall through to web redirect as fallback
           }
         } catch (nativeError) {
-          console.error('❌ Capacitor Google Sign-In failed:', nativeError);
-          console.log('⚠️ Native auth failed, falling back to web redirect...');
-          
+          console.error('❌ Native Google Sign-In failed:', nativeError);
+          console.error('❌ Error details:', nativeError.message, nativeError.code);
+          console.log('⚠️ Falling back to web redirect...');
           // Fall through to web authentication (redirect)
-          // Don't return error - let web auth handle it
         }
       } else {
-        console.log('⚠️ Native platform detected but Capacitor Firebase Auth plugin not available');
-        console.log('⚠️ Falling back to web authentication...');
-        // Fall through to web authentication
+        console.warn('⚠️ Capacitor Firebase Auth plugin not available');
+        console.log('⚠️ Falling back to web redirect...');
       }
     }
     
@@ -213,8 +214,9 @@ export const signInWithGoogle = async () => {
     // Redirect works in both mobile browsers and Capacitor WebView
     // This ensures user can at least select their Google account
     if (isMobileBrowser || isNativeApp) {
-      console.log('📱 Mobile device detected - using redirect (works in browser and native WebView)...');
-      console.log('🔄 This will open Google account selection and return to the app...');
+      console.log('📱 Mobile/Native device detected - using web redirect');
+      console.log('🔄 Redirecting to Google account selection...');
+      console.log('📍 This will open Google sign-in page');
       
       try {
         // Ensure we can save to sessionStorage before redirect (required by Firebase)
@@ -235,25 +237,17 @@ export const signInWithGoogle = async () => {
         console.log('🔄 Attempting redirect on mobile/native app...');
         console.log('📍 Current origin:', window.location.origin);
         console.log('📍 Auth domain:', auth.config?.authDomain || 'not available');
-        console.log('📍 Firebase config:', {
-          authDomain: auth.config?.authDomain,
-          apiKey: auth.config?.apiKey ? '***' : 'not available'
-        });
-        console.log('🌐 Redirect URL will be: https://' + auth.config?.authDomain + '/__/auth/handler');
-        console.log('📱 Redirecting to Google account selection now...');
+        console.log('🌐 Redirect URL will be: https://' + (auth.config?.authDomain || 'deitedatabase.firebaseapp.com') + '/__/auth/handler');
         
-        // Use redirect for mobile/native - this will navigate away from the page
-        // This opens Google's account selection page in the WebView
+        // CRITICAL: Use signInWithRedirect - this MUST work
+        console.log('🚀 Calling signInWithRedirect now...');
         await signInWithRedirect(auth, provider);
         
-        console.log('✅ Redirect call completed - page should navigate away now');
-        console.log('If you see this log but page did not redirect, check:');
-        console.log('1. Firebase Console Authorized Domains includes:', window.location.origin);
-        console.log('2. Storage (sessionStorage) is not blocked');
-        console.log('3. No JavaScript errors preventing redirect');
+        // If we reach here, redirect was initiated successfully
+        console.log('✅ Redirect initiated - page should navigate to Google now');
         
-        // Return immediately - the redirect will happen asynchronously
-        // The page will navigate away, so user won't see this return value
+        // The redirect happens asynchronously - page will navigate away
+        // Return immediately so the function completes
         return {
           success: true,
           redirecting: true,

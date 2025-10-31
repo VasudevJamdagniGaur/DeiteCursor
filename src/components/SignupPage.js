@@ -33,24 +33,35 @@ const SignupPage = () => {
   }, [navigate]);
 
   // Handle Google Sign-In
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (e) => {
+    // Prevent default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('========================================');
+    console.log('🔄 BUTTON CLICKED - Starting Google Sign-In...');
+    console.log('========================================');
+    
     try {
-      console.log('🔄 Starting Google Sign-In process...');
       console.log('📍 Current URL:', window.location.href);
       console.log('📍 Current origin:', window.location.origin);
+      console.log('📍 User agent:', navigator.userAgent);
       
-      // Show user that we're starting (for debugging)
-      console.log('👆 Button clicked - initiating Google Sign-In...');
+      // Show immediate feedback to user
+      console.log('👆 Button click registered - calling signInWithGoogle()...');
       
       // Remember the app origin so the redirect handler can return to the correct domain
       try { 
         localStorage.setItem('appOrigin', window.location.origin); 
-        console.log('✅ Stored app origin:', window.location.origin);
+        console.log('✅ Stored app origin in localStorage:', window.location.origin);
       } catch (storageError) {
         console.warn('⚠️ Could not store app origin in localStorage:', storageError);
         // Continue anyway - might work without it
       }
       
+      console.log('📞 Calling signInWithGoogle() now...');
       const result = await signInWithGoogle();
       console.log('📊 Sign-in result:', result);
       console.log('📊 Result details:', JSON.stringify(result, null, 2));
@@ -244,11 +255,18 @@ const SignupPage = () => {
           <div className="space-y-4">
           {/* Continue with Google */}
           <button
-            onClick={handleGoogleSignIn}
+            onClick={(e) => {
+              console.log('🔘 Button onClick triggered!');
+              handleGoogleSignIn(e);
+            }}
+            onTouchStart={(e) => {
+              console.log('👆 Button touchStart (mobile)');
+            }}
             className="w-full mobile-button rounded-2xl font-semibold text-gray-800 transition-all duration-300 hover:scale-[0.98] active:scale-[0.96] flex items-center justify-center gap-3"
             style={{
               background: 'white',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              cursor: 'pointer'
               }}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
