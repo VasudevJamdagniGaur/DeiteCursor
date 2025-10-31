@@ -127,7 +127,19 @@ const isStoragePartitioned = () => {
 export const signInWithGoogle = async () => {
   try {
     // CRITICAL: Check if we're in a Capacitor native environment
-    if (Capacitor.isNativePlatform()) {
+    // This will be true ONLY when running as a native app (APK/IPA)
+    // It will be FALSE when running in a mobile browser (even on Android/iOS)
+    const isNativeApp = Capacitor.isNativePlatform();
+    const isMobileBrowser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && !isNativeApp;
+    
+    console.log('🔍 Platform Detection:', {
+      isNativeApp,
+      isMobileBrowser,
+      userAgent: navigator.userAgent,
+      platform: Capacitor.getPlatform()
+    });
+    
+    if (isNativeApp) {
       console.log('📱 Detected native platform, attempting Capacitor Firebase Authentication...');
       
       // Lazy load the Capacitor plugin
@@ -141,10 +153,6 @@ export const signInWithGoogle = async () => {
           const result = await FirebaseAuthentication.signInWithGoogle();
           
           console.log('✅ Capacitor Google Sign-In successful:', result);
-          
-          // The Capacitor plugin returns a user object, but we need to sync it with Firebase Auth
-          // The plugin should handle the Firebase auth state automatically
-          // However, we can also manually create a credential if needed
           
           // Wait a moment for auth state to update
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -185,7 +193,6 @@ export const signInWithGoogle = async () => {
         } catch (nativeError) {
           console.error('❌ Capacitor Google Sign-In failed:', nativeError);
           
-          // If native auth fails, we can't fall back to web methods
           return {
             success: false,
             error: nativeError.message || 'Google sign-in failed on mobile device. Please try again.',
@@ -200,29 +207,53 @@ export const signInWithGoogle = async () => {
       }
     }
     
-    // WEB FALLBACK: Use web Firebase Auth (popup/redirect)
+    // WEB AUTHENTICATION (Browser - desktop OR mobile browser)
     console.log('🌐 Using web Firebase Authentication...');
     const provider = new GoogleAuthProvider();
     
-    // CRITICAL FOR MOBILE APP: Prepare redirect URL for fallback
-    // Always prefer the current app origin so we return to the correct domain
-    const currentOrigin = window.location.origin;
-    const redirectUrl = currentOrigin;
+    // For mobile browsers, ALWAYS use redirect (popup doesn't work reliably)
+    if (isMobileBrowser) {
+      console.log('📱 Mobile browser detected - using redirect (popup not reliable on mobile)...');
+      
+      try {
+        await signInWithRedirect(auth, provider);
+        console.log('📱 Redirecting to Google sign-in...');
+        return {
+          success: true,
+          redirecting: true,
+          message: 'Redirecting to Google sign-in...'
+        };
+      } catch (redirectError) {
+        console.error('❌ Redirect failed on mobile browser:', redirectError);
+        
+        if (redirectError.code === 'auth/argument-error' || 
+            redirectError.message?.includes('initial state') ||
+            redirectError.message?.includes('storage')) {
+          return {
+            success: false,
+            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please try using email/password sign-up instead, or enable cookies and storage for this site.',
+            code: 'storage-partitioned',
+            useEmailInstead: true
+          };
+        }
+        
+        return {
+          success: false,
+          error: redirectError.message || 'Google sign-in failed. Please try using email/password sign-up instead.',
+          code: redirectError.code
+        };
+      }
+    }
     
-    console.log('📍 Current origin:', currentOrigin);
-    console.log('📍 Redirect URL (fallback):', redirectUrl);
+    // Desktop browser - try popup first, fallback to redirect
+    console.log('🖥️ Desktop browser detected - attempting popup first...');
     
-    // Try popup first for better UX (opens account selection popup)
-    console.log('🔐 Attempting Google Sign-In with popup (account selection)...');
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
       console.log('✅ Google Sign-In successful via popup:', user);
-      console.log('✅ Popup closed - user stays in app, auth state will handle navigation');
       
-      // Return success without triggering any redirects
-      // The auth state listener in SignupPage will handle navigation to dashboard
       return {
         success: true,
         user: {
@@ -231,7 +262,7 @@ export const signInWithGoogle = async () => {
           displayName: user.displayName,
           photoURL: user.photoURL
         },
-        popup: true // Indicate this was via popup - no redirect needed
+        popup: true
       };
     } catch (popupError) {
       console.log('⚠️ Popup failed, error code:', popupError.code);
@@ -242,12 +273,8 @@ export const signInWithGoogle = async () => {
           popupError.code === 'auth/cancelled-popup-request') {
         console.log('⚠️ Popup blocked or cancelled, falling back to redirect...');
         
-        // Set custom parameters for redirect fallback
-        const redirectProvider = new GoogleAuthProvider();
-        // Keep parameters minimal and standard; rely on Firebase to return to the same origin
-        
         try {
-          await signInWithRedirect(auth, redirectProvider);
+          await signInWithRedirect(auth, provider);
           console.log('📱 Using signInWithRedirect fallback');
           return {
             success: true,
@@ -257,7 +284,6 @@ export const signInWithGoogle = async () => {
         } catch (redirectError) {
           console.error('❌ Redirect fallback also failed:', redirectError);
           
-          // Check if it's a storage-partitioned error
           if (redirectError.code === 'auth/argument-error' || 
               redirectError.message?.includes('initial state') ||
               redirectError.message?.includes('storage')) {
@@ -277,7 +303,6 @@ export const signInWithGoogle = async () => {
         }
       }
       
-      // Other popup errors - return the error
       if (popupError.code === 'auth/popup-closed-by-user') {
         return {
           success: false,
@@ -287,12 +312,11 @@ export const signInWithGoogle = async () => {
         };
       }
       
-      throw popupError; // Re-throw to be caught by outer catch
+      throw popupError;
     }
   } catch (error) {
     console.error("❌ Error signing in with Google:", error);
     
-    // Handle storage-partitioned specific errors
     if (error.code === 'auth/argument-error' || 
         error.message?.includes('initial state') ||
         error.message?.includes('storage') ||
