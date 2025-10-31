@@ -136,7 +136,8 @@ export const signInWithGoogle = async () => {
       isNativeApp,
       isMobileBrowser,
       userAgent: navigator.userAgent,
-      platform: Capacitor.getPlatform()
+      platform: Capacitor.getPlatform(),
+      origin: window.location.origin
     });
     
     if (isNativeApp) {
@@ -211,36 +212,110 @@ export const signInWithGoogle = async () => {
     console.log('🌐 Using web Firebase Authentication...');
     const provider = new GoogleAuthProvider();
     
-    // For mobile browsers, ALWAYS use redirect (popup doesn't work reliably)
+    // For mobile browsers: Try popup first (modern mobile browsers support it), then fallback to redirect
+    // This provides better UX similar to Reddit's sign-in flow
     if (isMobileBrowser) {
-      console.log('📱 Mobile browser detected - using redirect (popup not reliable on mobile)...');
+      console.log('📱 Mobile browser detected - trying popup first (modern browsers support it)...');
       
       try {
-        await signInWithRedirect(auth, provider);
-        console.log('📱 Redirecting to Google sign-in...');
+        // Try popup first - many modern mobile browsers support it now
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        console.log('✅ Google Sign-In successful via popup on mobile:', user);
+        
         return {
           success: true,
-          redirecting: true,
-          message: 'Redirecting to Google sign-in...'
+          user: {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          },
+          popup: true
         };
-      } catch (redirectError) {
-        console.error('❌ Redirect failed on mobile browser:', redirectError);
+      } catch (popupError) {
+        console.log('⚠️ Popup failed on mobile, error code:', popupError.code);
+        console.log('⚠️ Error details:', popupError.message);
         
-        if (redirectError.code === 'auth/argument-error' || 
-            redirectError.message?.includes('initial state') ||
-            redirectError.message?.includes('storage')) {
-          return {
-            success: false,
-            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please try using email/password sign-up instead, or enable cookies and storage for this site.',
-            code: 'storage-partitioned',
-            useEmailInstead: true
-          };
+        // Popup failed, fall back to redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.code === 'auth/cancelled-popup-request' ||
+            popupError.code === 'auth/popup-closed-by-user') {
+          console.log('⚠️ Popup blocked/cancelled on mobile, falling back to redirect...');
+          
+          try {
+            // Ensure we can save to sessionStorage before redirect
+            try {
+              sessionStorage.setItem('__firebase_redirect_check__', 'test');
+              sessionStorage.removeItem('__firebase_redirect_check__');
+            } catch (storageError) {
+              console.error('❌ Storage check failed:', storageError);
+              return {
+                success: false,
+                error: 'Your browser\'s privacy settings are preventing Google sign-in. Please enable cookies and storage for this site, or use the email/password sign-up option.',
+                code: 'storage-partitioned',
+                useEmailInstead: true
+              };
+            }
+            
+            console.log('🔄 Attempting redirect on mobile...');
+            console.log('📍 Current origin:', window.location.origin);
+            console.log('📍 Auth domain:', auth.config.authDomain);
+            
+            await signInWithRedirect(auth, provider);
+            
+            console.log('✅ Redirect initiated - user will be redirected to Google...');
+            
+            // Don't return immediately - the redirect will happen
+            // But set a flag so user knows something is happening
+            return {
+              success: true,
+              redirecting: true,
+              message: 'Redirecting to Google sign-in...'
+            };
+          } catch (redirectError) {
+            console.error('❌ Redirect also failed on mobile:', redirectError);
+            console.error('❌ Error code:', redirectError.code);
+            console.error('❌ Error message:', redirectError.message);
+            
+            if (redirectError.code === 'auth/argument-error' || 
+                redirectError.message?.includes('initial state') ||
+                redirectError.message?.includes('storage') ||
+                redirectError.message?.includes('sessionStorage')) {
+              return {
+                success: false,
+                error: 'Your browser\'s privacy settings are preventing Google sign-in. Please enable cookies and storage for this site, or use the email/password sign-up option.',
+                code: 'storage-partitioned',
+                useEmailInstead: true
+              };
+            }
+            
+            // Check if it's a redirect URI issue
+            if (redirectError.message?.includes('redirect_uri') || redirectError.code === 'auth/unauthorized-domain') {
+              return {
+                success: false,
+                error: 'Redirect URI not configured. Please add this URL to Firebase Console: ' + window.location.origin + '/__/auth/handler',
+                code: 'redirect-uri-not-configured',
+                useEmailInstead: false
+              };
+            }
+            
+            return {
+              success: false,
+              error: redirectError.message || 'Google sign-in failed. Please try using email/password sign-up instead.',
+              code: redirectError.code || 'unknown-error',
+              details: redirectError.toString()
+            };
+          }
         }
         
+        // Other popup errors
         return {
           success: false,
-          error: redirectError.message || 'Google sign-in failed. Please try using email/password sign-up instead.',
-          code: redirectError.code
+          error: popupError.message || 'Google sign-in failed. Please try using email/password sign-up instead.',
+          code: popupError.code
         };
       }
     }

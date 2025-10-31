@@ -37,13 +37,17 @@ const SignupPage = () => {
     try {
       // Remember the app origin so the redirect handler can return to the correct domain
       try { localStorage.setItem('appOrigin', window.location.origin); } catch (_) {}
+      
+      console.log('🔄 Starting Google Sign-In process...');
       const result = await signInWithGoogle();
+      
       if (result.success) {
         if (result.redirecting) {
           // User is being redirected to Google - navigation will happen automatically
           // App.js will handle the redirect result when user returns
           console.log('🔄 Redirecting to Google sign-in...');
-          // Optionally show a message or loading state
+          // Show loading message
+          alert('Redirecting to Google sign-in...');
           return;
         } else if (result.user) {
           // Popup sign-in successful - auth state listener will handle navigation
@@ -57,7 +61,9 @@ const SignupPage = () => {
           // Otherwise, auth state listener will handle navigation
         }
       } else {
-        console.error('❌ Google Sign-In failed:', result.error);
+        console.error('❌ Google Sign-In failed:', result);
+        console.error('❌ Error code:', result.code);
+        console.error('❌ Error message:', result.error);
         
         // Show user-friendly error message
         let errorMessage = result.error || 'Failed to sign in with Google';
@@ -65,6 +71,8 @@ const SignupPage = () => {
         // If it's a storage-partitioned error, provide helpful guidance
         if (result.code === 'storage-partitioned' || result.useEmailInstead) {
           errorMessage = 'Your browser\'s privacy settings are preventing Google sign-in. Please use the email/password sign-up option below instead, or adjust your browser settings to allow cookies and storage.';
+        } else if (result.code === 'redirect-uri-not-configured') {
+          errorMessage = result.error; // This already contains the helpful message
         }
         
         alert(errorMessage);
