@@ -35,19 +35,28 @@ const SignupPage = () => {
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
     try {
-      // Remember the app origin so the redirect handler can return to the correct domain
-      try { localStorage.setItem('appOrigin', window.location.origin); } catch (_) {}
-      
       console.log('🔄 Starting Google Sign-In process...');
+      console.log('📍 Current URL:', window.location.href);
+      console.log('📍 Current origin:', window.location.origin);
+      
+      // Remember the app origin so the redirect handler can return to the correct domain
+      try { 
+        localStorage.setItem('appOrigin', window.location.origin); 
+        console.log('✅ Stored app origin:', window.location.origin);
+      } catch (storageError) {
+        console.warn('⚠️ Could not store app origin in localStorage:', storageError);
+      }
+      
       const result = await signInWithGoogle();
+      console.log('📊 Sign-in result:', result);
       
       if (result.success) {
         if (result.redirecting) {
           // User is being redirected to Google - navigation will happen automatically
           // App.js will handle the redirect result when user returns
           console.log('🔄 Redirecting to Google sign-in...');
-          // Show loading message
-          alert('Redirecting to Google sign-in...');
+          // Note: Don't show alert here as it might interfere with redirect
+          // The page will navigate away immediately
           return;
         } else if (result.user) {
           // Popup sign-in successful - auth state listener will handle navigation
@@ -64,6 +73,7 @@ const SignupPage = () => {
         console.error('❌ Google Sign-In failed:', result);
         console.error('❌ Error code:', result.code);
         console.error('❌ Error message:', result.error);
+        console.error('❌ Error details:', result.details);
         
         // Show user-friendly error message
         let errorMessage = result.error || 'Failed to sign in with Google';
@@ -78,8 +88,9 @@ const SignupPage = () => {
         alert(errorMessage);
       }
     } catch (error) {
-      console.error('❌ Error during Google Sign-In:', error);
-      alert('An error occurred during Google Sign-In. Please try using email/password sign-up instead.');
+      console.error('❌ Unexpected error during Google Sign-In:', error);
+      console.error('❌ Error stack:', error.stack);
+      alert('An error occurred during Google Sign-In. Please check the console for details and try using email/password sign-up instead.');
     }
   };
 
