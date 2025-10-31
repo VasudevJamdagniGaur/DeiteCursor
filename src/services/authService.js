@@ -193,13 +193,10 @@ export const signInWithGoogle = async () => {
           }
         } catch (nativeError) {
           console.error('❌ Capacitor Google Sign-In failed:', nativeError);
+          console.log('⚠️ Native auth failed, falling back to web redirect...');
           
-          return {
-            success: false,
-            error: nativeError.message || 'Google sign-in failed on mobile device. Please try again.',
-            code: nativeError.code || 'native-auth-error',
-            native: true
-          };
+          // Fall through to web authentication (redirect)
+          // Don't return error - let web auth handle it
         }
       } else {
         console.log('⚠️ Native platform detected but Capacitor Firebase Auth plugin not available');
@@ -208,14 +205,16 @@ export const signInWithGoogle = async () => {
       }
     }
     
-    // WEB AUTHENTICATION (Browser - desktop OR mobile browser)
+    // WEB AUTHENTICATION (Browser - desktop OR mobile browser OR native app fallback)
     console.log('🌐 Using web Firebase Authentication...');
     const provider = new GoogleAuthProvider();
     
-    // For mobile browsers: ALWAYS use redirect (popups don't work reliably on mobile)
-    // This provides better UX and is more reliable
-    if (isMobileBrowser) {
-      console.log('📱 Mobile browser detected - using redirect (popups unreliable on mobile)...');
+    // For mobile browsers OR native apps (WebView): ALWAYS use redirect
+    // Redirect works in both mobile browsers and Capacitor WebView
+    // This ensures user can at least select their Google account
+    if (isMobileBrowser || isNativeApp) {
+      console.log('📱 Mobile device detected - using redirect (works in browser and native WebView)...');
+      console.log('🔄 This will open Google account selection and return to the app...');
       
       try {
         // Ensure we can save to sessionStorage before redirect (required by Firebase)
@@ -233,18 +232,25 @@ export const signInWithGoogle = async () => {
           };
         }
         
-        console.log('🔄 Attempting redirect on mobile...');
+        console.log('🔄 Attempting redirect on mobile/native app...');
         console.log('📍 Current origin:', window.location.origin);
         console.log('📍 Auth domain:', auth.config?.authDomain || 'not available');
         console.log('📍 Firebase config:', {
           authDomain: auth.config?.authDomain,
           apiKey: auth.config?.apiKey ? '***' : 'not available'
         });
+        console.log('🌐 Redirect URL will be: https://' + auth.config?.authDomain + '/__/auth/handler');
+        console.log('📱 Redirecting to Google account selection now...');
         
-        // Use redirect for mobile - this will navigate away from the page
+        // Use redirect for mobile/native - this will navigate away from the page
+        // This opens Google's account selection page in the WebView
         await signInWithRedirect(auth, provider);
         
-        console.log('✅ Redirect initiated - page will redirect to Google...');
+        console.log('✅ Redirect call completed - page should navigate away now');
+        console.log('👀 If you see this log but page didn't redirect, check:');
+        console.log('   1. Firebase Console Authorized Domains includes:', window.location.origin);
+        console.log('   2. Storage (sessionStorage) is not blocked');
+        console.log('   3. No JavaScript errors preventing redirect');
         
         // Return immediately - the redirect will happen asynchronously
         // The page will navigate away, so user won't see this return value

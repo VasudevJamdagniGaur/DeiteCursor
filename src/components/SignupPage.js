@@ -39,24 +39,33 @@ const SignupPage = () => {
       console.log('📍 Current URL:', window.location.href);
       console.log('📍 Current origin:', window.location.origin);
       
+      // Show user that we're starting (for debugging)
+      console.log('👆 Button clicked - initiating Google Sign-In...');
+      
       // Remember the app origin so the redirect handler can return to the correct domain
       try { 
         localStorage.setItem('appOrigin', window.location.origin); 
         console.log('✅ Stored app origin:', window.location.origin);
       } catch (storageError) {
         console.warn('⚠️ Could not store app origin in localStorage:', storageError);
+        // Continue anyway - might work without it
       }
       
       const result = await signInWithGoogle();
       console.log('📊 Sign-in result:', result);
+      console.log('📊 Result details:', JSON.stringify(result, null, 2));
       
       if (result.success) {
         if (result.redirecting) {
           // User is being redirected to Google - navigation will happen automatically
           // App.js will handle the redirect result when user returns
-          console.log('🔄 Redirecting to Google sign-in...');
-          // Note: Don't show alert here as it might interfere with redirect
-          // The page will navigate away immediately
+          console.log('🔄 REDIRECTING TO GOOGLE...');
+          console.log('🌐 Page will navigate away now...');
+          console.log('📍 You should see Google account selection page');
+          console.log('📍 After selecting account, you will return to: ' + window.location.origin);
+          
+          // The redirect happens asynchronously - page will navigate away
+          // No need to show alert as it might block redirect
           return;
         } else if (result.user) {
           // Popup sign-in successful - auth state listener will handle navigation
@@ -74,6 +83,7 @@ const SignupPage = () => {
         console.error('❌ Error code:', result.code);
         console.error('❌ Error message:', result.error);
         console.error('❌ Error details:', result.details);
+        console.error('❌ Full error object:', result);
         
         // Show user-friendly error message
         let errorMessage = result.error || 'Failed to sign in with Google';
@@ -83,9 +93,13 @@ const SignupPage = () => {
           errorMessage = 'Your browser\'s privacy settings are preventing Google sign-in. Please use the email/password sign-up option below instead, or adjust your browser settings to allow cookies and storage.';
         } else if (result.code === 'redirect-uri-not-configured') {
           errorMessage = result.error; // This already contains the helpful message
+        } else if (result.code === 'native-auth-error') {
+          // Native auth failed but should have fallen back to redirect
+          errorMessage = 'Google Sign-In encountered an issue. Please check the console for details. If this persists, ensure google-services.json is configured correctly.';
         }
         
-        alert(errorMessage);
+        // Always show error to user
+        alert('Google Sign-In Error:\n\n' + errorMessage + '\n\nCheck browser console for detailed logs.');
       }
     } catch (error) {
       console.error('❌ Unexpected error during Google Sign-In:', error);
