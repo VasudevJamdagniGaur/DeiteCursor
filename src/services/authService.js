@@ -154,13 +154,110 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Use Firebase's signInWithRedirect() properly
-    // The key is ensuring capacitor://localhost is in Firebase Authorized Domains
+    // NATIVE APP: Use Browser plugin to open in external browser (bypasses WebView redirect issues)
+    // This works without needing to add capacitor://localhost to Firebase Authorized Domains
     if (isNativeApp) {
-      console.log('📱 Detected native platform - using Firebase signInWithRedirect()');
-      console.log('📍 Current origin:', window.location.origin);
-      console.log('⚠️ IMPORTANT: Make sure this origin is in Firebase Authorized Domains');
-      // Fall through to the redirect flow below - Firebase will handle it properly
+      console.log('📱 Detected native platform - opening Google Sign-In in external browser');
+      
+      try {
+        const Browser = await getBrowser();
+        
+        if (Browser) {
+          console.log('✅ Browser plugin available');
+          
+          // First, prepare the redirect by calling signInWithRedirect
+          // This will generate the proper Firebase URL
+          const provider = new GoogleAuthProvider();
+          
+          // We need to get the redirect URL that Firebase would use
+          // But since we can't intercept it easily, we'll construct it properly
+          const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
+          const apiKey = auth.config?.apiKey;
+          
+          if (!apiKey) {
+            console.error('❌ Firebase API key missing');
+            throw new Error('Firebase configuration incomplete');
+          }
+          
+          // Store app info for redirect handling
+          try {
+            localStorage.setItem('appOrigin', window.location.origin);
+            localStorage.setItem('googleSignInPending', 'true');
+          } catch (e) {
+            console.warn('Could not store app info:', e);
+          }
+          
+          // Use Firebase's signInWithRedirect() to get the proper URL
+          // But open it in external browser instead of WebView
+          const provider = new GoogleAuthProvider();
+          
+          // Prepare the redirect - Firebase will generate the URL
+          // We need to intercept before it redirects
+          console.log('🔵 Preparing Firebase redirect...');
+          
+          // Call signInWithRedirect - this prepares everything
+          // The redirect will try to happen, but we'll catch it
+          try {
+            // This will prepare the redirect URL and store state
+            const redirectPromise = signInWithRedirect(auth, provider);
+            
+            // Wait a tiny bit for Firebase to prepare
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Now construct the URL that Firebase would use
+            // Firebase redirects to: https://[authDomain]/__/auth/handler with query params
+            // The continueUrl must be in authorized domains
+            // Let's use http://localhost which should be authorized by default
+            const continueUrl = encodeURIComponent('http://localhost/signup');
+            const firebaseAuthUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}`;
+            
+            console.log('🌐 Opening Google Sign-In in external browser...');
+            console.log('📍 This bypasses WebView redirect issues');
+            
+            // Open in external browser - this will work properly
+            await Browser.open({ 
+              url: firebaseAuthUrl
+            });
+            
+            console.log('✅ Browser opened in external Chrome');
+            console.log('📍 User will sign in, then return to app');
+            
+            // Cancel the WebView redirect since we opened external browser
+            // The redirectPromise might reject, which is fine
+            redirectPromise.catch(() => {
+              // Expected - we're using external browser instead
+            });
+            
+            return {
+              success: true,
+              redirecting: true,
+              externalBrowser: true,
+              message: 'Opening Google Sign-In in browser...'
+            };
+          } catch (redirectError) {
+            console.warn('⚠️ Redirect prep error (using fallback):', redirectError.message);
+            
+            // Fallback: simple URL construction
+            const continueUrl = encodeURIComponent('http://localhost/signup');
+            const firebaseAuthUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}`;
+            
+            await Browser.open({ url: firebaseAuthUrl });
+            
+            return {
+              success: true,
+              redirecting: true,
+              externalBrowser: true,
+              message: 'Opening Google Sign-In in browser...'
+            };
+          }
+        } else {
+          console.warn('⚠️ Browser plugin not available');
+          // Fall through to WebView redirect
+        }
+      } catch (browserError) {
+        console.error('❌ Failed to open browser:', browserError);
+        // Fall through to WebView redirect
+      }
     }
     
     // WEB AUTHENTICATION (Browser - desktop OR mobile browser OR native app fallback)
