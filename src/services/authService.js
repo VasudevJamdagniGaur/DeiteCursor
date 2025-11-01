@@ -230,18 +230,27 @@ export const signInWithGoogle = async () => {
           };
         }
         
-        console.log('🔄 Using Firebase signInWithRedirect (proper method)...');
-        console.log('📍 Current origin:', window.location.origin);
-        console.log('📍 This will redirect within WebView');
+        // Get app origin - in Capacitor native apps, this is capacitor://localhost
+        const appOrigin = window.location.origin;
+        console.log('🔄 Using Firebase signInWithRedirect...');
+        console.log('📍 App origin (redirect target):', appOrigin);
+        console.log('📍 This is NOT http://localhost - it\'s the app\'s origin!');
+        
+        // EXPLANATION:
+        // Firebase signInWithRedirect() redirects back to window.location.origin
+        // In your mobile APK, this is: capacitor://localhost (your app!)
+        // NOT http://localhost - that's only in web browsers!
+        // Firebase will redirect back to capacitor://localhost after sign-in
+        // Make sure capacitor://localhost is in Firebase Authorized Domains!
         
         // Use Firebase's proper signInWithRedirect method
-        // Firebase will handle URL construction and redirect properly
         const provider = new GoogleAuthProvider();
         
-        // Call signInWithRedirect - Firebase handles everything
+        // This redirects WebView to Google sign-in, then back to capacitor://localhost
         await signInWithRedirect(auth, provider);
         
-        console.log('✅ signInWithRedirect called - page will redirect now');
+        console.log('✅ signInWithRedirect called - redirecting now');
+        console.log('📍 After sign-in, Firebase will redirect back to:', appOrigin);
         
         // Return immediately - redirect will happen
         return {
@@ -587,11 +596,11 @@ export const handleGoogleRedirect = async () => {
       console.warn('⚠️ getRedirectResult error (expected for external browser):', redirectError.message);
     }
     
-    // SECOND: Check current auth state (works for external browser flows)
-    // If user signed in via external browser, they should now be authenticated
-    // We check this when app resumes after external browser sign-in
-    if (hasPendingSignIn || isDeepLink) {
-      console.log('🔍 Checking current auth state (external browser flow)...');
+    // SECOND: Check current auth state (works for WebView redirect flows)
+    // If user signed in via WebView redirect, Firebase auth state should be updated
+    // We check this when app loads or resumes
+    if (hasPendingSignIn || isDeepLink || isOnAuthHandler) {
+      console.log('🔍 Checking current auth state (WebView redirect flow)...');
       
       // Check if user is already authenticated
       const currentUser = auth.currentUser;
