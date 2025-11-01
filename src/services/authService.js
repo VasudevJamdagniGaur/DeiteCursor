@@ -200,99 +200,74 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Open Google Sign-In in external browser (bypasses WebView redirect issues)
-    // Uses multiple methods to ensure it works even if Browser plugin fails
+    // NATIVE APP: Use Firebase's signInWithRedirect (proper method, works in WebView)
+    // This is the correct way - let Firebase handle everything
     if (isNativeApp) {
-      console.log('📱 Detected native platform - opening Google Sign-In in external browser');
-      
-      // Get Firebase configuration
-      const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
-      const apiKey = auth.config?.apiKey;
-      
-      if (!apiKey) {
-        console.error('❌ Firebase API key missing');
-        return {
-          success: false,
-          error: 'Firebase configuration incomplete. API key is missing.',
-          code: 'firebase-config-incomplete'
-        };
-      }
+      console.log('📱 Detected native platform - using Firebase signInWithRedirect');
       
       // Store app info for redirect handling
       try {
         localStorage.setItem('appOrigin', window.location.origin);
         localStorage.setItem('googleSignInPending', 'true');
+        console.log('✅ Stored app origin:', window.location.origin);
       } catch (e) {
         console.warn('Could not store app info:', e);
       }
       
-      // Construct Firebase auth URL directly
-      // Firebase requires http/https URLs for OAuth redirects
-      // Use http://localhost which Firebase accepts by default
-      // Note: User will need to manually return to app after sign-in
-      // The app will detect resume and process sign-in automatically
-      const continueUrl = encodeURIComponent('http://localhost/signup');
-      const firebaseAuthUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}`;
-      
-      console.log('🌐 Opening Google Sign-In in external browser...');
-      console.log('📍 URL:', firebaseAuthUrl.substring(0, 100) + '...');
-      console.log('📍 After sign-in, will redirect to: http://localhost/signup');
-      console.log('📍 Please manually return to app after sign-in completes');
-      
-      // Method 1: Try Browser plugin (if available)
       try {
-        const Browser = await getBrowser();
-        if (Browser) {
-          console.log('✅ Browser plugin available - using it');
-          await Browser.open({ url: firebaseAuthUrl });
-          console.log('✅ External browser opened via Browser plugin');
+        // Ensure we can save to sessionStorage (required by Firebase)
+        try {
+          sessionStorage.setItem('__firebase_redirect_check__', 'test');
+          sessionStorage.removeItem('__firebase_redirect_check__');
+          console.log('✅ Storage check passed - sessionStorage is available');
+        } catch (storageError) {
+          console.error('❌ Storage check failed:', storageError);
           return {
-            success: true,
-            redirecting: true,
-            externalBrowser: true,
-            message: 'Opening Google Sign-In in browser...'
+            success: false,
+            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please enable cookies and storage for this site, or use the email/password sign-up option.',
+            code: 'storage-partitioned',
+            useEmailInstead: true
           };
         }
-      } catch (browserError) {
-        console.warn('⚠️ Browser plugin method failed:', browserError.message);
-      }
-      
-      // Method 2: Use window.open with target="_blank" - Android will open in external browser
-      try {
-        console.log('🌐 Attempting window.open() method...');
-        const opened = window.open(firebaseAuthUrl, '_blank', 'noopener,noreferrer');
-        if (opened) {
-          console.log('✅ Window opened successfully');
-          // Give it a moment to see if it actually opened
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return {
-            success: true,
-            redirecting: true,
-            externalBrowser: true,
-            message: 'Opening Google Sign-In in browser...'
-          };
-        }
-      } catch (windowError) {
-        console.warn('⚠️ window.open() method failed:', windowError.message);
-      }
-      
-      // Method 3: Use location.href as last resort (will navigate WebView)
-      try {
-        console.log('🌐 Attempting location.href navigation (fallback)...');
-        // This will navigate the WebView to Google sign-in
-        // Less ideal but better than failing completely
-        window.location.href = firebaseAuthUrl;
+        
+        console.log('🔄 Using Firebase signInWithRedirect (proper method)...');
+        console.log('📍 Current origin:', window.location.origin);
+        console.log('📍 This will redirect within WebView');
+        
+        // Use Firebase's proper signInWithRedirect method
+        // Firebase will handle URL construction and redirect properly
+        const provider = new GoogleAuthProvider();
+        
+        // Call signInWithRedirect - Firebase handles everything
+        await signInWithRedirect(auth, provider);
+        
+        console.log('✅ signInWithRedirect called - page will redirect now');
+        
+        // Return immediately - redirect will happen
         return {
           success: true,
           redirecting: true,
           message: 'Redirecting to Google sign-in...'
         };
-      } catch (hrefError) {
-        console.error('❌ All methods failed:', hrefError);
+      } catch (redirectError) {
+        console.error('❌ signInWithRedirect failed:', redirectError);
+        
+        // If redirect fails, provide helpful error
+        if (redirectError.code === 'auth/argument-error' || 
+            redirectError.message?.includes('initial state') ||
+            redirectError.message?.includes('storage')) {
+          return {
+            success: false,
+            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please enable cookies and storage, or use email/password sign-up.',
+            code: 'storage-partitioned',
+            useEmailInstead: true
+          };
+        }
+        
         return {
           success: false,
-          error: 'Failed to open browser. Please try again or use email/password sign-up.',
-          code: 'browser-open-failed'
+          error: redirectError.message || 'Google sign-in failed. Please try again or use email/password sign-up.',
+          code: redirectError.code || 'unknown-error'
         };
       }
     }
