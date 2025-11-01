@@ -2,8 +2,6 @@ plugins {
     id("com.android.application")
 }
 
-apply(plugin = "com.google.gms.google-services")
-
 android {
     namespace = "com.deite.app"
     compileSdk = rootProject.ext["compileSdkVersion"] as Int
@@ -60,3 +58,6 @@ dependencies {
 
 apply(from = "capacitor.build.gradle")
 
+// Apply Google Services plugin AFTER all dependencies (Firebase best practice)
+// This ensures google-services.json is processed after Firebase dependencies are resolved
+apply(plugin = "com.google.gms.google-services")
