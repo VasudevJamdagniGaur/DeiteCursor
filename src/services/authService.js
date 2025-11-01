@@ -34,13 +34,59 @@ const getBrowser = async () => {
   if (!Capacitor.isNativePlatform()) {
     return null;
   }
+  
+  console.log('🔍 Attempting to load Browser plugin...');
+  console.log('🔍 Capacitor platform:', Capacitor.getPlatform());
+  console.log('🔍 Is native platform:', Capacitor.isNativePlatform());
+  
+  // Method 1: Try dynamic import (preferred for ES modules)
   try {
-    const { Browser } = await import('@capacitor/browser');
-    return Browser;
-  } catch (e) {
-    console.warn('⚠️ Capacitor Browser plugin not available:', e);
-    return null;
+    console.log('📦 Attempting dynamic import of @capacitor/browser...');
+    const browserModule = await import('@capacitor/browser');
+    const Browser = browserModule.Browser;
+    
+    if (Browser) {
+      console.log('✅ Browser plugin loaded successfully via dynamic import');
+      return Browser;
+    } else {
+      console.warn('⚠️ Browser module imported but Browser is null');
+    }
+  } catch (importError) {
+    console.error('❌ Dynamic import failed:', importError);
+    console.error('❌ Error message:', importError.message);
+    console.error('❌ Error stack:', importError.stack);
   }
+  
+  // Method 2: Try accessing via Capacitor.Plugins (native bridge)
+  try {
+    if (window.Capacitor?.Plugins?.Browser) {
+      console.log('✅ Found Browser via Capacitor.Plugins');
+      return window.Capacitor.Plugins.Browser;
+    } else {
+      console.warn('⚠️ Browser not found in Capacitor.Plugins');
+      console.log('🔍 Available plugins:', Object.keys(window.Capacitor?.Plugins || {}));
+    }
+  } catch (pluginsError) {
+    console.error('❌ Error accessing Capacitor.Plugins:', pluginsError);
+  }
+  
+  // Method 3: Try accessing via window (some plugin registrations)
+  try {
+    if (window.Browser) {
+      console.log('✅ Found Browser via window.Browser');
+      return window.Browser;
+    }
+  } catch (windowError) {
+    console.error('❌ Error accessing window.Browser:', windowError);
+  }
+  
+  console.error('❌ All methods failed - Browser plugin not available');
+  console.error('❌ This usually means:');
+  console.error('   1. @capacitor/browser is not installed (run: npm install @capacitor/browser)');
+  console.error('   2. Plugin not synced to Android (run: npx cap sync android)');
+  console.error('   3. APK was built without syncing (rebuild after sync)');
+  
+  return null;
 };
 
 // Sign up new user
