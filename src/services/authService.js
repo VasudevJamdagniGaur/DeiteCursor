@@ -165,12 +165,7 @@ export const signInWithGoogle = async () => {
         if (Browser) {
           console.log('✅ Browser plugin available');
           
-          // First, prepare the redirect by calling signInWithRedirect
-          // This will generate the proper Firebase URL
-          const provider = new GoogleAuthProvider();
-          
-          // We need to get the redirect URL that Firebase would use
-          // But since we can't intercept it easily, we'll construct it properly
+          // Get Firebase configuration
           const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
           const apiKey = auth.config?.apiKey;
           
