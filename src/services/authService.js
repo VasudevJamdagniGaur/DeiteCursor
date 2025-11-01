@@ -227,13 +227,17 @@ export const signInWithGoogle = async () => {
       }
       
       // Construct Firebase auth URL directly
-      // Use deep link for redirect back to app
-      const continueUrl = encodeURIComponent('com.deite.app://signup');
+      // Firebase requires http/https URLs for OAuth redirects
+      // Use http://localhost which Firebase accepts by default
+      // Note: User will need to manually return to app after sign-in
+      // The app will detect resume and process sign-in automatically
+      const continueUrl = encodeURIComponent('http://localhost/signup');
       const firebaseAuthUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}`;
       
       console.log('🌐 Opening Google Sign-In in external browser...');
       console.log('📍 URL:', firebaseAuthUrl.substring(0, 100) + '...');
-      console.log('📍 After sign-in, will redirect to: com.deite.app://signup (deep link)');
+      console.log('📍 After sign-in, will redirect to: http://localhost/signup');
+      console.log('📍 Please manually return to app after sign-in completes');
       
       // Method 1: Try Browser plugin (if available)
       try {
@@ -522,6 +526,8 @@ export const signInWithGoogle = async () => {
 // Handle redirect result - call this on app initialization
 // Also handles cases where popup falls back to redirect on mobile
 // Handles deep links when returning from external browser
+// IMPORTANT: When using external browser, getRedirectResult won't work because
+// redirect state is in browser's sessionStorage, not app's WebView
 export const handleGoogleRedirect = async () => {
   try {
     // Check if we're returning via deep link
@@ -530,6 +536,14 @@ export const handleGoogleRedirect = async () => {
     const isOnAuthHandler = currentUrl.includes('__/auth/handler');
     const storedAppOrigin = localStorage.getItem('appOrigin');
     const appOrigin = storedAppOrigin || window.location.origin;
+    const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
+    
+    console.log('🔍 Checking for Google Sign-In result...', {
+      isDeepLink,
+      isOnAuthHandler,
+      hasPendingSignIn,
+      currentUrl: currentUrl.substring(0, 100)
+    });
     
     if (isDeepLink) {
       console.log('🔗 Detected deep link return:', currentUrl);
@@ -562,35 +576,127 @@ export const handleGoogleRedirect = async () => {
       console.log('📍 Detected Firebase auth handler page - attempting to process result');
     }
     
-    // Firebase's getRedirectResult will automatically extract tokens from URL
-    // It works with both regular redirects and deep links
-    const result = await getRedirectResult(auth);
-    if (result && result.user) {
-      const user = result.user;
-      console.log('✅ Google Sign-In successful via redirect/handler/deep link:', user);
-      
-      // Clear any pending sign-in flags
-      try {
-        localStorage.removeItem('googleSignInPending');
-      } catch (e) {
-        // Ignore storage errors
-      }
-      
-      // If we're on the auth handler page hosted on a different domain, ensure we return to the app domain
-      if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
-        window.location.replace(`${appOrigin}/dashboard`);
-        return { success: true, user: { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL } };
-      }
-      
-      return {
-        success: true,
-        user: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL
+    // FIRST: Try getRedirectResult (works for WebView redirects)
+    // This won't work for external browser flows, but we check it first
+    let result = null;
+    try {
+      result = await getRedirectResult(auth);
+      if (result && result.user) {
+        const user = result.user;
+        console.log('✅ Google Sign-In successful via getRedirectResult:', user);
+        
+        // Clear any pending sign-in flags
+        try {
+          localStorage.removeItem('googleSignInPending');
+        } catch (e) {
+          // Ignore storage errors
         }
-      };
+        
+        // If we're on the auth handler page hosted on a different domain, ensure we return to the app domain
+        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+          window.location.replace(`${appOrigin}/dashboard`);
+          return { success: true, user: { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL } };
+        }
+        
+        return {
+          success: true,
+          user: {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          }
+        };
+      }
+    } catch (redirectError) {
+      console.warn('⚠️ getRedirectResult error (expected for external browser):', redirectError.message);
+    }
+    
+    // SECOND: Check current auth state (works for external browser flows)
+    // If user signed in via external browser, they should now be authenticated
+    // We check this when app resumes after external browser sign-in
+    if (hasPendingSignIn || isDeepLink) {
+      console.log('🔍 Checking current auth state (external browser flow)...');
+      
+      // Check if user is already authenticated
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        console.log('✅ User is already authenticated! (external browser sign-in successful)');
+        
+        // Clear pending flag
+        try {
+          localStorage.removeItem('googleSignInPending');
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
+        return {
+          success: true,
+          user: {
+            uid: currentUser.uid,
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL
+          }
+        };
+      } else {
+        console.log('⚠️ User not authenticated yet, but pending sign-in flag exists');
+        // Wait a moment and check again (Firebase might still be processing)
+        // Also listen for auth state change as Firebase processes the sign-in
+        return new Promise((resolve) => {
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user && hasPendingSignIn) {
+              console.log('✅ Auth state changed - user is now authenticated!');
+              unsubscribe(); // Stop listening
+              
+              // Clear pending flag
+              try {
+                localStorage.removeItem('googleSignInPending');
+              } catch (e) {
+                // Ignore
+              }
+              
+              resolve({
+                success: true,
+                user: {
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: user.displayName,
+                  photoURL: user.photoURL
+                }
+              });
+            } else {
+              // Wait a bit more before giving up
+              setTimeout(() => {
+                if (auth.currentUser) {
+                  const finalUser = auth.currentUser;
+                  unsubscribe();
+                  try {
+                    localStorage.removeItem('googleSignInPending');
+                  } catch (e) {}
+                  resolve({
+                    success: true,
+                    user: {
+                      uid: finalUser.uid,
+                      email: finalUser.email,
+                      displayName: finalUser.displayName,
+                      photoURL: finalUser.photoURL
+                    }
+                  });
+                } else {
+                  // No user after waiting - sign-in didn't complete
+                  unsubscribe();
+                  resolve({
+                    success: false,
+                    noRedirect: true,
+                    message: 'No sign-in detected. Please try again.'
+                  });
+                }
+              }, 2000);
+            }
+          });
+        });
+      }
     }
     
     // If we're on auth handler but no result, it might be a storage-partitioned error

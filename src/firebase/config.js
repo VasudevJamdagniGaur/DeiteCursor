@@ -27,6 +27,11 @@ export const auth = getAuth(app);
 console.log('📍 Firebase Auth Domain:', firebaseConfig.authDomain);
 console.log('📍 Current Origin:', window.location.origin);
 
+// IMPORTANT: Firebase Auth persists tokens automatically
+// When user signs in via external browser, Firebase stores token server-side
+// When app checks auth state, Firebase verifies token from server
+// This allows external browser sign-in to work properly
+
 // Initialize Firestore and get a reference to the service
 export const db = getFirestore(app);
 
