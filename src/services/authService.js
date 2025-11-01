@@ -29,6 +29,20 @@ const getFirebaseAuthentication = async () => {
   }
 };
 
+// Lazy load Capacitor Browser plugin for external browser sign-in
+const getBrowser = async () => {
+  if (!Capacitor.isNativePlatform()) {
+    return null;
+  }
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    return Browser;
+  } catch (e) {
+    console.warn('⚠️ Capacitor Browser plugin not available:', e);
+    return null;
+  }
+};
+
 // Sign up new user
 export const signUpUser = async (email, password, displayName) => {
   try {
@@ -140,13 +154,45 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Skip native auth for now and use redirect directly
-    // Native auth requires proper configuration and can fail silently
-    // Redirect is more reliable in WebView
+    // NATIVE APP: Use manual navigation directly (most reliable in WebView)
+    // signInWithRedirect() often fails in Capacitor WebView due to sessionStorage/redirect issues
     if (isNativeApp) {
-      console.log('📱 Detected native platform');
-      console.log('🔄 Using web redirect (skipping native auth for reliability)');
-      // Skip to redirect flow below
+      console.log('📱 Detected native platform - using direct navigation for Google Sign-In');
+      
+      try {
+        // Construct Google Sign-In URL manually
+        const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
+        const apiKey = auth.config?.apiKey;
+        
+        if (!apiKey) {
+          console.error('❌ Firebase API key missing');
+          throw new Error('Firebase configuration incomplete');
+        }
+        
+        // Use Firebase's OAuth redirect endpoint
+        // The continueUrl will be the origin (capacitor://localhost) which Firebase should handle
+        const continueUrl = encodeURIComponent(window.location.origin);
+        const googleSignInUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}&lang=en`;
+        
+        console.log('🌐 Navigating to Google Sign-In URL...');
+        console.log('📍 URL:', googleSignInUrl);
+        console.log('📍 Continue URL (origin):', window.location.origin);
+        
+        // Direct navigation - this should work in WebView
+        window.location.href = googleSignInUrl;
+        
+        // Return immediately - navigation will happen
+        return {
+          success: true,
+          redirecting: true,
+          manualNavigation: true,
+          message: 'Redirecting to Google sign-in...'
+        };
+      } catch (navError) {
+        console.error('❌ Manual navigation failed:', navError);
+        console.log('⚠️ Falling back to Firebase signInWithRedirect()...');
+        // Fall through to regular redirect flow
+      }
     }
     
     // WEB AUTHENTICATION (Browser - desktop OR mobile browser OR native app fallback)
@@ -205,10 +251,9 @@ export const signInWithGoogle = async () => {
             console.error('❌ signInWithRedirect promise rejected:', err);
           });
           
-          // For native apps, redirect might not work in WebView
-          // Let's try a workaround: wait a bit then check if we're still here
+          // For native apps, check if redirect actually happened
           if (isNativeApp) {
-            console.log('📱 Native app detected - redirect may work differently in WebView');
+            console.log('📱 Native app detected - checking if redirect worked...');
             // Give it 500ms - if redirect works, page will navigate away
             await new Promise(resolve => setTimeout(resolve, 500));
             
@@ -217,11 +262,31 @@ export const signInWithGoogle = async () => {
             console.log('📍 Current URL after redirect attempt:', currentUrl);
             
             if (currentUrl.includes('signup') || currentUrl.includes('login')) {
-              console.warn('⚠️ Still on signup/login page - redirect may have failed');
-              console.warn('⚠️ This could mean:');
-              console.warn('   1. Firebase redirect not working in WebView');
-              console.warn('   2. Authorized domain not configured');
-              console.warn('   3. Storage/sessionStorage blocked');
+              console.warn('⚠️ Still on signup/login page - redirect failed in WebView');
+              console.warn('⚠️ Attempting manual navigation as fallback...');
+              
+              // Manual navigation fallback
+              try {
+                const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
+                const apiKey = auth.config?.apiKey;
+                const providerId = 'google.com';
+                const continueUrl = encodeURIComponent(window.location.origin + '/signup');
+                const googleUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=${providerId}&continueUrl=${continueUrl}`;
+                
+                console.log('🌐 Attempting manual navigation to:', googleUrl);
+                // Use window.location.href for immediate navigation
+                window.location.href = googleUrl;
+                
+                return {
+                  success: true,
+                  redirecting: true,
+                  manualNavigation: true,
+                  message: 'Redirecting to Google sign-in...'
+                };
+              } catch (manualNavError) {
+                console.error('❌ Manual navigation also failed:', manualNavError);
+                throw new Error('All redirect methods failed. Please add capacitor://localhost to Firebase Authorized Domains.');
+              }
             }
           }
           
