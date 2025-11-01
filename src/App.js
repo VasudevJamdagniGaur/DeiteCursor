@@ -20,30 +20,68 @@ function AppContent() {
   useEffect(() => {
     // Handle Google Sign-In redirect on app load
     // This also catches popup fallbacks to redirect on mobile
-    handleGoogleRedirect().then((result) => {
-      if (result.success && result.user) {
-        console.log('✅ Google Sign-In successful via redirect/handler, navigating to dashboard');
-        // Navigate to dashboard after successful redirect sign-in
-        navigate('/dashboard', { replace: true });
-      } else if (result.error && !result.isNormalLoad) {
-        // Only log errors that aren't expected (like normal page loads)
-        console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
+    // Also handles deep links when returning from external browser
+    const handleAuthRedirect = async () => {
+      try {
+        // Check if we're returning from a deep link
+        const url = window.location.href;
+        if (url.includes('com.deite.app://') || url.includes('__/auth/handler')) {
+          console.log('🔗 Detected deep link or auth handler URL:', url);
+        }
         
-        // If we're on the Firebase auth handler page with an error, navigate back to signup
-        if (window.location.href.includes('__/auth/handler') && result.error) {
-          console.log('🔄 Redirected to auth handler with error, navigating back to signup');
+        const result = await handleGoogleRedirect();
+        
+        if (result.success && result.user) {
+          console.log('✅ Google Sign-In successful via redirect/handler, navigating to dashboard');
+          // Navigate to dashboard after successful redirect sign-in
+          navigate('/dashboard', { replace: true });
+        } else if (result.error && !result.isNormalLoad) {
+          // Only log errors that aren't expected (like normal page loads)
+          console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
+          
+          // If we're on the Firebase auth handler page with an error, navigate back to signup
+          if (window.location.href.includes('__/auth/handler') && result.error) {
+            console.log('🔄 Redirected to auth handler with error, navigating back to signup');
+            navigate('/signup', { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Unexpected error handling Google redirect:', error);
+        
+        // If we're stuck on the auth handler page, navigate back
+        if (window.location.href.includes('__/auth/handler')) {
+          console.log('🔄 Caught error on auth handler page, navigating back to signup');
           navigate('/signup', { replace: true });
         }
       }
-    }).catch((error) => {
-      console.error('❌ Unexpected error handling Google redirect:', error);
-      
-      // If we're stuck on the auth handler page, navigate back
-      if (window.location.href.includes('__/auth/handler')) {
-        console.log('🔄 Caught error on auth handler page, navigating back to signup');
-        navigate('/signup', { replace: true });
+    };
+    
+    // Initial check
+    handleAuthRedirect();
+    
+    // Also listen for app resume events (when returning from external browser)
+    const handleAppResume = () => {
+      console.log('📱 App resumed - checking for pending Google Sign-In');
+      setTimeout(() => {
+        handleAuthRedirect();
+      }, 1000); // Give it a moment for Firebase to process
+    };
+    
+    // Listen for visibility change (app coming to foreground)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ App became visible - checking for pending Google Sign-In');
+        setTimeout(() => {
+          handleAuthRedirect();
+        }, 1000);
       }
-    });
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [navigate]);
 
   return (

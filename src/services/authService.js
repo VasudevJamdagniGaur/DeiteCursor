@@ -200,82 +200,95 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Use Browser plugin to open in external browser (bypasses WebView redirect issues)
-    // This works without needing to add capacitor://localhost to Firebase Authorized Domains
+    // NATIVE APP: Open Google Sign-In in external browser (bypasses WebView redirect issues)
+    // Uses multiple methods to ensure it works even if Browser plugin fails
     if (isNativeApp) {
       console.log('📱 Detected native platform - opening Google Sign-In in external browser');
       
-      const Browser = await getBrowser();
+      // Get Firebase configuration
+      const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
+      const apiKey = auth.config?.apiKey;
       
-      if (!Browser) {
-        console.error('❌ Browser plugin not available - cannot open external browser');
+      if (!apiKey) {
+        console.error('❌ Firebase API key missing');
         return {
           success: false,
-          error: 'Browser plugin not available. Please ensure @capacitor/browser is installed and synced.',
-          code: 'browser-plugin-unavailable'
+          error: 'Firebase configuration incomplete. API key is missing.',
+          code: 'firebase-config-incomplete'
         };
       }
       
+      // Store app info for redirect handling
       try {
-        console.log('✅ Browser plugin available');
-        
-        // Get Firebase configuration
-        const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
-        const apiKey = auth.config?.apiKey;
-        
-        if (!apiKey) {
-          console.error('❌ Firebase API key missing');
+        localStorage.setItem('appOrigin', window.location.origin);
+        localStorage.setItem('googleSignInPending', 'true');
+      } catch (e) {
+        console.warn('Could not store app info:', e);
+      }
+      
+      // Construct Firebase auth URL directly
+      // Use deep link for redirect back to app
+      const continueUrl = encodeURIComponent('com.deite.app://signup');
+      const firebaseAuthUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}`;
+      
+      console.log('🌐 Opening Google Sign-In in external browser...');
+      console.log('📍 URL:', firebaseAuthUrl.substring(0, 100) + '...');
+      console.log('📍 After sign-in, will redirect to: com.deite.app://signup (deep link)');
+      
+      // Method 1: Try Browser plugin (if available)
+      try {
+        const Browser = await getBrowser();
+        if (Browser) {
+          console.log('✅ Browser plugin available - using it');
+          await Browser.open({ url: firebaseAuthUrl });
+          console.log('✅ External browser opened via Browser plugin');
           return {
-            success: false,
-            error: 'Firebase configuration incomplete. API key is missing.',
-            code: 'firebase-config-incomplete'
+            success: true,
+            redirecting: true,
+            externalBrowser: true,
+            message: 'Opening Google Sign-In in browser...'
           };
         }
-        
-        // Store app info for redirect handling
-        try {
-          localStorage.setItem('appOrigin', window.location.origin);
-          localStorage.setItem('googleSignInPending', 'true');
-        } catch (e) {
-          console.warn('Could not store app info:', e);
+      } catch (browserError) {
+        console.warn('⚠️ Browser plugin method failed:', browserError.message);
+      }
+      
+      // Method 2: Use window.open with target="_blank" - Android will open in external browser
+      try {
+        console.log('🌐 Attempting window.open() method...');
+        const opened = window.open(firebaseAuthUrl, '_blank', 'noopener,noreferrer');
+        if (opened) {
+          console.log('✅ Window opened successfully');
+          // Give it a moment to see if it actually opened
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return {
+            success: true,
+            redirecting: true,
+            externalBrowser: true,
+            message: 'Opening Google Sign-In in browser...'
+          };
         }
-        
-        // Construct Firebase auth URL directly
-        // Use http://localhost as continueUrl (should be authorized by default)
-        // Note: User will need to manually return to app after sign-in completes
-        // OR we can set up a redirect handler if needed
-        const continueUrl = encodeURIComponent('http://localhost/signup');
-        const firebaseAuthUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}`;
-        
-        console.log('🌐 Opening Google Sign-In in external browser...');
-        console.log('📍 URL:', firebaseAuthUrl.substring(0, 100) + '...');
-        console.log('📍 After sign-in, will redirect to: http://localhost/signup');
-        console.log('⚠️ NOTE: You may need to manually return to app after sign-in');
-        
-        // Open in external browser (Chrome)
-        await Browser.open({ 
-          url: firebaseAuthUrl
-        });
-        
-        console.log('✅ External browser (Chrome) opened successfully');
-        console.log('📍 User will complete sign-in in Chrome');
-        console.log('📍 Deep link will automatically return to app after sign-in');
-        
-        // Return success - external browser is open
-        // The deep link will handle returning to app
+      } catch (windowError) {
+        console.warn('⚠️ window.open() method failed:', windowError.message);
+      }
+      
+      // Method 3: Use location.href as last resort (will navigate WebView)
+      try {
+        console.log('🌐 Attempting location.href navigation (fallback)...');
+        // This will navigate the WebView to Google sign-in
+        // Less ideal but better than failing completely
+        window.location.href = firebaseAuthUrl;
         return {
           success: true,
           redirecting: true,
-          externalBrowser: true,
-          message: 'Opening Google Sign-In in browser...'
+          message: 'Redirecting to Google sign-in...'
         };
-      } catch (browserError) {
-        console.error('❌ Failed to open external browser:', browserError);
+      } catch (hrefError) {
+        console.error('❌ All methods failed:', hrefError);
         return {
           success: false,
-          error: 'Failed to open external browser. Please check if Chrome is installed.',
-          code: 'browser-open-failed',
-          details: browserError.message
+          error: 'Failed to open browser. Please try again or use email/password sign-up.',
+          code: 'browser-open-failed'
         };
       }
     }
