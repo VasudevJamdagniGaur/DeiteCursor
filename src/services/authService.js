@@ -140,85 +140,13 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Use Capacitor Firebase Authentication (with google-services.json)
+    // NATIVE APP: Skip native auth for now and use redirect directly
+    // Native auth requires proper configuration and can fail silently
+    // Redirect is more reliable in WebView
     if (isNativeApp) {
-      console.log('📱 Detected native platform - attempting native Google Sign-In...');
-      
-      // Lazy load the Capacitor plugin
-      const FirebaseAuthentication = await getFirebaseAuthentication();
-      
-      if (FirebaseAuthentication) {
-        console.log('✅ Capacitor Firebase Auth plugin loaded');
-        console.log('🚀 Calling native Google Sign-In...');
-        
-        try {
-          console.log('🔵 About to call FirebaseAuthentication.signInWithGoogle()...');
-          console.log('🔵 FirebaseAuthentication object:', FirebaseAuthentication);
-          
-          // Use Capacitor Firebase Authentication plugin
-          const result = await FirebaseAuthentication.signInWithGoogle();
-          
-          console.log('✅ Native Google Sign-In result received:', result);
-          console.log('📊 Result type:', typeof result);
-          console.log('📊 Result keys:', result ? Object.keys(result) : 'null');
-          
-          // Wait a moment for auth state to update
-          console.log('⏳ Waiting for auth state to update...');
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          
-          // Get the current user from Firebase Auth (should be set by the plugin)
-          const user = auth.currentUser;
-          console.log('👤 auth.currentUser after native sign-in:', user ? user.email : 'null');
-          
-          if (user) {
-            console.log('✅ User authenticated via native auth:', user.email);
-            return {
-              success: true,
-              user: {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL
-              },
-              popup: false,
-              native: true
-            };
-          } else if (result && result.user) {
-            // If user is not set, try to get from result
-            console.log('✅ Using user from result object');
-            return {
-              success: true,
-              user: {
-                uid: result.user.uid || result.user.id,
-                email: result.user.email,
-                displayName: result.user.displayName,
-                photoURL: result.user.photoURL || result.user.photoUrl
-              },
-              popup: false,
-              native: true
-            };
-          } else {
-            console.warn('⚠️ Native auth completed but no user object available');
-            console.warn('⚠️ Result:', result);
-            console.warn('⚠️ Falling through to redirect...');
-            // Fall through to web redirect as fallback
-          }
-        } catch (nativeError) {
-          console.error('========================================');
-          console.error('❌ NATIVE GOOGLE SIGN-IN FAILED');
-          console.error('========================================');
-          console.error('❌ Error message:', nativeError.message);
-          console.error('❌ Error code:', nativeError.code);
-          console.error('❌ Error stack:', nativeError.stack);
-          console.error('❌ Full error object:', nativeError);
-          console.log('⚠️ Native auth failed - will try redirect fallback...');
-          // Fall through to web authentication (redirect)
-        }
-      } else {
-        console.warn('⚠️ Capacitor Firebase Auth plugin NOT AVAILABLE');
-        console.warn('⚠️ Plugin check returned null/undefined');
-        console.log('⚠️ Falling back to web redirect...');
-      }
+      console.log('📱 Detected native platform');
+      console.log('🔄 Using web redirect (skipping native auth for reliability)');
+      // Skip to redirect flow below
     }
     
     // WEB AUTHENTICATION (Browser - desktop OR mobile browser OR native app fallback)
@@ -260,29 +188,44 @@ export const signInWithGoogle = async () => {
         
         try {
           console.log('🚀 EXECUTING signInWithRedirect() NOW...');
-          await signInWithRedirect(auth, provider);
+          console.log('🔵 Auth config:', {
+            apiKey: auth.config?.apiKey ? '***' : 'missing',
+            authDomain: auth.config?.authDomain || 'missing',
+            projectId: auth.config?.projectId || 'missing'
+          });
           
-          // If we reach here, redirect was initiated successfully
-          console.log('✅ signInWithRedirect() completed successfully');
-          console.log('🌐 Page SHOULD navigate to Google now');
-          console.log('⏳ If you still see this page, redirect may have failed');
+          // Call signInWithRedirect
+          const redirectPromise = signInWithRedirect(auth, provider);
           
-          // Give it a moment to see if redirect happens
-          // If we're still here after 2 seconds, try manual navigation as last resort
-          setTimeout(() => {
-            if (window.location.href.includes('signup') || window.location.href.includes('login')) {
-              console.warn('⚠️ Still on signup page after redirect - redirect may have failed');
-              console.warn('⚠️ Attempting manual navigation to Google sign-in...');
-              // Last resort: manually construct Google sign-in URL
-              const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
-              const redirectUrl = `https://${authDomain}/__/auth/handler?apiKey=${auth.config?.apiKey || ''}`;
-              console.log('🌐 Manual redirect URL:', redirectUrl);
-              // Don't navigate manually - let Firebase handle it
-              // But log it for debugging
+          console.log('⏳ signInWithRedirect() called, waiting for redirect...');
+          
+          // The redirect should happen immediately
+          // We don't await it because it will navigate away
+          redirectPromise.catch((err) => {
+            console.error('❌ signInWithRedirect promise rejected:', err);
+          });
+          
+          // For native apps, redirect might not work in WebView
+          // Let's try a workaround: wait a bit then check if we're still here
+          if (isNativeApp) {
+            console.log('📱 Native app detected - redirect may work differently in WebView');
+            // Give it 500ms - if redirect works, page will navigate away
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Check if we're still on the same page
+            const currentUrl = window.location.href;
+            console.log('📍 Current URL after redirect attempt:', currentUrl);
+            
+            if (currentUrl.includes('signup') || currentUrl.includes('login')) {
+              console.warn('⚠️ Still on signup/login page - redirect may have failed');
+              console.warn('⚠️ This could mean:');
+              console.warn('   1. Firebase redirect not working in WebView');
+              console.warn('   2. Authorized domain not configured');
+              console.warn('   3. Storage/sessionStorage blocked');
             }
-          }, 2000);
+          }
           
-          // Return immediately - the redirect happens asynchronously
+          // Return immediately - redirect should have happened
           return {
             success: true,
             redirecting: true,
