@@ -154,45 +154,13 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Use manual navigation directly (most reliable in WebView)
-    // signInWithRedirect() often fails in Capacitor WebView due to sessionStorage/redirect issues
+    // NATIVE APP: Use Firebase's signInWithRedirect() properly
+    // The key is ensuring capacitor://localhost is in Firebase Authorized Domains
     if (isNativeApp) {
-      console.log('📱 Detected native platform - using direct navigation for Google Sign-In');
-      
-      try {
-        // Construct Google Sign-In URL manually
-        const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
-        const apiKey = auth.config?.apiKey;
-        
-        if (!apiKey) {
-          console.error('❌ Firebase API key missing');
-          throw new Error('Firebase configuration incomplete');
-        }
-        
-        // Use Firebase's OAuth redirect endpoint
-        // The continueUrl will be the origin (capacitor://localhost) which Firebase should handle
-        const continueUrl = encodeURIComponent(window.location.origin);
-        const googleSignInUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=google.com&mode=signIn&continueUrl=${continueUrl}&lang=en`;
-        
-        console.log('🌐 Navigating to Google Sign-In URL...');
-        console.log('📍 URL:', googleSignInUrl);
-        console.log('📍 Continue URL (origin):', window.location.origin);
-        
-        // Direct navigation - this should work in WebView
-        window.location.href = googleSignInUrl;
-        
-        // Return immediately - navigation will happen
-        return {
-          success: true,
-          redirecting: true,
-          manualNavigation: true,
-          message: 'Redirecting to Google sign-in...'
-        };
-      } catch (navError) {
-        console.error('❌ Manual navigation failed:', navError);
-        console.log('⚠️ Falling back to Firebase signInWithRedirect()...');
-        // Fall through to regular redirect flow
-      }
+      console.log('📱 Detected native platform - using Firebase signInWithRedirect()');
+      console.log('📍 Current origin:', window.location.origin);
+      console.log('⚠️ IMPORTANT: Make sure this origin is in Firebase Authorized Domains');
+      // Fall through to the redirect flow below - Firebase will handle it properly
     }
     
     // WEB AUTHENTICATION (Browser - desktop OR mobile browser OR native app fallback)
@@ -262,31 +230,18 @@ export const signInWithGoogle = async () => {
             console.log('📍 Current URL after redirect attempt:', currentUrl);
             
             if (currentUrl.includes('signup') || currentUrl.includes('login')) {
-              console.warn('⚠️ Still on signup/login page - redirect failed in WebView');
-              console.warn('⚠️ Attempting manual navigation as fallback...');
+              console.error('❌ Redirect failed - still on signup/login page');
+              console.error('❌ This means signInWithRedirect() did not navigate');
+              console.error('❌ Most likely cause: capacitor://localhost not in Firebase Authorized Domains');
+              console.error('❌ FIX: Add capacitor://localhost to Firebase Console → Authentication → Settings → Authorized domains');
               
-              // Manual navigation fallback
-              try {
-                const authDomain = auth.config?.authDomain || 'deitedatabase.firebaseapp.com';
-                const apiKey = auth.config?.apiKey;
-                const providerId = 'google.com';
-                const continueUrl = encodeURIComponent(window.location.origin + '/signup');
-                const googleUrl = `https://${authDomain}/__/auth/handler?apiKey=${apiKey}&providerId=${providerId}&continueUrl=${continueUrl}`;
-                
-                console.log('🌐 Attempting manual navigation to:', googleUrl);
-                // Use window.location.href for immediate navigation
-                window.location.href = googleUrl;
-                
-                return {
-                  success: true,
-                  redirecting: true,
-                  manualNavigation: true,
-                  message: 'Redirecting to Google sign-in...'
-                };
-              } catch (manualNavError) {
-                console.error('❌ Manual navigation also failed:', manualNavError);
-                throw new Error('All redirect methods failed. Please add capacitor://localhost to Firebase Authorized Domains.');
-              }
+              return {
+                success: false,
+                error: 'Redirect failed. Please add capacitor://localhost to Firebase Authorized Domains in Firebase Console.',
+                code: 'redirect-failed',
+                redirectFailed: true,
+                fixInstructions: 'Go to Firebase Console → Authentication → Settings → Authorized domains → Add: capacitor://localhost'
+              };
             }
           }
           
