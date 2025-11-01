@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { handleGoogleRedirect } from './services/authService';
+import { Capacitor } from '@capacitor/core';
 import SplashScreen from './components/SplashScreen';
 import LandingPage from './components/LandingPage';
 import WelcomePage from './components/WelcomePage';
@@ -12,6 +13,20 @@ import DashboardPage from './components/DashboardPage';
 import ChatPage from './components/ChatPage';
 import EmotionalWellbeing from './components/EmotionalWellbeing';
 import ProfilePage from './components/ProfilePage';
+
+// Lazy load Capacitor App plugin for deep link handling
+const getAppPlugin = async () => {
+  if (!Capacitor.isNativePlatform()) {
+    return null;
+  }
+  try {
+    const { App } = await import('@capacitor/app');
+    return App;
+  } catch (e) {
+    console.warn('⚠️ Capacitor App plugin not available:', e);
+    return null;
+  }
+};
 
 // Component to handle Google Sign-In redirects
 function AppContent() {
@@ -59,6 +74,60 @@ function AppContent() {
     // Initial check
     handleAuthRedirect();
     
+    // Setup deep link listener for automatic return from browser
+    let appUrlListener = null;
+    
+    const setupDeepLinkListener = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const App = await getAppPlugin();
+          if (App) {
+            console.log('✅ Setting up deep link listener for automatic return...');
+            
+            // Listen for app URL open events (when deep link opens the app)
+            appUrlListener = await App.addListener('appUrlOpen', (data) => {
+              console.log('🔗 Deep link opened app:', data.url);
+              
+              // Check if it's a Google Sign-In redirect
+              if (data.url.includes('com.deite.app://')) {
+                console.log('✅ Detected deep link return from Google Sign-In');
+                console.log('📍 Deep link URL:', data.url);
+                
+                // Wait a moment for Firebase to process, then check redirect result
+                setTimeout(async () => {
+                  try {
+                    const result = await handleGoogleRedirect();
+                    if (result.success && result.user) {
+                      console.log('✅ Google Sign-In successful via deep link!');
+                      navigate('/dashboard', { replace: true });
+                    } else {
+                      console.log('⚠️ No redirect result yet, will check again...');
+                      // Try again after another delay
+                      setTimeout(async () => {
+                        const retryResult = await handleGoogleRedirect();
+                        if (retryResult.success && retryResult.user) {
+                          console.log('✅ Google Sign-In successful on retry!');
+                          navigate('/dashboard', { replace: true });
+                        }
+                      }, 2000);
+                    }
+                  } catch (error) {
+                    console.error('❌ Error processing deep link:', error);
+                  }
+                }, 1000);
+              }
+            });
+            
+            console.log('✅ Deep link listener registered');
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not set up deep link listener:', error);
+        }
+      }
+    };
+    
+    setupDeepLinkListener();
+    
     // Also listen for app resume events (when returning from external browser)
     const handleAppResume = () => {
       console.log('📱 App resumed - checking for pending Google Sign-In');
@@ -81,6 +150,10 @@ function AppContent() {
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Remove deep link listener on cleanup
+      if (appUrlListener) {
+        appUrlListener.remove();
+      }
     };
   }, [navigate]);
 

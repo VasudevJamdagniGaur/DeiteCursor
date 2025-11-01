@@ -521,21 +521,60 @@ export const signInWithGoogle = async () => {
 
 // Handle redirect result - call this on app initialization
 // Also handles cases where popup falls back to redirect on mobile
+// Handles deep links when returning from external browser
 export const handleGoogleRedirect = async () => {
   try {
-    // Check if we're on the Firebase auth handler page (indicates redirect/popup fallback)
-    const isOnAuthHandler = window.location.href.includes('__/auth/handler');
+    // Check if we're returning via deep link
+    const currentUrl = window.location.href;
+    const isDeepLink = currentUrl.includes('com.deite.app://');
+    const isOnAuthHandler = currentUrl.includes('__/auth/handler');
     const storedAppOrigin = localStorage.getItem('appOrigin');
     const appOrigin = storedAppOrigin || window.location.origin;
+    
+    if (isDeepLink) {
+      console.log('🔗 Detected deep link return:', currentUrl);
+      
+      // Parse deep link URL to extract auth parameters
+      // Firebase might include auth tokens in the URL
+      const urlObj = new URL(currentUrl.replace('com.deite.app://', 'http://'));
+      const code = urlObj.searchParams.get('code');
+      const state = urlObj.searchParams.get('state');
+      const error = urlObj.searchParams.get('error');
+      
+      if (error) {
+        console.error('❌ Auth error in deep link:', error);
+        return {
+          success: false,
+          error: `Authentication error: ${error}`,
+          code: 'auth-error'
+        };
+      }
+      
+      console.log('📍 Deep link contains auth params:', { code: !!code, state: !!state });
+      
+      // Clear the deep link from URL bar for cleaner navigation
+      if (isDeepLink) {
+        window.history.replaceState({}, '', '/signup');
+      }
+    }
     
     if (isOnAuthHandler) {
       console.log('📍 Detected Firebase auth handler page - attempting to process result');
     }
     
+    // Firebase's getRedirectResult will automatically extract tokens from URL
+    // It works with both regular redirects and deep links
     const result = await getRedirectResult(auth);
     if (result && result.user) {
       const user = result.user;
-      console.log('✅ Google Sign-In successful via redirect/handler:', user);
+      console.log('✅ Google Sign-In successful via redirect/handler/deep link:', user);
+      
+      // Clear any pending sign-in flags
+      try {
+        localStorage.removeItem('googleSignInPending');
+      } catch (e) {
+        // Ignore storage errors
+      }
       
       // If we're on the auth handler page hosted on a different domain, ensure we return to the app domain
       if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
