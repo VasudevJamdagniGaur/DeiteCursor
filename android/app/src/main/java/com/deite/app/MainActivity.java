@@ -43,18 +43,28 @@ public class MainActivity extends BridgeActivity {
                                         url.contains("googleapis.com") ||
                                         url.contains("google.com/signin");
                     
-                    // CRITICAL: Also catch http://localhost redirects (Firebase OAuth redirect target)
-                    // Firebase redirects to http://localhost when capacitor://localhost isn't supported
+                    // CRITICAL: Handle http://localhost redirects (Firebase OAuth redirect target)
+                    // On mobile, there's NO localhost server, so we intercept and redirect to app immediately
+                    // Firebase has already processed the OAuth by the time it redirects to localhost
                     boolean isLocalhostRedirect = url.startsWith("http://localhost") || 
                                                   url.startsWith("https://localhost");
+                    
+                    if (isLocalhostRedirect) {
+                        // IMPORTANT: Firebase processes OAuth BEFORE redirecting to localhost
+                        // By the time we reach here, user is already authenticated!
+                        // Instead of loading localhost (which fails - no server), redirect to app immediately
+                        String appUrl = "capacitor://localhost/dashboard";
+                        view.loadUrl(appUrl);
+                        return true; // We handled it, don't open external browser
+                    }
                     
                     // Check if this is an app scheme (capacitor:// or deep link)
                     boolean isAppScheme = url.startsWith("capacitor://") || 
                                          url.startsWith("com.deite.app://");
                     
-                    // For OAuth URLs, localhost redirects, and app schemes, load within WebView
+                    // For OAuth URLs and app schemes, load within WebView
                     // This prevents external browser from opening, which causes storage-partitioned errors
-                    if (isOAuthUrl || isLocalhostRedirect || isAppScheme) {
+                    if (isOAuthUrl || isAppScheme) {
                         view.loadUrl(url);
                         return true; // We handled it, don't open external browser
                     }
@@ -87,15 +97,25 @@ public class MainActivity extends BridgeActivity {
                                       url.contains("googleapis.com") ||
                                       url.contains("google.com/signin");
                     
-                    // CRITICAL: Also catch http://localhost redirects (Firebase OAuth redirect target)
+                    // CRITICAL: Handle http://localhost redirects (Firebase OAuth redirect target)
+                    // On mobile, there's NO localhost server, so we intercept and redirect to app immediately
                     boolean isLocalhostRedirect = url.startsWith("http://localhost") || 
                                                  url.startsWith("https://localhost");
+                    
+                    if (isLocalhostRedirect) {
+                        // IMPORTANT: Firebase processes OAuth BEFORE redirecting to localhost
+                        // By the time we reach here, user is already authenticated!
+                        // Instead of loading localhost (which fails - no server), redirect to app immediately
+                        String appUrl = "capacitor://localhost/dashboard";
+                        view.loadUrl(appUrl);
+                        return true; // We handled it, don't open external browser
+                    }
                     
                     boolean isAppScheme = url.startsWith("capacitor://") || 
                                         url.startsWith("com.deite.app://");
                     
-                    // For OAuth URLs, localhost redirects, and app schemes, load within WebView
-                    if (isOAuthUrl || isLocalhostRedirect || isAppScheme) {
+                    // For OAuth URLs and app schemes, load within WebView
+                    if (isOAuthUrl || isAppScheme) {
                         view.loadUrl(url);
                         return true; // We handled it, don't open external browser
                     }

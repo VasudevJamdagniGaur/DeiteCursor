@@ -313,16 +313,23 @@ export const signInWithGoogle = async () => {
           console.warn('⚠️ Could not store redirect state backup:', e);
         }
         
-        // IMPORTANT: Firebase signInWithRedirect() will:
-        // 1. Navigate to Google OAuth (stays in WebView via MainActivity)
-        // 2. After sign-in, redirect to http://localhost (not capacitor://localhost)
-        // 3. http://localhost redirect stays in WebView (MainActivity intercepts)
-        // 4. Firebase processes the redirect result and signs user in
+        // CRITICAL: Firebase signInWithRedirect() flow:
+        // 1. Stores OAuth state in sessionStorage
+        // 2. Navigates WebView to Google OAuth (MainActivity keeps in WebView)
+        // 3. User selects account, Google redirects to Firebase handler (stays in WebView)
+        // 4. Firebase handler redirects to http://localhost (MainActivity intercepts, keeps in WebView)
+        // 5. When http://localhost loads in WebView, Firebase can read sessionStorage (same WebView!)
+        // 6. Firebase processes redirect and signs user in
+        //
+        // IMPORTANT: MainActivity.java intercepts http://localhost and keeps it in WebView
+        // This ensures the ENTIRE flow happens in the SAME WebView context
+        // sessionStorage persists because it's the same WebView (not external browser)
         await signInWithRedirect(auth, provider);
         
         console.log('✅ signInWithRedirect called - redirecting now');
-        console.log('📍 Firebase will redirect to: http://localhost (authorized domain)');
-        console.log('📍 WebView will handle http://localhost in-app (no external browser)');
+        console.log('📍 Flow: WebView → Google OAuth → Firebase Handler → http://localhost');
+        console.log('📍 ALL redirects stay in WebView (MainActivity intercepts)');
+        console.log('📍 User will be signed in automatically when redirect completes');
         
         // Return immediately - redirect will happen
         return {
@@ -658,10 +665,26 @@ export const handleGoogleRedirect = async () => {
           // Ignore storage errors
         }
         
-        // If we're on the auth handler page hosted on a different domain, ensure we return to the app domain
-        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+        // CRITICAL: After successful redirect, navigate back to app routes
+        // If we're on http://localhost (from Firebase redirect), go back to app origin
+        const currentOrigin = window.location.origin;
+        const isOnLocalhostRedirect = currentOrigin === 'http://localhost' || currentOrigin === 'https://localhost';
+        
+        if (isOnLocalhostRedirect || (isOnAuthHandler && !currentOrigin.startsWith(appOrigin))) {
+          console.log('📍 Redirecting from http://localhost back to app:', appOrigin);
+          // Navigate back to app's origin (capacitor://localhost) on the dashboard
           window.location.replace(`${appOrigin}/dashboard`);
-          return { success: true, user: { uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL } };
+          // Return success - navigation will happen
+          return { 
+            success: true, 
+            user: { 
+              uid: user.uid, 
+              email: user.email, 
+              displayName: user.displayName, 
+              photoURL: user.photoURL 
+            },
+            navigated: true
+          };
         }
         
         return {
@@ -718,6 +741,26 @@ export const handleGoogleRedirect = async () => {
       const currentUser = auth.currentUser;
       if (currentUser) {
         console.log('✅ User is already authenticated! (redirect sign-in successful)');
+        
+        // CRITICAL: If we're on http://localhost (from Firebase redirect), navigate back to app
+        const currentOrigin = window.location.origin;
+        const isOnLocalhostRedirect = currentOrigin === 'http://localhost' || currentOrigin === 'https://localhost';
+        
+        if (isOnLocalhostRedirect) {
+          console.log('📍 Redirecting from http://localhost back to app:', appOrigin);
+          // Navigate to app origin on dashboard
+          window.location.replace(`${appOrigin}/dashboard`);
+          return {
+            success: true,
+            user: {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              photoURL: currentUser.photoURL
+            },
+            navigated: true
+          };
+        }
         
         // Clear pending flags and backup state
         try {
