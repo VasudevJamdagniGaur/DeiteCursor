@@ -690,7 +690,45 @@ export const handleGoogleRedirect = async () => {
           redirectError.message?.includes('sessionStorage') ||
           redirectError.code === 'auth/argument-error') {
         console.warn('⚠️ Storage-partitioned error detected in getRedirectResult');
-        console.warn('⚠️ This means sessionStorage was partitioned - will try alternative recovery');
+        console.warn('⚠️ This means sessionStorage was partitioned - checking auth state directly...');
+        
+        // CRITICAL WORKAROUND: Even if getRedirectResult fails due to storage partitioning,
+        // Firebase may have successfully authenticated the user. Check auth state directly.
+        // Firebase stores auth tokens server-side, so even if sessionStorage is partitioned,
+        // the user might still be authenticated and we can detect that via auth.currentUser
+        
+        // Wait a moment for Firebase to complete authentication
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check if user is authenticated despite the error
+        const authenticatedUser = auth.currentUser;
+        if (authenticatedUser) {
+          console.log('✅ User is authenticated despite storage error! (Firebase worked)');
+          
+          // Clear pending flags
+          try {
+            localStorage.removeItem('googleSignInPending');
+            localStorage.removeItem('firebase_redirect_state_backup');
+            localStorage.removeItem('googleSignInTimestamp');
+          } catch (e) {
+            // Ignore
+          }
+          
+          // Navigate back to app if on handler page
+          if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+            window.location.replace(`${appOrigin}/dashboard`);
+          }
+          
+          return {
+            success: true,
+            user: {
+              uid: authenticatedUser.uid,
+              email: authenticatedUser.email,
+              displayName: authenticatedUser.displayName,
+              photoURL: authenticatedUser.photoURL
+            }
+          };
+        }
         
         // Try to recover using auth state listener (see below)
         // Don't return error yet - let the auth state check below handle it
@@ -724,15 +762,40 @@ export const handleGoogleRedirect = async () => {
         }
       }
       
-      // Check if user is already authenticated
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        console.log('✅ User is already authenticated! (redirect sign-in successful)');
-        
-        // If we're on the Firebase handler page, navigate back to app
-        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
-          console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
-          window.location.replace(`${appOrigin}/dashboard`);
+      // CRITICAL WORKAROUND: Check auth state directly even if getRedirectResult failed
+      // Firebase may have authenticated on the handler page despite storage-partitioned error
+      let authCheckAttempts = 0;
+      const maxAuthChecks = 10; // Check up to 5 seconds (10 * 500ms)
+      
+      while (authCheckAttempts < maxAuthChecks) {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          console.log('✅ User authenticated! (detected via auth state check)');
+          
+          // Clear pending flags and backup state
+          try {
+            localStorage.removeItem('googleSignInPending');
+            localStorage.removeItem('firebase_redirect_state_backup');
+            localStorage.removeItem('googleSignInTimestamp');
+          } catch (e) {
+            // Ignore storage errors
+          }
+          
+          // If we're on the Firebase handler page, navigate back to app
+          if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+            console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
+            window.location.replace(`${appOrigin}/dashboard`);
+            return {
+              success: true,
+              user: {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName,
+                photoURL: currentUser.photoURL
+              }
+            };
+          }
+          
           return {
             success: true,
             user: {
@@ -744,31 +807,25 @@ export const handleGoogleRedirect = async () => {
           };
         }
         
-        // Clear pending flags and backup state
-        try {
-          localStorage.removeItem('googleSignInPending');
-          localStorage.removeItem('firebase_redirect_state_backup');
-          localStorage.removeItem('googleSignInTimestamp');
-        } catch (e) {
-          // Ignore storage errors
-        }
-        
-        return {
-          success: true,
-          user: {
-            uid: currentUser.uid,
-            email: currentUser.email,
-            displayName: currentUser.displayName,
-            photoURL: currentUser.photoURL
-          }
-        };
-      } else {
-        console.log('⚠️ User not authenticated yet, but pending sign-in flag exists');
-        console.log('⚠️ This may be a storage-partitioned scenario - will listen for auth state change');
-        
-        // Wait a moment and check again (Firebase might still be processing)
-        // Also listen for auth state change as Firebase processes the sign-in
-        return new Promise((resolve) => {
+        // Wait before checking again
+        await new Promise(resolve => setTimeout(resolve, 500));
+        authCheckAttempts++;
+      }
+      
+      // If we didn't find authenticated user after polling, continue with other checks
+      if (authCheckAttempts >= maxAuthChecks) {
+        console.log('⚠️ User not authenticated after polling, checking other methods...');
+      }
+    }
+    
+    // If we still don't have a user, try listening for auth state change
+    if (!auth.currentUser && (hasPendingSignIn || isDeepLink || isOnAuthHandler)) {
+      console.log('⚠️ User not authenticated yet, but pending sign-in flag exists');
+      console.log('⚠️ This may be a storage-partitioned scenario - will listen for auth state change');
+      
+      // Wait a moment and check again (Firebase might still be processing)
+      // Also listen for auth state change as Firebase processes the sign-in
+      return new Promise((resolve) => {
           let resolved = false;
           const maxWaitTime = 5000; // Wait up to 5 seconds
           const startTime = Date.now();
