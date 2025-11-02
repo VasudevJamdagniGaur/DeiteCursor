@@ -6,6 +6,10 @@ android {
     namespace = "com.deite.app"
     compileSdk = rootProject.ext["compileSdkVersion"] as Int
     
+    buildFeatures {
+        buildConfig = true
+    }
+    
     defaultConfig {
         applicationId = "com.deite.app"
         minSdk = rootProject.ext["minSdkVersion"] as Int
