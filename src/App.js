@@ -54,25 +54,28 @@ function AppContent() {
         }
         
         // PRIORITY 2: Handle other redirect scenarios (deep link, auth handler)
-        const isDeepLink = url.includes('com.deite.app://');
-        const isAuthHandler = url.includes('__/auth/handler');
-        
-        if (isDeepLink || isAuthHandler) {
-          console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, url });
+        // Only check these if NOT on localhost (already handled above)
+        if (!isLocalhost) {
+          const isDeepLink = url.includes('com.deite.app://');
+          const isAuthHandler = url.includes('__/auth/handler');
           
-          // Check redirect result
-          const result = await handleGoogleRedirect();
-          
-          if (result.success && result.user) {
-            console.log('✅ Google Sign-In successful via redirect, navigating to dashboard');
-            navigate('/dashboard', { replace: true });
-          } else if (result.error && !result.isNormalLoad) {
-            console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
+          if (isDeepLink || isAuthHandler) {
+            console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, url });
             
-            // If on auth handler, navigate back to signup
-            if (isAuthHandler) {
-              console.log('🔄 Navigating back to signup');
-              navigate('/signup', { replace: true });
+            // Check redirect result
+            const result = await handleGoogleRedirect();
+            
+            if (result.success && result.user) {
+              console.log('✅ Google Sign-In successful via redirect, navigating to dashboard');
+              navigate('/dashboard', { replace: true });
+            } else if (result.error && !result.isNormalLoad) {
+              console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
+              
+              // If on auth handler, navigate back to signup
+              if (isAuthHandler) {
+                console.log('🔄 Navigating back to signup');
+                navigate('/signup', { replace: true });
+              }
             }
           }
         }

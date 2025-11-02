@@ -673,29 +673,8 @@ export const handleGoogleRedirect = async () => {
       }
     }
     
-    if (isOnAuthHandler) {
-      console.log('📍 Detected Firebase auth handler page - attempting to process result');
-      
-      // CRITICAL: Firebase handler page - redirect to deep link IMMEDIATELY
-      // This opens the app directly without going through localhost
-      console.log('🚀 Redirecting to app via deep link: com.deite.app://auth');
-      
-      // Wait a brief moment for Firebase to process authentication server-side
-      // Then redirect to deep link which opens the app
-      setTimeout(() => {
-        const deepLink = 'com.deite.app://auth';
-        console.log('✅ Opening app via deep link:', deepLink);
-        window.location.href = deepLink;
-      }, 300); // Small delay to let Firebase complete
-      
-      // Return immediately - redirect will happen
-      return {
-        success: false,
-        noRedirect: true,
-        message: 'Redirecting to app via deep link...',
-        redirecting: true
-      };
-    }
+    // Note: Auth handler detection - don't block processing here
+    // We'll handle redirects after checking auth state
     
     // FIRST: Try getRedirectResult (works for WebView redirects)
     // FIX: Enhanced error handling for storage-partitioned errors
@@ -729,11 +708,24 @@ export const handleGoogleRedirect = async () => {
           };
         }
         
-        // If we're on the auth handler page, redirect to deep link
+        // If we're on the auth handler page (Firebase domain), redirect to app
         if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
           console.log('📍 Firebase handler - redirecting to app via deep link');
-          const deepLink = 'com.deite.app://auth';
-          window.location.href = deepLink;
+          
+          // Try deep link first (if supported)
+          try {
+            const deepLink = 'com.deite.app://auth';
+            console.log('🚀 Attempting deep link redirect:', deepLink);
+            // Use setTimeout to allow current execution to complete
+            setTimeout(() => {
+              window.location.href = deepLink;
+            }, 100);
+          } catch (e) {
+            console.warn('⚠️ Deep link redirect failed, using app origin:', e);
+            // Fallback to app origin
+            window.location.replace(`${appOrigin}/dashboard`);
+          }
+          
           return { 
             success: true, 
             user: { 
