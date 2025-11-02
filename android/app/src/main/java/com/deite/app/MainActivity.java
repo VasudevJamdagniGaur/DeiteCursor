@@ -43,12 +43,18 @@ public class MainActivity extends BridgeActivity {
                                         url.contains("googleapis.com") ||
                                         url.contains("google.com/signin");
                     
+                    // CRITICAL: Also catch http://localhost redirects (Firebase OAuth redirect target)
+                    // Firebase redirects to http://localhost when capacitor://localhost isn't supported
+                    boolean isLocalhostRedirect = url.startsWith("http://localhost") || 
+                                                  url.startsWith("https://localhost");
+                    
                     // Check if this is an app scheme (capacitor:// or deep link)
                     boolean isAppScheme = url.startsWith("capacitor://") || 
                                          url.startsWith("com.deite.app://");
                     
-                    // For OAuth URLs and app schemes, load within WebView (don't open external browser)
-                    if (isOAuthUrl || isAppScheme) {
+                    // For OAuth URLs, localhost redirects, and app schemes, load within WebView
+                    // This prevents external browser from opening, which causes storage-partitioned errors
+                    if (isOAuthUrl || isLocalhostRedirect || isAppScheme) {
                         view.loadUrl(url);
                         return true; // We handled it, don't open external browser
                     }
@@ -81,10 +87,15 @@ public class MainActivity extends BridgeActivity {
                                       url.contains("googleapis.com") ||
                                       url.contains("google.com/signin");
                     
+                    // CRITICAL: Also catch http://localhost redirects (Firebase OAuth redirect target)
+                    boolean isLocalhostRedirect = url.startsWith("http://localhost") || 
+                                                 url.startsWith("https://localhost");
+                    
                     boolean isAppScheme = url.startsWith("capacitor://") || 
                                         url.startsWith("com.deite.app://");
                     
-                    if (isOAuthUrl || isAppScheme) {
+                    // For OAuth URLs, localhost redirects, and app schemes, load within WebView
+                    if (isOAuthUrl || isLocalhostRedirect || isAppScheme) {
                         view.loadUrl(url);
                         return true; // We handled it, don't open external browser
                     }

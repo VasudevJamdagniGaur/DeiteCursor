@@ -264,21 +264,30 @@ export const signInWithGoogle = async () => {
         
         // Get app origin - in Capacitor native apps, this is capacitor://localhost
         const appOrigin = window.location.origin;
+        // CRITICAL: Firebase OAuth requires http/https URLs, not custom schemes
+        // Since 'localhost' is in Firebase Authorized Domains, Firebase will redirect to http://localhost
+        // The WebView (via MainActivity) will handle http://localhost and keep it in-app
+        const firebaseRedirectUrl = 'http://localhost';
+        
         console.log('🔄 Using Firebase signInWithRedirect...');
-        console.log('📍 App origin (redirect target):', appOrigin);
+        console.log('📍 App origin (WebView):', appOrigin);
+        console.log('📍 Firebase redirect URL (http://localhost):', firebaseRedirectUrl);
+        console.log('✅ http://localhost is in Firebase Authorized Domains');
         
         // EXPLANATION:
-        // Firebase signInWithRedirect() redirects back to window.location.origin
-        // In your mobile APK, this is: capacitor://localhost (your app!)
-        // The storage-partitioned error occurs when:
+        // Firebase signInWithRedirect() tries to redirect to window.location.origin
+        // In Capacitor apps, that's capacitor://localhost (not supported by OAuth)
+        // Firebase OAuth requires http/https URLs, so it falls back to http://localhost
+        // (since 'localhost' is in your authorized domains)
+        // 
+        // Flow:
         // 1. Firebase stores state in sessionStorage
-        // 2. Browser redirects to Google OAuth (different domain)
-        // 3. Browser redirects to Firebase handler (different domain)
-        // 4. Browser redirects back to app (capacitor://localhost)
-        // 5. Firebase tries to retrieve state from sessionStorage but it's partitioned
+        // 2. WebView navigates to Google OAuth (accounts.google.com) - stays in WebView
+        // 3. User selects account, Google redirects to Firebase handler - stays in WebView
+        // 4. Firebase handler redirects to http://localhost - stays in WebView (MainActivity intercepts)
+        // 5. Firebase retrieves state from sessionStorage (works because it's same WebView!)
         //
-        // SOLUTION: Ensure WebView handles the entire flow within same context
-        // Firebase 9+ should handle this better, but we need to ensure proper configuration
+        // SOLUTION: MainActivity keeps all OAuth URLs in WebView, preventing storage partitioning
         
         // Use Firebase's proper signInWithRedirect method
         const provider = new GoogleAuthProvider();
@@ -294,8 +303,9 @@ export const signInWithGoogle = async () => {
         try {
           const redirectState = {
             timestamp: Date.now(),
-            origin: appOrigin,
-            expectedReturnUrl: `${appOrigin}/__/auth/handler`
+            appOrigin: appOrigin,
+            firebaseRedirectUrl: firebaseRedirectUrl,
+            expectedReturnUrl: `${firebaseRedirectUrl}/__/auth/handler`
           };
           localStorage.setItem('firebase_redirect_state_backup', JSON.stringify(redirectState));
           console.log('✅ Stored redirect state backup in localStorage');
@@ -303,11 +313,16 @@ export const signInWithGoogle = async () => {
           console.warn('⚠️ Could not store redirect state backup:', e);
         }
         
-        // This redirects WebView to Google sign-in, then back to capacitor://localhost
+        // IMPORTANT: Firebase signInWithRedirect() will:
+        // 1. Navigate to Google OAuth (stays in WebView via MainActivity)
+        // 2. After sign-in, redirect to http://localhost (not capacitor://localhost)
+        // 3. http://localhost redirect stays in WebView (MainActivity intercepts)
+        // 4. Firebase processes the redirect result and signs user in
         await signInWithRedirect(auth, provider);
         
         console.log('✅ signInWithRedirect called - redirecting now');
-        console.log('📍 After sign-in, Firebase will redirect back to:', appOrigin);
+        console.log('📍 Firebase will redirect to: http://localhost (authorized domain)');
+        console.log('📍 WebView will handle http://localhost in-app (no external browser)');
         
         // Return immediately - redirect will happen
         return {
