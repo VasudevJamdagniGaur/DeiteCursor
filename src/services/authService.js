@@ -602,9 +602,49 @@ export const handleGoogleRedirect = async () => {
     const appOrigin = storedAppOrigin || window.location.origin;
     const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
     
+    // CRITICAL: Check if we're on localhost redirect (Firebase fallback)
+    // Firebase redirects to http://localhost when capacitor://localhost isn't available
+    // We need to immediately redirect back to the app
+    const isOnLocalhost = window.location.origin === 'http://localhost' || 
+                         window.location.origin === 'https://localhost';
+    
+    if (isOnLocalhost && hasPendingSignIn) {
+      console.log('📍 Detected localhost redirect from Firebase - redirecting back to app');
+      console.log('📍 App origin:', appOrigin);
+      
+      // Wait a moment for Firebase to process authentication
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if user is authenticated
+      if (auth.currentUser) {
+        console.log('✅ User is authenticated on localhost redirect - navigating to dashboard');
+        // Navigate to app on dashboard
+        window.location.replace(`${appOrigin}/dashboard`);
+        return {
+          success: true,
+          user: {
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email,
+            displayName: auth.currentUser.displayName,
+            photoURL: auth.currentUser.photoURL
+          }
+        };
+      }
+      
+      // If not authenticated yet, still redirect to app (will check auth state there)
+      console.log('⚠️ User not authenticated yet, redirecting to app to check auth state');
+      window.location.replace(`${appOrigin}/signup`);
+      return {
+        success: false,
+        noRedirect: true,
+        message: 'Redirecting back to app...'
+      };
+    }
+    
     console.log('🔍 Checking for Google Sign-In result...', {
       isDeepLink,
       isOnAuthHandler,
+      isOnLocalhost,
       hasPendingSignIn,
       currentUrl: currentUrl.substring(0, 100)
     });
@@ -930,6 +970,7 @@ export const handleGoogleRedirect = async () => {
       console.warn('⚠️ On auth handler page but no redirect result - likely storage-partitioned error');
       // Navigate back to the app domain signup page
       if (!window.location.origin.startsWith(appOrigin)) {
+        console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
         window.location.replace(`${appOrigin}/signup`);
       }
       return {
@@ -937,6 +978,37 @@ export const handleGoogleRedirect = async () => {
         error: 'Browser storage restrictions prevented sign-in. Please try using email/password sign-up instead.',
         code: 'storage-partitioned',
         isNormalLoad: false
+      };
+    }
+    
+    // CRITICAL: If we're on localhost (Firebase redirect fallback), navigate back to app
+    if (isOnLocalhost && hasPendingSignIn) {
+      console.log('📍 On localhost redirect - checking auth state and redirecting to app');
+      
+      // Check auth state one more time before redirecting
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (auth.currentUser) {
+        console.log('✅ User authenticated - redirecting to dashboard');
+        window.location.replace(`${appOrigin}/dashboard`);
+        return {
+          success: true,
+          user: {
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email,
+            displayName: auth.currentUser.displayName,
+            photoURL: auth.currentUser.photoURL
+          }
+        };
+      }
+      
+      // Redirect to app signup page
+      console.log('📍 Redirecting from localhost to app:', appOrigin);
+      window.location.replace(`${appOrigin}/signup`);
+      return { 
+        success: false, 
+        noRedirect: true,
+        message: 'Redirecting back to app...'
       };
     }
     

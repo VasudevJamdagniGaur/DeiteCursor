@@ -37,22 +37,28 @@ function AppContent() {
     // Don't block app startup - check redirect asynchronously
     const handleAuthRedirect = async () => {
       try {
-        // Check if we're returning from a deep link or auth handler
         const url = window.location.href;
-        if (url.includes('com.deite.app://') || url.includes('__/auth/handler')) {
-          console.log('🔗 Detected deep link or auth handler URL:', url);
+        const isLocalhost = window.location.origin === 'http://localhost' || 
+                          window.location.origin === 'https://localhost';
+        const isDeepLink = url.includes('com.deite.app://');
+        const isAuthHandler = url.includes('__/auth/handler');
+        const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
+        
+        // Check if we're returning from a redirect (deep link, auth handler, or localhost)
+        if (isDeepLink || isAuthHandler || (isLocalhost && hasPendingSignIn)) {
+          console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, isLocalhost, url });
           
           // Check redirect result
           const result = await handleGoogleRedirect();
           
           if (result.success && result.user) {
-            console.log('✅ Google Sign-In successful via redirect/handler, navigating to dashboard');
+            console.log('✅ Google Sign-In successful via redirect, navigating to dashboard');
             navigate('/dashboard', { replace: true });
           } else if (result.error && !result.isNormalLoad) {
             console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
             
-            // If on auth handler page, navigate back to signup
-            if (window.location.href.includes('__/auth/handler')) {
+            // If on auth handler or localhost, navigate back to signup
+            if (isAuthHandler || isLocalhost) {
               console.log('🔄 Navigating back to signup');
               navigate('/signup', { replace: true });
             }
