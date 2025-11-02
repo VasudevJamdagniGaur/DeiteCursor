@@ -292,6 +292,18 @@ export const signInWithGoogle = async () => {
           prompt: 'select_account'
         });
         
+        // CRITICAL: Configure redirect URL to use deep link
+        // Firebase will redirect to this after OAuth completes
+        // We set it to our app's deep link scheme
+        try {
+          // Store the deep link we want to redirect to
+          const deepLinkRedirect = 'com.deite.app://auth';
+          localStorage.setItem('oauthDeepLink', deepLinkRedirect);
+          console.log('✅ Stored deep link for OAuth redirect:', deepLinkRedirect);
+        } catch (e) {
+          console.warn('⚠️ Could not store deep link:', e);
+        }
+        
         // Pre-store redirect information in localStorage (persists across redirects)
         // This helps us recover state if sessionStorage is partitioned
         try {
@@ -663,6 +675,26 @@ export const handleGoogleRedirect = async () => {
     
     if (isOnAuthHandler) {
       console.log('📍 Detected Firebase auth handler page - attempting to process result');
+      
+      // CRITICAL: Firebase handler page - redirect to deep link IMMEDIATELY
+      // This opens the app directly without going through localhost
+      console.log('🚀 Redirecting to app via deep link: com.deite.app://auth');
+      
+      // Wait a brief moment for Firebase to process authentication server-side
+      // Then redirect to deep link which opens the app
+      setTimeout(() => {
+        const deepLink = 'com.deite.app://auth';
+        console.log('✅ Opening app via deep link:', deepLink);
+        window.location.href = deepLink;
+      }, 300); // Small delay to let Firebase complete
+      
+      // Return immediately - redirect will happen
+      return {
+        success: false,
+        noRedirect: true,
+        message: 'Redirecting to app via deep link...',
+        redirecting: true
+      };
     }
     
     // FIRST: Try getRedirectResult (works for WebView redirects)
@@ -683,11 +715,9 @@ export const handleGoogleRedirect = async () => {
           // Ignore storage errors
         }
         
-        // If we're on the auth handler page (Firebase domain), navigate back to app after getting result
-        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
-          console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
-          // Navigate back to app's origin on the dashboard
-          window.location.replace(`${appOrigin}/dashboard`);
+        // If we got here from deep link redirect, user is already in app
+        // Just return success - no need to redirect again
+        if (isDeepLink) {
           return { 
             success: true, 
             user: { 
@@ -696,6 +726,23 @@ export const handleGoogleRedirect = async () => {
               displayName: user.displayName, 
               photoURL: user.photoURL 
             }
+          };
+        }
+        
+        // If we're on the auth handler page, redirect to deep link
+        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+          console.log('📍 Firebase handler - redirecting to app via deep link');
+          const deepLink = 'com.deite.app://auth';
+          window.location.href = deepLink;
+          return { 
+            success: true, 
+            user: { 
+              uid: user.uid, 
+              email: user.email, 
+              displayName: user.displayName, 
+              photoURL: user.photoURL 
+            },
+            redirecting: true
           };
         }
         
