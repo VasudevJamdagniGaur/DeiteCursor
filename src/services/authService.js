@@ -264,28 +264,22 @@ export const signInWithGoogle = async () => {
         
         // Get app origin - in Capacitor native apps, this is capacitor://localhost
         const appOrigin = window.location.origin;
-        // CRITICAL: Firebase OAuth requires http/https URLs, not custom schemes
-        // Since 'localhost' is in Firebase Authorized Domains, Firebase will redirect to http://localhost
-        // The WebView (via MainActivity) will handle http://localhost and keep it in-app
-        const firebaseRedirectUrl = 'http://localhost';
         
         console.log('🔄 Using Firebase signInWithRedirect...');
         console.log('📍 App origin (WebView):', appOrigin);
-        console.log('📍 Firebase redirect URL (http://localhost):', firebaseRedirectUrl);
-        console.log('✅ http://localhost is in Firebase Authorized Domains');
+        console.log('📍 Firebase will redirect to:', appOrigin);
         
         // EXPLANATION:
-        // Firebase signInWithRedirect() tries to redirect to window.location.origin
-        // In Capacitor apps, that's capacitor://localhost (not supported by OAuth)
-        // Firebase OAuth requires http/https URLs, so it falls back to http://localhost
-        // (since 'localhost' is in your authorized domains)
+        // Firebase signInWithRedirect() redirects back to window.location.origin
+        // In Capacitor apps, that's capacitor://localhost (the app itself!)
         // 
         // Flow:
         // 1. Firebase stores state in sessionStorage
         // 2. WebView navigates to Google OAuth (accounts.google.com) - stays in WebView
         // 3. User selects account, Google redirects to Firebase handler - stays in WebView
-        // 4. Firebase handler redirects to http://localhost - stays in WebView (MainActivity intercepts)
-        // 5. Firebase retrieves state from sessionStorage (works because it's same WebView!)
+        // 4. Firebase handler processes OAuth and redirects back to capacitor://localhost
+        // 5. WebView receives redirect, JavaScript checks auth state
+        // 6. User is authenticated and navigated to dashboard
         //
         // SOLUTION: MainActivity keeps all OAuth URLs in WebView, preventing storage partitioning
         
@@ -304,8 +298,7 @@ export const signInWithGoogle = async () => {
           const redirectState = {
             timestamp: Date.now(),
             appOrigin: appOrigin,
-            firebaseRedirectUrl: firebaseRedirectUrl,
-            expectedReturnUrl: `${firebaseRedirectUrl}/__/auth/handler`
+            expectedReturnUrl: `${appOrigin}/__/auth/handler`
           };
           localStorage.setItem('firebase_redirect_state_backup', JSON.stringify(redirectState));
           console.log('✅ Stored redirect state backup in localStorage');
@@ -313,21 +306,21 @@ export const signInWithGoogle = async () => {
           console.warn('⚠️ Could not store redirect state backup:', e);
         }
         
-        // CRITICAL: Firebase signInWithRedirect() flow:
+        // Firebase signInWithRedirect() flow:
         // 1. Stores OAuth state in sessionStorage
         // 2. Navigates WebView to Google OAuth (MainActivity keeps in WebView)
         // 3. User selects account, Google redirects to Firebase handler (stays in WebView)
-        // 4. Firebase handler redirects to http://localhost (MainActivity intercepts, keeps in WebView)
-        // 5. When http://localhost loads in WebView, Firebase can read sessionStorage (same WebView!)
-        // 6. Firebase processes redirect and signs user in
+        // 4. Firebase handler processes OAuth and redirects back to capacitor://localhost
+        // 5. WebView receives redirect, handleGoogleRedirect() processes it
+        // 6. User is authenticated and navigated to dashboard
         //
-        // IMPORTANT: MainActivity.java intercepts http://localhost and keeps it in WebView
+        // IMPORTANT: MainActivity.java keeps all OAuth URLs in WebView
         // This ensures the ENTIRE flow happens in the SAME WebView context
         // sessionStorage persists because it's the same WebView (not external browser)
         await signInWithRedirect(auth, provider);
         
         console.log('✅ signInWithRedirect called - redirecting now');
-        console.log('📍 Flow: WebView → Google OAuth → Firebase Handler → http://localhost');
+        console.log('📍 Flow: WebView → Google OAuth → Firebase Handler → capacitor://localhost');
         console.log('📍 ALL redirects stay in WebView (MainActivity intercepts)');
         console.log('📍 User will be signed in automatically when redirect completes');
         
@@ -665,16 +658,11 @@ export const handleGoogleRedirect = async () => {
           // Ignore storage errors
         }
         
-        // CRITICAL: After successful redirect, navigate back to app routes
-        // If we're on http://localhost (from Firebase redirect), go back to app origin
-        const currentOrigin = window.location.origin;
-        const isOnLocalhostRedirect = currentOrigin === 'http://localhost' || currentOrigin === 'https://localhost';
-        
-        if (isOnLocalhostRedirect || (isOnAuthHandler && !currentOrigin.startsWith(appOrigin))) {
-          console.log('📍 Redirecting from http://localhost back to app:', appOrigin);
-          // Navigate back to app's origin (capacitor://localhost) on the dashboard
+        // If we're on the auth handler page (Firebase domain), navigate back to app after getting result
+        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+          console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
+          // Navigate back to app's origin on the dashboard
           window.location.replace(`${appOrigin}/dashboard`);
-          // Return success - navigation will happen
           return { 
             success: true, 
             user: { 
@@ -682,8 +670,7 @@ export const handleGoogleRedirect = async () => {
               email: user.email, 
               displayName: user.displayName, 
               photoURL: user.photoURL 
-            },
-            navigated: true
+            }
           };
         }
         
@@ -742,13 +729,9 @@ export const handleGoogleRedirect = async () => {
       if (currentUser) {
         console.log('✅ User is already authenticated! (redirect sign-in successful)');
         
-        // CRITICAL: If we're on http://localhost (from Firebase redirect), navigate back to app
-        const currentOrigin = window.location.origin;
-        const isOnLocalhostRedirect = currentOrigin === 'http://localhost' || currentOrigin === 'https://localhost';
-        
-        if (isOnLocalhostRedirect) {
-          console.log('📍 Redirecting from http://localhost back to app:', appOrigin);
-          // Navigate to app origin on dashboard
+        // If we're on the Firebase handler page, navigate back to app
+        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+          console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
           window.location.replace(`${appOrigin}/dashboard`);
           return {
             success: true,
@@ -757,8 +740,7 @@ export const handleGoogleRedirect = async () => {
               email: currentUser.email,
               displayName: currentUser.displayName,
               photoURL: currentUser.photoURL
-            },
-            navigated: true
+            }
           };
         }
         
