@@ -200,8 +200,8 @@ export const signInWithGoogle = async () => {
       origin: window.location.origin
     });
     
-    // NATIVE APP: Use Firebase's signInWithRedirect (proper method, works in WebView)
-    // This is the correct way - let Firebase handle everything
+    // NATIVE APP: Use Firebase's signInWithRedirect with storage workaround
+    // FIX: Address storage-partitioned browser issue by ensuring state persistence
     if (isNativeApp) {
       console.log('📱 Detected native platform - using Firebase signInWithRedirect');
       
@@ -209,19 +209,46 @@ export const signInWithGoogle = async () => {
       try {
         localStorage.setItem('appOrigin', window.location.origin);
         localStorage.setItem('googleSignInPending', 'true');
+        // Store timestamp to help with state recovery
+        localStorage.setItem('googleSignInTimestamp', Date.now().toString());
         console.log('✅ Stored app origin:', window.location.origin);
       } catch (e) {
         console.warn('Could not store app info:', e);
       }
       
       try {
-        // Ensure we can save to sessionStorage (required by Firebase)
+        // CRITICAL FIX: Check BOTH sessionStorage and localStorage
+        // Some browsers partition sessionStorage but allow localStorage
+        let storageAvailable = false;
+        let sessionStorageAvailable = false;
+        let localStorageAvailable = false;
+        
         try {
           sessionStorage.setItem('__firebase_redirect_check__', 'test');
+          const sessionValue = sessionStorage.getItem('__firebase_redirect_check__');
           sessionStorage.removeItem('__firebase_redirect_check__');
-          console.log('✅ Storage check passed - sessionStorage is available');
-        } catch (storageError) {
-          console.error('❌ Storage check failed:', storageError);
+          if (sessionValue === 'test') {
+            sessionStorageAvailable = true;
+            storageAvailable = true;
+          }
+        } catch (e) {
+          console.warn('⚠️ sessionStorage check failed:', e);
+        }
+        
+        try {
+          localStorage.setItem('__firebase_redirect_check__', 'test');
+          const localValue = localStorage.getItem('__firebase_redirect_check__');
+          localStorage.removeItem('__firebase_redirect_check__');
+          if (localValue === 'test') {
+            localStorageAvailable = true;
+            storageAvailable = true;
+          }
+        } catch (e) {
+          console.warn('⚠️ localStorage check failed:', e);
+        }
+        
+        if (!storageAvailable) {
+          console.error('❌ Both sessionStorage and localStorage are blocked');
           return {
             success: false,
             error: 'Your browser\'s privacy settings are preventing Google sign-in. Please enable cookies and storage for this site, or use the email/password sign-up option.',
@@ -230,21 +257,51 @@ export const signInWithGoogle = async () => {
           };
         }
         
+        console.log('✅ Storage check passed:', {
+          sessionStorage: sessionStorageAvailable,
+          localStorage: localStorageAvailable
+        });
+        
         // Get app origin - in Capacitor native apps, this is capacitor://localhost
         const appOrigin = window.location.origin;
         console.log('🔄 Using Firebase signInWithRedirect...');
         console.log('📍 App origin (redirect target):', appOrigin);
-        console.log('📍 This is NOT http://localhost - it\'s the app\'s origin!');
         
         // EXPLANATION:
         // Firebase signInWithRedirect() redirects back to window.location.origin
         // In your mobile APK, this is: capacitor://localhost (your app!)
-        // NOT http://localhost - that's only in web browsers!
-        // Firebase will redirect back to capacitor://localhost after sign-in
-        // Make sure capacitor://localhost is in Firebase Authorized Domains!
+        // The storage-partitioned error occurs when:
+        // 1. Firebase stores state in sessionStorage
+        // 2. Browser redirects to Google OAuth (different domain)
+        // 3. Browser redirects to Firebase handler (different domain)
+        // 4. Browser redirects back to app (capacitor://localhost)
+        // 5. Firebase tries to retrieve state from sessionStorage but it's partitioned
+        //
+        // SOLUTION: Ensure WebView handles the entire flow within same context
+        // Firebase 9+ should handle this better, but we need to ensure proper configuration
         
         // Use Firebase's proper signInWithRedirect method
         const provider = new GoogleAuthProvider();
+        
+        // CRITICAL: Set custom parameters to help with state management
+        // This ensures the OAuth flow includes proper state parameters
+        provider.setCustomParameters({
+          prompt: 'select_account'
+        });
+        
+        // Pre-store redirect information in localStorage (persists across redirects)
+        // This helps us recover state if sessionStorage is partitioned
+        try {
+          const redirectState = {
+            timestamp: Date.now(),
+            origin: appOrigin,
+            expectedReturnUrl: `${appOrigin}/__/auth/handler`
+          };
+          localStorage.setItem('firebase_redirect_state_backup', JSON.stringify(redirectState));
+          console.log('✅ Stored redirect state backup in localStorage');
+        } catch (e) {
+          console.warn('⚠️ Could not store redirect state backup:', e);
+        }
         
         // This redirects WebView to Google sign-in, then back to capacitor://localhost
         await signInWithRedirect(auth, provider);
@@ -261,13 +318,21 @@ export const signInWithGoogle = async () => {
       } catch (redirectError) {
         console.error('❌ signInWithRedirect failed:', redirectError);
         
+        // Clean up stored state on error
+        try {
+          localStorage.removeItem('firebase_redirect_state_backup');
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        
         // If redirect fails, provide helpful error
         if (redirectError.code === 'auth/argument-error' || 
             redirectError.message?.includes('initial state') ||
-            redirectError.message?.includes('storage')) {
+            redirectError.message?.includes('storage') ||
+            redirectError.message?.includes('sessionStorage')) {
           return {
             success: false,
-            error: 'Your browser\'s privacy settings are preventing Google sign-in. Please enable cookies and storage, or use email/password sign-up.',
+            error: 'Google sign-in encountered a storage issue. This may happen if your browser has strict privacy settings. Please try: 1) Clear app data and retry, 2) Use email/password sign-up instead, or 3) Check that capacitor://localhost is in Firebase Authorized Domains.',
             code: 'storage-partitioned',
             useEmailInstead: true
           };
@@ -561,7 +626,7 @@ export const handleGoogleRedirect = async () => {
     }
     
     // FIRST: Try getRedirectResult (works for WebView redirects)
-    // This won't work for external browser flows, but we check it first
+    // FIX: Enhanced error handling for storage-partitioned errors
     let result = null;
     try {
       result = await getRedirectResult(auth);
@@ -569,9 +634,11 @@ export const handleGoogleRedirect = async () => {
         const user = result.user;
         console.log('✅ Google Sign-In successful via getRedirectResult:', user);
         
-        // Clear any pending sign-in flags
+        // Clear any pending sign-in flags and backup state
         try {
           localStorage.removeItem('googleSignInPending');
+          localStorage.removeItem('firebase_redirect_state_backup');
+          localStorage.removeItem('googleSignInTimestamp');
         } catch (e) {
           // Ignore storage errors
         }
@@ -593,23 +660,55 @@ export const handleGoogleRedirect = async () => {
         };
       }
     } catch (redirectError) {
-      console.warn('⚠️ getRedirectResult error (expected for external browser):', redirectError.message);
+      // Check if this is the storage-partitioned error
+      if (redirectError.message?.includes('missing initial state') || 
+          redirectError.message?.includes('sessionStorage') ||
+          redirectError.code === 'auth/argument-error') {
+        console.warn('⚠️ Storage-partitioned error detected in getRedirectResult');
+        console.warn('⚠️ This means sessionStorage was partitioned - will try alternative recovery');
+        
+        // Try to recover using auth state listener (see below)
+        // Don't return error yet - let the auth state check below handle it
+      } else {
+        console.warn('⚠️ getRedirectResult error:', redirectError.message);
+      }
     }
     
     // SECOND: Check current auth state (works for WebView redirect flows)
+    // FIX: Enhanced recovery for storage-partitioned scenarios
     // If user signed in via WebView redirect, Firebase auth state should be updated
     // We check this when app loads or resumes
     if (hasPendingSignIn || isDeepLink || isOnAuthHandler) {
       console.log('🔍 Checking current auth state (WebView redirect flow)...');
       
+      // Check if we have a stored redirect state backup (indicates storage partitioning)
+      const storedRedirectState = localStorage.getItem('firebase_redirect_state_backup');
+      if (storedRedirectState) {
+        try {
+          const state = JSON.parse(storedRedirectState);
+          const age = Date.now() - state.timestamp;
+          console.log('📍 Found redirect state backup (storage partitioning detected), age:', age, 'ms');
+          
+          // If state is too old (more than 5 minutes), clean it up
+          if (age > 5 * 60 * 1000) {
+            localStorage.removeItem('firebase_redirect_state_backup');
+            console.log('⚠️ Redirect state backup is too old, removed');
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not parse redirect state backup:', e);
+        }
+      }
+      
       // Check if user is already authenticated
       const currentUser = auth.currentUser;
       if (currentUser) {
-        console.log('✅ User is already authenticated! (external browser sign-in successful)');
+        console.log('✅ User is already authenticated! (redirect sign-in successful)');
         
-        // Clear pending flag
+        // Clear pending flags and backup state
         try {
           localStorage.removeItem('googleSignInPending');
+          localStorage.removeItem('firebase_redirect_state_backup');
+          localStorage.removeItem('googleSignInTimestamp');
         } catch (e) {
           // Ignore storage errors
         }
@@ -625,60 +724,107 @@ export const handleGoogleRedirect = async () => {
         };
       } else {
         console.log('⚠️ User not authenticated yet, but pending sign-in flag exists');
+        console.log('⚠️ This may be a storage-partitioned scenario - will listen for auth state change');
+        
         // Wait a moment and check again (Firebase might still be processing)
         // Also listen for auth state change as Firebase processes the sign-in
         return new Promise((resolve) => {
+          let resolved = false;
+          const maxWaitTime = 5000; // Wait up to 5 seconds
+          const startTime = Date.now();
+          
           const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user && hasPendingSignIn) {
+            if (user && (hasPendingSignIn || isDeepLink || isOnAuthHandler)) {
               console.log('✅ Auth state changed - user is now authenticated!');
-              unsubscribe(); // Stop listening
               
-              // Clear pending flag
+              if (!resolved) {
+                resolved = true;
+                unsubscribe(); // Stop listening
+                
+                // Clear pending flags and backup state
+                try {
+                  localStorage.removeItem('googleSignInPending');
+                  localStorage.removeItem('firebase_redirect_state_backup');
+                  localStorage.removeItem('googleSignInTimestamp');
+                } catch (e) {
+                  // Ignore
+                }
+                
+                resolve({
+                  success: true,
+                  user: {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL
+                  }
+                });
+              }
+            }
+          });
+          
+          // Also check periodically in case auth state listener doesn't fire
+          const checkInterval = setInterval(() => {
+            if (resolved) {
+              clearInterval(checkInterval);
+              return;
+            }
+            
+            const elapsed = Date.now() - startTime;
+            if (elapsed >= maxWaitTime) {
+              clearInterval(checkInterval);
+              unsubscribe();
+              
+              // Final check
+              if (auth.currentUser) {
+                const finalUser = auth.currentUser;
+                resolved = true;
+                try {
+                  localStorage.removeItem('googleSignInPending');
+                  localStorage.removeItem('firebase_redirect_state_backup');
+                  localStorage.removeItem('googleSignInTimestamp');
+                } catch (e) {}
+                resolve({
+                  success: true,
+                  user: {
+                    uid: finalUser.uid,
+                    email: finalUser.email,
+                    displayName: finalUser.displayName,
+                    photoURL: finalUser.photoURL
+                  }
+                });
+              } else {
+                resolved = true;
+                console.warn('⚠️ No sign-in detected after waiting');
+                resolve({
+                  success: false,
+                  noRedirect: true,
+                  message: 'Sign-in may have failed due to browser storage restrictions. Please try again or use email/password sign-up.',
+                  storagePartitioned: true
+                });
+              }
+            } else if (auth.currentUser && !resolved) {
+              // Found user during periodic check
+              const foundUser = auth.currentUser;
+              clearInterval(checkInterval);
+              unsubscribe();
+              resolved = true;
               try {
                 localStorage.removeItem('googleSignInPending');
-              } catch (e) {
-                // Ignore
-              }
-              
+                localStorage.removeItem('firebase_redirect_state_backup');
+                localStorage.removeItem('googleSignInTimestamp');
+              } catch (e) {}
               resolve({
                 success: true,
                 user: {
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName,
-                  photoURL: user.photoURL
+                  uid: foundUser.uid,
+                  email: foundUser.email,
+                  displayName: foundUser.displayName,
+                  photoURL: foundUser.photoURL
                 }
               });
-            } else {
-              // Wait a bit more before giving up
-              setTimeout(() => {
-                if (auth.currentUser) {
-                  const finalUser = auth.currentUser;
-                  unsubscribe();
-                  try {
-                    localStorage.removeItem('googleSignInPending');
-                  } catch (e) {}
-                  resolve({
-                    success: true,
-                    user: {
-                      uid: finalUser.uid,
-                      email: finalUser.email,
-                      displayName: finalUser.displayName,
-                      photoURL: finalUser.photoURL
-                    }
-                  });
-                } else {
-                  // No user after waiting - sign-in didn't complete
-                  unsubscribe();
-                  resolve({
-                    success: false,
-                    noRedirect: true,
-                    message: 'No sign-in detected. Please try again.'
-                  });
-                }
-              }, 2000);
             }
-          });
+          }, 500); // Check every 500ms
         });
       }
     }

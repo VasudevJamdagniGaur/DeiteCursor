@@ -54,6 +54,36 @@ function AppContent() {
           // Only log errors that aren't expected (like normal page loads)
           console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
           
+          // Special handling for storage-partitioned errors
+          if (result.storagePartitioned || result.error?.includes('storage') || result.error?.includes('initial state')) {
+            console.error('❌ Storage-partitioned error detected');
+            console.error('❌ This means the browser blocked sessionStorage access during redirect');
+            console.error('❌ The sign-in may have actually succeeded - checking auth state...');
+            
+            // Wait a moment and check auth state - Firebase might have authenticated despite the error
+            setTimeout(async () => {
+              try {
+                const { getCurrentUser } = await import('./services/authService');
+                const user = getCurrentUser();
+                if (user) {
+                  console.log('✅ User is authenticated despite storage error - sign-in succeeded!');
+                  navigate('/dashboard', { replace: true });
+                  return;
+                }
+              } catch (e) {
+                console.warn('⚠️ Could not check auth state:', e);
+              }
+              
+              // If no user found, navigate back to signup
+              if (window.location.href.includes('__/auth/handler') || window.location.href.includes('firebaseapp.com')) {
+                console.log('🔄 Navigating back to signup due to storage error');
+                navigate('/signup', { replace: true });
+              }
+            }, 2000);
+            
+            return; // Don't navigate immediately - wait for auth check
+          }
+          
           // If we're on the Firebase auth handler page with an error, navigate back to signup
           if (window.location.href.includes('__/auth/handler') && result.error) {
             console.log('🔄 Redirected to auth handler with error, navigating back to signup');
