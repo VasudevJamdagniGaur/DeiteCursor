@@ -816,16 +816,15 @@ export const handleGoogleRedirect = async () => {
       if (authCheckAttempts >= maxAuthChecks) {
         console.log('⚠️ User not authenticated after polling, checking other methods...');
       }
-    }
-    
-    // If we still don't have a user, try listening for auth state change
-    if (!auth.currentUser && (hasPendingSignIn || isDeepLink || isOnAuthHandler)) {
-      console.log('⚠️ User not authenticated yet, but pending sign-in flag exists');
-      console.log('⚠️ This may be a storage-partitioned scenario - will listen for auth state change');
       
-      // Wait a moment and check again (Firebase might still be processing)
-      // Also listen for auth state change as Firebase processes the sign-in
-      return new Promise((resolve) => {
+      // If we still don't have a user, try listening for auth state change
+      if (!auth.currentUser && (hasPendingSignIn || isDeepLink || isOnAuthHandler)) {
+        console.log('⚠️ User not authenticated yet, but pending sign-in flag exists');
+        console.log('⚠️ This may be a storage-partitioned scenario - will listen for auth state change');
+        
+        // Wait a moment and check again (Firebase might still be processing)
+        // Also listen for auth state change as Firebase processes the sign-in
+        return new Promise((resolve) => {
           let resolved = false;
           const maxWaitTime = 5000; // Wait up to 5 seconds
           const startTime = Date.now();
