@@ -609,35 +609,20 @@ export const handleGoogleRedirect = async () => {
                          window.location.origin === 'https://localhost';
     
     if (isOnLocalhost && hasPendingSignIn) {
-      console.log('📍 Detected localhost redirect from Firebase - redirecting back to app');
+      console.log('📍 Detected localhost redirect from Firebase - redirecting back to app IMMEDIATELY');
       console.log('📍 App origin:', appOrigin);
       
-      // Wait a moment for Firebase to process authentication
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // IMMEDIATE redirect - don't wait, redirect now
+      // Firebase authentication happens server-side, so we'll check auth state after redirect
+      console.log('🚀 Redirecting to app dashboard immediately...');
+      window.location.replace(`${appOrigin}/dashboard`);
       
-      // Check if user is authenticated
-      if (auth.currentUser) {
-        console.log('✅ User is authenticated on localhost redirect - navigating to dashboard');
-        // Navigate to app on dashboard
-        window.location.replace(`${appOrigin}/dashboard`);
-        return {
-          success: true,
-          user: {
-            uid: auth.currentUser.uid,
-            email: auth.currentUser.email,
-            displayName: auth.currentUser.displayName,
-            photoURL: auth.currentUser.photoURL
-          }
-        };
-      }
-      
-      // If not authenticated yet, still redirect to app (will check auth state there)
-      console.log('⚠️ User not authenticated yet, redirecting to app to check auth state');
-      window.location.replace(`${appOrigin}/signup`);
+      // Return immediately - redirect is happening
       return {
         success: false,
         noRedirect: true,
-        message: 'Redirecting back to app...'
+        message: 'Redirecting back to app...',
+        redirecting: true
       };
     }
     
@@ -981,36 +966,8 @@ export const handleGoogleRedirect = async () => {
       };
     }
     
-    // CRITICAL: If we're on localhost (Firebase redirect fallback), navigate back to app
-    if (isOnLocalhost && hasPendingSignIn) {
-      console.log('📍 On localhost redirect - checking auth state and redirecting to app');
-      
-      // Check auth state one more time before redirecting
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (auth.currentUser) {
-        console.log('✅ User authenticated - redirecting to dashboard');
-        window.location.replace(`${appOrigin}/dashboard`);
-        return {
-          success: true,
-          user: {
-            uid: auth.currentUser.uid,
-            email: auth.currentUser.email,
-            displayName: auth.currentUser.displayName,
-            photoURL: auth.currentUser.photoURL
-          }
-        };
-      }
-      
-      // Redirect to app signup page
-      console.log('📍 Redirecting from localhost to app:', appOrigin);
-      window.location.replace(`${appOrigin}/signup`);
-      return { 
-        success: false, 
-        noRedirect: true,
-        message: 'Redirecting back to app...'
-      };
-    }
+    // Note: Localhost redirects are handled at the top of the function
+    // This section is for other redirect scenarios
     
     // No redirect result - user didn't come from a redirect
     return { success: false, noRedirect: true };
