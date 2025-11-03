@@ -78,28 +78,41 @@ export default function EmotionalWellbeing() {
 
   // Add CSS animation styles and mobile utilities
   React.useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
+    try {
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+        
+        @media (max-width: 475px) {
+          .xs\\:block {
+            display: none !important;
+          }
         }
-      }
-      
-      @media (max-width: 475px) {
-        .xs\\:block {
-          display: none !important;
+      `;
+      document.head.appendChild(style);
+      return () => {
+        try {
+          document.head.removeChild(style);
+        } catch (e) {
+          // Style already removed or doesn't exist
         }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+      };
+    } catch (error) {
+      console.error('Error adding styles:', error);
+    }
   }, []);
+  
+  // Add initial loading state
+  const [isInitializing, setIsInitializing] = useState(true);
   const [emotionalData, setEmotionalData] = useState([]);
   const [weeklyMoodData, setWeeklyMoodData] = useState([]);
   const [moodBalance, setMoodBalance] = useState([]);
@@ -462,82 +475,119 @@ export default function EmotionalWellbeing() {
 
   // Load cached data instantly on mount only
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      // CRITICAL FIX: Migrate any existing localStorage data to Firestore
-      const migrated = localStorage.getItem('emotional_data_migrated');
-      if (!migrated) {
-        console.log('🔄 First time loading - checking for localStorage data to migrate...');
-        emotionalAnalysisService.migrateLocalStorageToFirestore(user.uid).then(result => {
-          if (result.success) {
-            console.log(`✅ Migration complete: ${result.migrated} records migrated`);
-            localStorage.setItem('emotional_data_migrated', 'true');
-            // Clear cache to force reload with new data
-            const cacheKeys = Object.keys(localStorage).filter(key =>
-              key.includes('emotional_wellbeing') || key.includes('moodChart')
-            );
-            cacheKeys.forEach(key => localStorage.removeItem(key));
-          }
-        });
-      }
-      
-      // Check if we need to force fresh data loading (bypass all caching)
-      const forceFreshUntil = localStorage.getItem('force_fresh_data_until');
-      const currentTime = Date.now();
-      const shouldForceFresh = forceFreshUntil && parseInt(forceFreshUntil) > currentTime;
-
-      if (shouldForceFresh) {
-        console.log('🚨 FORCE FRESH MODE: Bypassing all caching for fresh data...');
-        // Skip all caching and load directly from Firestore
-        loadFreshDataOnly();
-        return;
-      }
-
-      // Check if we need to force refresh due to new data
-      const lastRefresh = localStorage.getItem('emotional_data_refresh');
-      const shouldForceRefresh = lastRefresh && (currentTime - parseInt(lastRefresh)) < 60000; // Within last minute
-
-      if (shouldForceRefresh) {
-        console.log('🔄 FORCE REFRESH: New emotional data detected, clearing all caches...');
-        // Clear ALL emotional wellbeing caches
-        const cacheKeys = Object.keys(localStorage).filter(key =>
-          key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance') || key.includes('force_fresh_data_until')
-        );
-        cacheKeys.forEach(key => {
-          localStorage.removeItem(key);
-          console.log('🗑️ Cleared cache:', key);
-        });
-      }
-
-      // Load cached data instantly on initial mount only
-      loadCachedData(user.uid);
-
-      // CRITICAL: Check for forced fresh data and use it immediately
-      const forcedCacheKey = `emotional_wellbeing_emotional_7_${user.uid}`;
-      const forcedData = localStorage.getItem(forcedCacheKey);
-
-      if (forcedData) {
-        try {
-          const parsedForcedData = JSON.parse(forcedData);
-          console.log('🔥 FORCE DATA: Using forced fresh data:', parsedForcedData);
-          setWeeklyMoodData(parsedForcedData.weeklyMoodData || []);
-          setEmotionalData(parsedForcedData.emotionalData || []);
-          setChartKey(prev => prev + 1); // Force chart re-render
-        } catch (error) {
-          console.error('❌ Error parsing forced data:', error);
+    const initializeComponent = async () => {
+      try {
+        setIsInitializing(true);
+        const user = getCurrentUser();
+        
+        if (!user) {
+          console.warn('⚠️ No user found, component will render with empty state');
+          setIsInitializing(false);
+          return;
         }
-      }
 
-      // Only fetch fresh data in background if it's a new day after 12 PM
-      // Otherwise, use cached data (refresh button will force update when needed)
-      const shouldRefresh = shouldRefreshForNewDay(lastCacheUpdate ? new Date(lastCacheUpdate).toDateString() : null);
-      if (shouldRefresh) {
-        console.log('📅 New day after 12 PM detected on mount, refreshing in background');
-      loadFreshData();
-      } else {
-        console.log('📅 Using cached data on mount (same day or before 12 PM)');
-    }
-    }
+        // CRITICAL FIX: Migrate any existing localStorage data to Firestore
+        try {
+          const migrated = localStorage.getItem('emotional_data_migrated');
+          if (!migrated) {
+            console.log('🔄 First time loading - checking for localStorage data to migrate...');
+            emotionalAnalysisService.migrateLocalStorageToFirestore(user.uid).then(result => {
+              if (result.success) {
+                console.log(`✅ Migration complete: ${result.migrated} records migrated`);
+                localStorage.setItem('emotional_data_migrated', 'true');
+                // Clear cache to force reload with new data
+                const cacheKeys = Object.keys(localStorage).filter(key =>
+                  key.includes('emotional_wellbeing') || key.includes('moodChart')
+                );
+                cacheKeys.forEach(key => localStorage.removeItem(key));
+              }
+            }).catch(error => {
+              console.error('❌ Migration error:', error);
+            });
+          }
+        } catch (error) {
+          console.error('❌ Error checking migration status:', error);
+        }
+        
+        // Check if we need to force fresh data loading (bypass all caching)
+        const forceFreshUntil = localStorage.getItem('force_fresh_data_until');
+        const currentTime = Date.now();
+        const shouldForceFresh = forceFreshUntil && parseInt(forceFreshUntil) > currentTime;
+
+        if (shouldForceFresh) {
+          console.log('🚨 FORCE FRESH MODE: Bypassing all caching for fresh data...');
+          // Skip all caching and load directly from Firestore
+          try {
+            await loadFreshDataOnly();
+          } catch (error) {
+            console.error('❌ Error in force fresh data load:', error);
+          }
+          setIsInitializing(false);
+          return;
+        }
+
+        // Check if we need to force refresh due to new data
+        const lastRefresh = localStorage.getItem('emotional_data_refresh');
+        const shouldForceRefresh = lastRefresh && (currentTime - parseInt(lastRefresh)) < 60000; // Within last minute
+
+        if (shouldForceRefresh) {
+          console.log('🔄 FORCE REFRESH: New emotional data detected, clearing all caches...');
+          // Clear ALL emotional wellbeing caches
+          const cacheKeys = Object.keys(localStorage).filter(key =>
+            key.includes('emotional_wellbeing') || key.includes('moodChart') || key.includes('emotionalBalance') || key.includes('force_fresh_data_until')
+          );
+          cacheKeys.forEach(key => {
+            localStorage.removeItem(key);
+            console.log('🗑️ Cleared cache:', key);
+          });
+        }
+
+        // Load cached data instantly on initial mount only
+        try {
+          loadCachedData(user.uid);
+        } catch (error) {
+          console.error('❌ Error loading cached data:', error);
+        }
+
+        // CRITICAL: Check for forced fresh data and use it immediately
+        const forcedCacheKey = `emotional_wellbeing_emotional_7_${user.uid}`;
+        const forcedData = localStorage.getItem(forcedCacheKey);
+
+        if (forcedData) {
+          try {
+            const parsedForcedData = JSON.parse(forcedData);
+            console.log('🔥 FORCE DATA: Using forced fresh data:', parsedForcedData);
+            setWeeklyMoodData(parsedForcedData.weeklyMoodData || []);
+            setEmotionalData(parsedForcedData.emotionalData || []);
+            setChartKey(prev => prev + 1); // Force chart re-render
+          } catch (error) {
+            console.error('❌ Error parsing forced data:', error);
+          }
+        }
+
+        // Only fetch fresh data in background if it's a new day after 12 PM
+        // Otherwise, use cached data (refresh button will force update when needed)
+        const shouldRefresh = shouldRefreshForNewDay(lastCacheUpdate ? new Date(lastCacheUpdate).toDateString() : null);
+        if (shouldRefresh) {
+          console.log('📅 New day after 12 PM detected on mount, refreshing in background');
+          loadFreshData().catch(error => {
+            console.error('❌ Error loading fresh data:', error);
+          });
+        } else {
+          console.log('📅 Using cached data on mount (same day or before 12 PM)');
+        }
+        
+        // Set initialization complete after a short delay to ensure UI renders
+        setTimeout(() => {
+          setIsInitializing(false);
+        }, 100);
+      } catch (error) {
+        console.error('❌ CRITICAL ERROR in EmotionalWellbeing initialization:', error);
+        setIsInitializing(false);
+      }
+    };
+
+    initializeComponent();
   }, [shouldRefreshForNewDay]); // Run only once on mount
 
   // Listen for localStorage changes and custom events to detect when new emotional data is saved
@@ -3380,6 +3430,40 @@ Return in this JSON format:
       )}
     </div>
   );
+
+  // Show loading screen during initialization
+  if (isInitializing) {
+    return (
+      <ErrorBoundary>
+        <div
+          className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+          style={{
+            background: isDarkMode
+              ? "#202124"
+              : "#FAFAF8",
+          }}
+        >
+          <div className="flex flex-col items-center space-y-4">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center animate-pulse"
+              style={isDarkMode ? {
+                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                backgroundColor: "rgba(255, 255, 255, 0.6)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <Heart className="w-8 h-8" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} />
+            </div>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Loading Emotional Wellbeing...
+            </p>
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
