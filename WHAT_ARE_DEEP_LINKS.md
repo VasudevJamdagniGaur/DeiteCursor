@@ -6,17 +6,17 @@ A **deep link** is a special URL that opens your app directly, even from outside
 
 Think of it like this:
 - **Regular web link:** `https://example.com` → Opens in a browser
-- **Deep link:** `com.deite.app://signup` → Opens your app directly
+- **Deep link:** `jamdagni.deite.app://signup` → Opens your app directly
 
 ## How It Works in Your App
 
 ### 1. **Deep Link Format**
-Your app's deep link is: **`com.deite.app://`** (followed by a path)
+Your app's deep link is: **`jamdagni.deite.app://`** (followed by a path)
 
 Examples:
-- `com.deite.app://signup` → Opens app at signup page
-- `com.deite.app://dashboard` → Opens app at dashboard
-- `com.deite.app://profile` → Opens app at profile page
+- `jamdagni.deite.app://signup` → Opens app at signup page
+- `jamdagni.deite.app://dashboard` → Opens app at dashboard
+- `jamdagni.deite.app://profile` → Opens app at profile page
 
 ### 2. **How It's Configured**
 
@@ -28,11 +28,11 @@ In your `AndroidManifest.xml`, you have:
     <action android:name="android.intent.action.VIEW" />
     <category android:name="android.intent.category.DEFAULT" />
     <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="com.deite.app" />
+    <data android:scheme="jamdagni.deite.app" />
 </intent-filter>
 ```
 
-This tells Android: *"When someone clicks a link starting with `com.deite.app://`, open THIS app"*
+This tells Android: *"When someone clicks a link starting with `jamdagni.deite.app://`, open THIS app"*
 
 ## Real-World Example: Google Sign-In Flow
 
@@ -41,7 +41,7 @@ This tells Android: *"When someone clicks a link starting with `com.deite.app://
 1. You click "Sign-in with Google" in your app
 2. App opens Chrome browser with Google sign-in
 3. You select your Google account
-4. Firebase redirects to: `com.deite.app://signup`
+4. Firebase redirects to: `jamdagni.deite.app://signup`
 5. **Android sees this URL and automatically opens your app!** ✨
 6. Your app processes the sign-in result
 7. You're signed in → Dashboard
@@ -59,17 +59,17 @@ This tells Android: *"When someone clicks a link starting with `com.deite.app://
 ## Your Current Setup
 
 ✅ **Deep link is configured** in AndroidManifest.xml  
-✅ **Scheme:** `com.deite.app://`  
+✅ **Scheme:** `jamdagni.deite.app://`  
 ✅ **Will work** when Firebase redirects to it
 
 ## Example URLs
 
 ### Deep Links (Open Your App):
 ```
-com.deite.app://signup          → Opens signup page
-com.deite.app://dashboard       → Opens dashboard
-com.deite.app://profile         → Opens profile
-com.deite.app://chat            → Opens chat
+jamdagni.deite.app://signup          → Opens signup page
+jamdagni.deite.app://dashboard       → Opens dashboard
+jamdagni.deite.app://profile         → Opens profile
+jamdagni.deite.app://chat            → Opens chat
 ```
 
 ### Regular URLs (Open in Browser):
@@ -84,10 +84,10 @@ When you use the external browser approach:
 
 1. **App opens Chrome** with Firebase sign-in page
 2. **You sign in** with Google
-3. **Firebase redirects to:** `com.deite.app://signup` (deep link!)
-4. **Android detects:** "This is a deep link for `com.deite.app` app"
+3. **Firebase redirects to:** `jamdagni.deite.app://signup` (deep link!)
+4. **Android detects:** "This is a deep link for `jamdagni.deite.app` app"
 5. **Android automatically:** Closes browser, opens your app
-6. **Your app receives:** The URL `com.deite.app://signup`
+6. **Your app receives:** The URL `jamdagni.deite.app://signup`
 7. **App.js runs:** `handleGoogleRedirect()` processes the result
 8. **Result:** You're signed in!
 
@@ -109,7 +109,7 @@ When you use the external browser approach:
 
 **Instagram:** `instagram://`  
 **WhatsApp:** `whatsapp://`  
-**Your App:** `com.deite.app://`
+**Your App:** `jamdagni.deite.app://`
 
 When you click a WhatsApp link like `whatsapp://send?text=Hello`, it opens WhatsApp, not your browser.
 
@@ -117,21 +117,21 @@ When you click a WhatsApp link like `whatsapp://send?text=Hello`, it opens Whats
 
 Your app supports these deep links:
 
-- `com.deite.app://signup` - Signup page
-- `com.deite.app://login` - Login page  
-- `com.deite.app://dashboard` - Dashboard
-- `com.deite.app://chat` - Chat page
-- `com.deite.app://profile` - Profile page
-- `com.deite.app://wellbeing` - Wellbeing page
+- `jamdagni.deite.app://signup` - Signup page
+- `jamdagni.deite.app://login` - Login page  
+- `jamdagni.deite.app://dashboard` - Dashboard
+- `jamdagni.deite.app://chat` - Chat page
+- `jamdagni.deite.app://profile` - Profile page
+- `jamdagni.deite.app://wellbeing` - Wellbeing page
 
-Any URL starting with `com.deite.app://` will open your app!
+Any URL starting with `jamdagni.deite.app://` will open your app!
 
 ## Testing Deep Links
 
 You can test deep links using ADB:
 
 ```bash
-adb shell am start -W -a android.intent.action.VIEW -d "com.deite.app://signup" com.deite.app
+adb shell am start -W -a android.intent.action.VIEW -d "jamdagni.deite.app://signup" jamdagni.deite.app
 ```
 
 This will open your app with the deep link URL.
@@ -145,5 +145,5 @@ In your Google Sign-In flow:
 - Without it, user has to manually switch back
 - Your app is already configured for deep links ✅
 
-The deep link `com.deite.app://signup` will automatically open your app when Firebase redirects to it after Google sign-in!
+The deep link `jamdagni.deite.app://signup` will automatically open your app when Firebase redirects to it after Google sign-in!
 

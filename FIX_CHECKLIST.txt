@@ -24,7 +24,7 @@ THE FIX:
    Click gear icon (⚙️) → Project settings
 
 ☐ Step 4: Find your Android app
-   Look for app with package: com.deite.app
+   Look for app with package: jamdagni.deite.app
    (If not found, add new Android app with this package name)
 
 ☐ Step 5: Download google-services.json
@@ -65,7 +65,7 @@ After placing google-services.json, run:
 
 This will check:
   - File exists in correct location
-  - Package name is correct (com.deite.app)
+  - Package name is correct (jamdagni.deite.app)
   - File is valid JSON
   - Firebase dependencies are installed
 

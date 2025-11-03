@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.deite.app"
+    namespace = "jamdagni.deite.app"
     compileSdk = rootProject.ext["compileSdkVersion"] as Int
     
     buildFeatures {
@@ -11,7 +11,7 @@ android {
     }
     
     defaultConfig {
-        applicationId = "com.deite.app"
+        applicationId = "jamdagni.deite.app"
         minSdk = rootProject.ext["minSdkVersion"] as Int
         targetSdk = rootProject.ext["targetSdkVersion"] as Int
         versionCode = 1

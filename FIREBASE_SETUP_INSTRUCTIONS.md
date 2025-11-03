@@ -12,7 +12,7 @@ Your native Android app is missing `google-services.json` file. This file is REQ
 
 ### Step 2: Add/Configure Android App
 1. Scroll to "Your apps" section
-2. Look for an Android app with package name: `com.deite.app`
+2. Look for an Android app with package name: `jamdagni.deite.app`
    
    **If it EXISTS:**
    - Click on it
@@ -20,7 +20,7 @@ Your native Android app is missing `google-services.json` file. This file is REQ
    
    **If it DOESN'T exist:**
    - Click "Add app" → Android icon
-   - Package name: `com.deite.app`
+   - Package name: `jamdagni.deite.app`
    - App nickname: `Deite`
    - Click "Register app"
 
@@ -60,7 +60,7 @@ The file should look like this (with your actual values):
       "client_info": {
         "mobilesdk_app_id": "...",
         "android_client_info": {
-          "package_name": "com.deite.app"
+          "package_name": "jamdagni.deite.app"
         }
       }
     }
@@ -88,7 +88,7 @@ Install and test the new APK on your phone.
 
 ## 🚨 Common Mistakes
 - ❌ Placing file in wrong location (must be in `android/app/`)
-- ❌ Using wrong package name (must be `com.deite.app`)
+- ❌ Using wrong package name (must be `jamdagni.deite.app`)
 - ❌ Forgetting to rebuild after adding the file
 - ❌ Using google-services.json from a different project
 

@@ -3,7 +3,7 @@
 ## What Was Wrong
 
 Firebase was rejecting the redirect URL because it was using a custom scheme:
-- ❌ `com.deite.app://signup` (custom scheme - Firebase rejects this)
+- ❌ `jamdagni.deite.app://signup` (custom scheme - Firebase rejects this)
 
 Firebase's OAuth handler **only accepts http/https URLs** for security reasons. Custom scheme URLs (deep links) are not allowed in OAuth redirects.
 
@@ -84,14 +84,14 @@ android\app\build\outputs\apk\debug\app-debug.apk
 To achieve **true automatic return** (no manual switch), you would need:
 
 1. **Set up a web redirect page** (e.g., on your domain)
-2. **That page redirects to deep link:** `com.deite.app://signup`
+2. **That page redirects to deep link:** `jamdagni.deite.app://signup`
 3. **Use that redirect page URL** in Firebase's `continueUrl`
 4. **Android catches deep link** and opens app automatically
 
 Example:
 ```
 Firebase → https://yourdomain.com/auth/callback
-          → Redirects to com.deite.app://signup
+          → Redirects to jamdagni.deite.app://signup
           → Android opens app automatically
 ```
 

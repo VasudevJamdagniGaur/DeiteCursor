@@ -27,7 +27,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.deite.app" />
+                <data android:scheme="jamdagni.deite.app" />
             </intent-filter>
 
         </activity>

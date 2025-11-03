@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:300613626896:android:9fb71fa796af9e9f07ae95",
         "android_client_info": {
-          "package_name": "com.deite.app"
+          "package_name": "jamdagni.deite.app"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "300613626896-6cnko5g3q19o4ifddr7t1qhppa9rfvv7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.deite.app",
+            "package_name": "jamdagni.deite.app",
             "certificate_hash": "c465ffcb3d988222dc729c487e5fd50b3c9d9f8a"
           }
         },

@@ -26,7 +26,7 @@ Without this file:
 1. **Go to Firebase Console:** https://console.firebase.google.com/
 2. **Your project:** deitedatabase
 3. **Project Settings (⚙️)** → Android app section
-4. **Find or add** Android app with package: `com.deite.app`
+4. **Find or add** Android app with package: `jamdagni.deite.app`
 5. **Download** `google-services.json`
 6. **Place file here:** `android/app/google-services.json`
 7. **Rebuild:**
@@ -60,7 +60,7 @@ Run this to check your setup:
 ## Current Status
 
 ### ✅ What's Already Done:
-1. Package name: `com.deite.app` ✓
+1. Package name: `jamdagni.deite.app` ✓
 2. Build.gradle configured for Firebase ✓
 3. Capacitor Firebase Auth plugin installed ✓
 4. Firebase dependencies added ✓
@@ -164,7 +164,7 @@ A: `android/app/google-services.json` (same folder as build.gradle)
 A: No! Use it exactly as downloaded from Firebase Console
 
 **Q: What if I don't have an Android app in Firebase?**
-A: Add one with package name `com.deite.app`
+A: Add one with package name `jamdagni.deite.app`
 
 **Q: I added the file but it still doesn't work**
 A: Run `./verify-firebase-setup.ps1` to check configuration

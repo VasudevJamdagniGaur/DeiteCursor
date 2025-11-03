@@ -72,7 +72,7 @@ android\app\build\outputs\apk\debug\app-debug.apk
 - ✅ **Removed blocking error** when Browser plugin unavailable
 - ✅ **Added 3 fallback methods** (Browser plugin → window.open → location.href)
 - ✅ **Enhanced logging** for debugging
-- ✅ **Uses deep link** (`com.deite.app://signup`) for redirect
+- ✅ **Uses deep link** (`jamdagni.deite.app://signup`) for redirect
 
 ### `src/App.js`
 - ✅ **Added visibility change listener** - Detects when app resumes

@@ -37,15 +37,15 @@ To enable automatic return via deep link:
 2. Project: **deitedatabase**
 3. **Authentication → Settings → Authorized domains**
 4. Click **"Add domain"**
-5. **Try adding:** `com.deite.app`
+5. **Try adding:** `jamdagni.deite.app`
    - Note: Firebase might only accept http/https URLs
-   - If it doesn't accept `com.deite.app`, that's okay - we'll use the manual return method
+   - If it doesn't accept `jamdagni.deite.app`, that's okay - we'll use the manual return method
 
 ### Step 2: Update Code to Use Deep Link (if Firebase accepts it)
 
-If Firebase accepts `com.deite.app` as a domain, update the continueUrl in code to:
+If Firebase accepts `jamdagni.deite.app` as a domain, update the continueUrl in code to:
 ```javascript
-const continueUrl = encodeURIComponent('com.deite.app://signup');
+const continueUrl = encodeURIComponent('jamdagni.deite.app://signup');
 ```
 
 Then the deep link will automatically return to app after sign-in.

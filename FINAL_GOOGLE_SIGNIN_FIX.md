@@ -24,7 +24,7 @@ You still need to add your deep link to Firebase:
 1. **Go to Firebase Console:** https://console.firebase.google.com/
 2. **Project:** deitedatabase
 3. **Authentication → Settings → Authorized domains**
-4. **Add domain:** `com.deite.app`
+4. **Add domain:** `jamdagni.deite.app`
    - This allows Firebase to redirect back to your app via deep link
 5. **Also add** (optional but recommended):
    - `capacitor://localhost`
@@ -66,14 +66,14 @@ cd android
 - Check console logs for redirect handling
 
 ### If you see "invalid action" error:
-- Add `com.deite.app` to Firebase Authorized Domains
+- Add `jamdagni.deite.app` to Firebase Authorized Domains
 - Add `capacitor://localhost` to Firebase Authorized Domains
 - Rebuild app after adding domains
 
 ## Summary
 
 ✅ **Code fixed** - Uses external browser for native apps
-⚠️ **You need to** - Add `com.deite.app` to Firebase Authorized Domains
+⚠️ **You need to** - Add `jamdagni.deite.app` to Firebase Authorized Domains
 ✅ **Then** - Rebuild and test!
 
 The external browser approach is much more reliable than WebView redirects!
