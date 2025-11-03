@@ -16,11 +16,17 @@ const firebaseConfig = {
   measurementId: "G-CRK45CXML7"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
+// Initialize Firebase with error handling
+let app;
+let auth;
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+} catch (error) {
+  console.error('❌ Firebase initialization failed:', error);
+  throw error; // Re-throw to be caught by error boundary
+}
+export { auth };
 
 // CRITICAL FOR MOBILE APP: Firebase redirect configuration
 // Firebase signInWithRedirect() uses window.location.origin as the redirect URL
@@ -36,9 +42,25 @@ console.log('⚠️ Make sure "' + window.location.origin + '" is in Firebase Au
 // This allows external browser sign-in to work properly
 
 // Initialize Firestore and get a reference to the service
-export const db = getFirestore(app);
+let db;
+try {
+  db = getFirestore(app);
+} catch (error) {
+  console.error('❌ Firestore initialization failed:', error);
+  throw error; // Re-throw to be caught by error boundary
+}
+export { db };
 
-// Initialize Analytics (optional)
-export const analytics = getAnalytics(app);
+// Initialize Analytics (optional) - wrap in try-catch to prevent crashes in native apps
+let analytics = null;
+try {
+  // Analytics may not be available in all environments (e.g., native apps)
+  analytics = getAnalytics(app);
+} catch (error) {
+  console.warn('⚠️ Firebase Analytics not available:', error.message);
+  // Analytics is optional, so we continue without it
+}
+export { analytics };
 
 export default app;
+export { app };
