@@ -1,28 +1,78 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { Brain, Heart, Star } from "lucide-react";
+import { getCurrentUser, onAuthStateChange } from '../services/authService';
 
 export default function SplashScreen() {
   const navigate = useNavigate();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
-    console.log('🎬 SplashScreen mounted - setting timer to navigate to /landing');
+    console.log('🎬 SplashScreen mounted - checking authentication status');
     
-    const timer = setTimeout(() => {
-      console.log('⏰ Timer expired - navigating to /landing');
+    let navigationTimeout = null;
+    let authUnsubscribe = null;
+    let hasNavigated = false;
+
+    const navigateToDestination = (user) => {
+      if (hasNavigated) return; // Prevent multiple navigations
+      hasNavigated = true;
+      
+      // Clear timeout and unsubscribe
+      if (navigationTimeout) clearTimeout(navigationTimeout);
+      if (authUnsubscribe) authUnsubscribe();
+      
       try {
-        navigate('/landing', { replace: true });
-        console.log('✅ Navigation called successfully');
+        if (user) {
+          console.log('✅ User is logged in - navigating to dashboard');
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.log('ℹ️ No user found - navigating to landing page');
+          navigate('/landing', { replace: true });
+        }
+        setHasCheckedAuth(true);
       } catch (error) {
         console.error('❌ Navigation error:', error);
-        // Fallback: try window.location if navigate fails
-        window.location.href = '/landing';
+        // Fallback: navigate to landing page
+        navigate('/landing', { replace: true });
       }
-    }, 2000); // Reduced to 2 seconds for faster experience
+    };
+
+    // Check auth state immediately
+    const initialUser = getCurrentUser();
+    if (initialUser) {
+      // User is already authenticated, navigate after splash screen
+      console.log('✅ User found on mount - will navigate to dashboard after splash');
+      navigationTimeout = setTimeout(() => navigateToDestination(initialUser), 2000);
+    } else {
+      // Listen for auth state changes (handles async auth state restoration)
+      console.log('🔍 No user found initially - listening for auth state changes');
+      authUnsubscribe = onAuthStateChange((user) => {
+        console.log('🔄 Auth state changed in SplashScreen:', user ? 'User authenticated' : 'User signed out');
+        if (!hasNavigated) {
+          // Navigate immediately if user is authenticated, or wait for splash screen
+          if (user) {
+            navigationTimeout = setTimeout(() => navigateToDestination(user), 2000);
+          } else {
+            // Wait a bit longer if no user, in case auth state is still loading
+            navigationTimeout = setTimeout(() => navigateToDestination(null), 2500);
+          }
+        }
+      });
+
+      // Fallback: If no auth state change occurs within 3 seconds, navigate to landing
+      navigationTimeout = setTimeout(() => {
+        if (!hasNavigated) {
+          console.log('⏰ Timeout reached (3s) - navigating to landing page');
+          navigateToDestination(null);
+        }
+      }, 3000);
+    }
 
     return () => {
-      console.log('🧹 SplashScreen cleanup - clearing timer');
-      clearTimeout(timer);
+      console.log('🧹 SplashScreen cleanup');
+      if (navigationTimeout) clearTimeout(navigationTimeout);
+      if (authUnsubscribe) authUnsubscribe();
     };
   }, [navigate]);
 

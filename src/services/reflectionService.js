@@ -62,20 +62,21 @@ class ReflectionService {
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
-    const reflectionPrompt = `You are helping someone write a simple summary of their day. Based on the conversation below, write a short, casual summary that sounds like how a normal person would describe their day.
+    const reflectionPrompt = `You are helping someone write a diary entry summarizing their day. Analyze the conversation below CAREFULLY and write an empathetic, thoughtful summary that captures the ACTUAL events and emotions discussed.
 
-Guidelines:
-- Write in first person ("I felt...", "Today I...")
-- Keep it simple and casual, like talking to a friend
-- Focus on what actually happened and how they felt
-- 2-3 sentences maximum
-- Use everyday language, not fancy words
-- Sound like a normal person, not a poet or writer
+CRITICAL REQUIREMENTS:
+1. READ THE ENTIRE CONVERSATION - Pay close attention to what the user actually shared
+2. IDENTIFY THE EMOTIONAL TONE - Is it grief, sadness, joy, stress, anxiety, etc.? Reflect that tone appropriately
+3. WRITE LIKE A DIARY ENTRY - Use first person, empathetic tone, like a personal journal
+4. REFLECT WHAT WAS ACTUALLY DISCUSSED - If they mentioned losing a loved one, reflect grief. If they mentioned a happy event, reflect joy. DO NOT generate random summaries
+5. BE SPECIFIC - Mention key topics, events, or feelings they actually talked about
+6. SHOW EMPATHY - For difficult topics (loss, grief, stress), write with understanding and gentleness
+7. 3-4 sentences, capturing the essence and emotional weight of the conversation
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a simple, casual summary of this person's day:`;
+Write a diary entry summarizing this person's day based on what they ACTUALLY discussed. Match the emotional tone and reflect the real content of their conversation:`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
@@ -99,9 +100,9 @@ Write a simple, casual summary of this person's day:`;
             prompt: reflectionPrompt,
             stream: false,
             options: {
-              temperature: 0.7,
+              temperature: 0.5,  // Lower temperature for more accurate, focused summaries
               top_p: 0.9,
-              max_tokens: 150
+              max_tokens: 250  // Increased to allow for more detailed, empathetic summaries
             }
           })
         });
@@ -146,14 +147,24 @@ Write a simple, casual summary of this person's day:`;
     let context = '';
     
     // Build a detailed conversation flow for better day summaries
+    // Include more context to capture emotional depth and important topics
     userMessages.forEach((userMsg, index) => {
       context += `User: "${userMsg}"\n`;
       if (aiMessages[index]) {
-        // Include more of the AI response to capture the emotional journey
-        const aiResponse = aiMessages[index].substring(0, 200);
-        context += `Deite: "${aiResponse}${aiMessages[index].length > 200 ? '...' : ''}"\n\n`;
+        // Include more of the AI response to capture the emotional journey and context
+        // Increased from 200 to 300 characters to better capture full context
+        const aiResponse = aiMessages[index].substring(0, 300);
+        context += `Deite: "${aiResponse}${aiMessages[index].length > 300 ? '...' : ''}"\n\n`;
       }
     });
+    
+    // Add a summary note at the end to help the AI identify key themes
+    if (context.length > 0) {
+      context += `\n---\nPlease analyze this conversation carefully and identify:\n`;
+      context += `1. Key events or topics discussed (loss, grief, achievements, challenges, etc.)\n`;
+      context += `2. Emotional tone (sad, grieving, happy, stressed, anxious, etc.)\n`;
+      context += `3. Important details that should be reflected in the diary entry\n`;
+    }
     
     return context.trim();
   }
