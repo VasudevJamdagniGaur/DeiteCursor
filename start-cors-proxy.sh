@@ -32,7 +32,7 @@ echo "🌐 Server will be available at: http://localhost:3001"
 echo "💬 Chat API: http://localhost:3001/api/chat"
 echo "🧠 Emotional Analysis API: http://localhost:3001/api/emotional-analysis"
 echo "🔍 Pattern Analysis API: http://localhost:3001/api/pattern-analysis"
-echo "🔗 Proxying to RunPod: https://b5z7d285vvdqfz-11434.proxy.runpod.net"
+echo "🔗 Proxying to RunPod: https://5omad6zq0ez4f5-11434.proxy.runpod.net"
 echo ""
 
 # Start the server
