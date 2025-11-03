@@ -33,107 +33,20 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Handle Google Sign-In redirect on app load (non-blocking)
-    // Don't block app startup - check redirect asynchronously
+    // Handle Google Sign-In redirect on app load
     const handleAuthRedirect = async () => {
       try {
-        const url = window.location.href;
-        const isLocalhost = window.location.origin === 'http://localhost' || 
-                          window.location.origin === 'https://localhost';
-        const isDeepLink = url.includes('com.deite.app://');
-        const isAuthHandler = url.includes('__/auth/handler');
-        const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
-        
-        // Check if we're returning from a redirect (deep link, auth handler, or localhost)
-        if (isDeepLink || isAuthHandler || (isLocalhost && hasPendingSignIn)) {
-          console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, isLocalhost, url });
-          
-          // Check redirect result
-          const result = await handleGoogleRedirect();
-          
-          if (result.success && result.user) {
-            console.log('✅ Google Sign-In successful via redirect, navigating to dashboard');
-            navigate('/dashboard', { replace: true });
-          } else if (result.error && !result.isNormalLoad) {
-            console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
-            
-            // If on auth handler or localhost, navigate back to signup
-            if (isAuthHandler || isLocalhost) {
-              console.log('🔄 Navigating back to signup');
-              navigate('/signup', { replace: true });
-            }
-          }
+        const result = await handleGoogleRedirect();
+        if (result.success && result.user) {
+          navigate('/dashboard', { replace: true });
         }
       } catch (error) {
-        console.error('❌ Error handling Google redirect:', error);
-        // Don't block app - just log the error
+        console.error('Error handling Google redirect:', error);
       }
     };
     
-    // Run asynchronously after app has rendered (don't block startup)
-    setTimeout(handleAuthRedirect, 100);
-    
-    // Setup deep link listener for automatic return from browser
-    let appUrlListener = null;
-    
-    const setupDeepLinkListener = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const App = await getAppPlugin();
-          if (App) {
-            console.log('✅ Setting up deep link listener for automatic return...');
-            
-            // Listen for app URL open events (when deep link opens the app)
-            appUrlListener = await App.addListener('appUrlOpen', (data) => {
-              console.log('🔗 Deep link opened app:', data.url);
-              
-              // Check if it's a Google Sign-In redirect
-              if (data.url.includes('com.deite.app://')) {
-                console.log('✅ Detected deep link return from Google Sign-In');
-                console.log('📍 Deep link URL:', data.url);
-                
-                // Wait a moment for Firebase to process, then check redirect result
-                setTimeout(async () => {
-                  try {
-                    const result = await handleGoogleRedirect();
-                    if (result.success && result.user) {
-                      console.log('✅ Google Sign-In successful via deep link!');
-                      navigate('/dashboard', { replace: true });
-                    } else {
-                      console.log('⚠️ No redirect result yet, will check again...');
-                      // Try again after another delay
-                      setTimeout(async () => {
-                        const retryResult = await handleGoogleRedirect();
-                        if (retryResult.success && retryResult.user) {
-                          console.log('✅ Google Sign-In successful on retry!');
-                          navigate('/dashboard', { replace: true });
-                        }
-                      }, 2000);
-                    }
-                  } catch (error) {
-                    console.error('❌ Error processing deep link:', error);
-                  }
-                }, 1000);
-              }
-            });
-            
-            console.log('✅ Deep link listener registered');
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not set up deep link listener:', error);
-        }
-      }
-    };
-    
-    setupDeepLinkListener();
-    
-    // Cleanup
-    return () => {
-      // Remove deep link listener on cleanup
-      if (appUrlListener) {
-        appUrlListener.remove();
-      }
-    };
+    // Check for redirect result after app loads
+    setTimeout(handleAuthRedirect, 500);
   }, [navigate]);
 
   return (

@@ -1,0 +1,30 @@
+[33m967ceeac[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Enhance localhost redirect logic in index.html for improved app startup
+[33m5699e90f[m Implement immediate localhost redirect handling in index.html and refactor auth redirect logic in App.js
+[33mfb7568fb[m Refactor auth redirect handling in App.js and improve Firebase initialization in config.js
+[33me677ac94[m Refactor Firebase initialization in config.js to improve app startup and analytics handling
+[33m25a3b421[m Refactor auth redirect handling in App.js and improve SplashScreen navigation
+[33md260faba[m Refactor Google services Gradle plugin integration in build.gradle.kts
+[33m56976b0b[m Add Google services Gradle plugin to build.gradle.kts and remove redundant application of the plugin
+[33mf06256c4[m Add Google services Gradle plugin to build.gradle.kts for Firebase integration
+[33m73fe2bf7[m Refactor DashboardPage.js to streamline localStorage reflection retrieval and enhance date formatting
+[33m830085aa[m Improve Firebase initialization error handling to allow app startup without Firebase
+[33m6231fa66[m Add Error Boundary and enhance Firebase initialization error handling
+[33me76bb4d5[m Refactor redirect handling in App.js and authService.js for improved deep link processing
+[33mff376a39[m Enhance deep link handling in authService.js for improved OAuth flow
+[33m6221ffda[m Refactor MainActivity and enhance redirect handling in App.js and authService.js
+[33mac952091[m Implement WebView redirect handling in MainActivity for improved OAuth flow
+[33m0662517a[m Enhance Google Sign-In redirect handling for localhost and deep links
+[33m801e29c8[m Refactor authService.js to streamline authentication state checks
+[33m88770c6b[m Refactor MainActivity and enhance authService.js for improved OAuth handling
+[33m01857261[m Implement in-app OAuth URL handling in MainActivity
+[33m1e62c827[m Refactor MainActivity and App.js for improved OAuth handling
+[33m28ab464b[m Refactor Firebase OAuth handling to remove localhost references
+[33mcb7ef897[m Update Gradle configuration for BuildConfig handling
+[33m22a2570e[m Refine localhost redirect handling in Firebase OAuth flow
+[33m7d79e72d[m Enhance OAuth handling in WebView to support localhost redirects
+[33m70f82707[m Implement OAuth URL handling in WebView to prevent external browser redirects
+[33m179351a4[m Enhance Google Sign-In flow with storage-partitioning error handling
+[33m18845a23[m Refactor Google Services plugin application in build.gradle.kts
+[33m9ddf14c1[m Add initial Android Gradle configuration files for the project
+[33m64e61f3a[m Add Android Studio module recognition documentation and configuration updates
+[33me404cb85[m Add documentation for Firebase redirect configuration in mobile apps
