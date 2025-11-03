@@ -17,6 +17,30 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script>
+      // CRITICAL: Immediate localhost redirect handler (runs BEFORE React loads)
+      // Firebase redirects to http://localhost after OAuth - we catch it immediately
+      (function() {
+        try {
+          const isLocalhost = window.location.origin === 'http://localhost' || 
+                             window.location.origin === 'https://localhost';
+          const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
+          
+          if (isLocalhost && hasPendingSignIn) {
+            console.log('🚨 IMMEDIATE: Detected localhost redirect - redirecting to app NOW');
+            const appOrigin = localStorage.getItem('appOrigin') || 'capacitor://localhost';
+            
+            // Wait a tiny moment for Firebase to process auth, then redirect
+            setTimeout(function() {
+              // Check if we can access auth (might not be loaded yet, but redirect anyway)
+              window.location.replace(appOrigin + '/dashboard');
+            }, 100);
+          }
+        } catch (e) {
+          console.error('Error in immediate redirect:', e);
+        }
+      })();
+    </script>
   </body>
 </html>
 

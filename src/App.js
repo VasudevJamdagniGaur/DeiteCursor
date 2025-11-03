@@ -34,31 +34,19 @@ function AppContent() {
 
   useEffect(() => {
     // Handle Google Sign-In redirect on app load (non-blocking)
-    // CRITICAL: Check localhost redirect FIRST (before other checks) to redirect immediately
+    // Don't block app startup - check redirect asynchronously
     const handleAuthRedirect = async () => {
       try {
         const url = window.location.href;
         const isLocalhost = window.location.origin === 'http://localhost' || 
                           window.location.origin === 'https://localhost';
-        const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
-        
-        // PRIORITY 1: Handle localhost redirect IMMEDIATELY (Firebase fallback)
-        if (isLocalhost && hasPendingSignIn) {
-          console.log('📍 CRITICAL: On localhost - redirecting to app IMMEDIATELY');
-          const appOrigin = localStorage.getItem('appOrigin') || 'capacitor://localhost';
-          console.log('🚀 Redirecting to:', `${appOrigin}/dashboard`);
-          
-          // Immediate redirect - don't wait for anything
-          window.location.replace(`${appOrigin}/dashboard`);
-          return; // Exit immediately
-        }
-        
-        // PRIORITY 2: Handle other redirect scenarios (deep link, auth handler)
         const isDeepLink = url.includes('com.deite.app://');
         const isAuthHandler = url.includes('__/auth/handler');
+        const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
         
-        if (isDeepLink || isAuthHandler) {
-          console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, url });
+        // Check if we're returning from a redirect (deep link, auth handler, or localhost)
+        if (isDeepLink || isAuthHandler || (isLocalhost && hasPendingSignIn)) {
+          console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, isLocalhost, url });
           
           // Check redirect result
           const result = await handleGoogleRedirect();
@@ -69,8 +57,8 @@ function AppContent() {
           } else if (result.error && !result.isNormalLoad) {
             console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
             
-            // If on auth handler, navigate back to signup
-            if (isAuthHandler) {
+            // If on auth handler or localhost, navigate back to signup
+            if (isAuthHandler || isLocalhost) {
               console.log('🔄 Navigating back to signup');
               navigate('/signup', { replace: true });
             }
@@ -83,7 +71,7 @@ function AppContent() {
     };
     
     // Run asynchronously after app has rendered (don't block startup)
-    setTimeout(handleAuthRedirect, 50); // Reduced delay for faster localhost detection
+    setTimeout(handleAuthRedirect, 100);
     
     // Setup deep link listener for automatic return from browser
     let appUrlListener = null;

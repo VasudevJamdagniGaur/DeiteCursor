@@ -448,14 +448,14 @@ export const signInWithGoogle = async () => {
             success: true,
             redirecting: true,
             message: 'Redirecting to Google sign-in...'
-          };
+              };
         } catch (redirectCallError) {
           console.error('❌ signInWithRedirect threw an error:', redirectCallError);
           console.error('❌ Error message:', redirectCallError.message);
           console.error('❌ Error code:', redirectCallError.code);
           console.error('❌ Full error:', redirectCallError);
           throw redirectCallError; // Re-throw to be caught by outer catch
-        }
+          }
       } catch (redirectError) {
         console.error('❌ Redirect failed on mobile:', redirectError);
         console.error('❌ Error code:', redirectError.code);
@@ -604,25 +604,41 @@ export const handleGoogleRedirect = async () => {
     
     // CRITICAL: Check if we're on localhost redirect (Firebase fallback)
     // Firebase redirects to http://localhost when capacitor://localhost isn't available
-    // We need to immediately redirect back to the app
+    // Note: index.html has an immediate redirect script that should catch this first
+    // This is a backup check in case the immediate redirect didn't fire
     const isOnLocalhost = window.location.origin === 'http://localhost' || 
                          window.location.origin === 'https://localhost';
     
     if (isOnLocalhost && hasPendingSignIn) {
-      console.log('📍 Detected localhost redirect from Firebase - redirecting back to app IMMEDIATELY');
+      console.log('📍 [BACKUP] Detected localhost redirect - redirecting back to app');
       console.log('📍 App origin:', appOrigin);
       
-      // IMMEDIATE redirect - don't wait, redirect now
-      // Firebase authentication happens server-side, so we'll check auth state after redirect
-      console.log('🚀 Redirecting to app dashboard immediately...');
-      window.location.replace(`${appOrigin}/dashboard`);
+      // Don't wait - redirect immediately (index.html should have handled this, but backup)
+      // Check auth quickly
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Return immediately - redirect is happening
+      // Check if user is authenticated
+      if (auth.currentUser) {
+        console.log('✅ User is authenticated - navigating to dashboard');
+        window.location.replace(`${appOrigin}/dashboard`);
+        return {
+          success: true,
+          user: {
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email,
+            displayName: auth.currentUser.displayName,
+            photoURL: auth.currentUser.photoURL
+          }
+        };
+      }
+      
+      // Redirect to app anyway (auth will be checked there)
+      console.log('⚠️ Redirecting to app - auth state will be checked there');
+      window.location.replace(`${appOrigin}/dashboard`); // Try dashboard first, will redirect if not auth'd
       return {
         success: false,
         noRedirect: true,
-        message: 'Redirecting back to app...',
-        redirecting: true
+        message: 'Redirecting back to app...'
       };
     }
     
@@ -670,8 +686,8 @@ export const handleGoogleRedirect = async () => {
     let result = null;
     try {
       result = await getRedirectResult(auth);
-      if (result && result.user) {
-        const user = result.user;
+    if (result && result.user) {
+      const user = result.user;
         console.log('✅ Google Sign-In successful via getRedirectResult:', user);
         
         // Clear any pending sign-in flags and backup state
@@ -682,12 +698,12 @@ export const handleGoogleRedirect = async () => {
         } catch (e) {
           // Ignore storage errors
         }
-        
+      
         // If we're on the auth handler page (Firebase domain), navigate back to app after getting result
-        if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
+      if (isOnAuthHandler && !window.location.origin.startsWith(appOrigin)) {
           console.log('📍 Redirecting from Firebase handler back to app:', appOrigin);
           // Navigate back to app's origin on the dashboard
-          window.location.replace(`${appOrigin}/dashboard`);
+        window.location.replace(`${appOrigin}/dashboard`);
           return { 
             success: true, 
             user: { 
@@ -697,17 +713,17 @@ export const handleGoogleRedirect = async () => {
               photoURL: user.photoURL 
             }
           };
+      }
+      
+      return {
+        success: true,
+        user: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
         }
-        
-        return {
-          success: true,
-          user: {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL
-          }
-        };
+      };
       }
     } catch (redirectError) {
       // Check if this is the storage-partitioned error
@@ -966,8 +982,36 @@ export const handleGoogleRedirect = async () => {
       };
     }
     
-    // Note: Localhost redirects are handled at the top of the function
-    // This section is for other redirect scenarios
+    // CRITICAL: If we're on localhost (Firebase redirect fallback), navigate back to app
+    if (isOnLocalhost && hasPendingSignIn) {
+      console.log('📍 On localhost redirect - checking auth state and redirecting to app');
+      
+      // Check auth state one more time before redirecting
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (auth.currentUser) {
+        console.log('✅ User authenticated - redirecting to dashboard');
+        window.location.replace(`${appOrigin}/dashboard`);
+        return {
+          success: true,
+          user: {
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email,
+            displayName: auth.currentUser.displayName,
+            photoURL: auth.currentUser.photoURL
+          }
+        };
+      }
+      
+      // Redirect to app signup page
+      console.log('📍 Redirecting from localhost to app:', appOrigin);
+      window.location.replace(`${appOrigin}/signup`);
+      return { 
+        success: false, 
+        noRedirect: true,
+        message: 'Redirecting back to app...'
+      };
+    }
     
     // No redirect result - user didn't come from a redirect
     return { success: false, noRedirect: true };
