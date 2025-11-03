@@ -6,7 +6,7 @@ import CalendarPopup from './CalendarPopup';
 import reflectionService from '../services/reflectionService';
 import firestoreService from '../services/firestoreService';
 import { getCurrentUser } from '../services/authService';
-import { getDateId } from '../utils/dateUtils';
+import { getDateId, formatDateForDisplay, getReflectionFromLocalStorage } from '../utils/dateUtils';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -59,9 +59,7 @@ export default function DashboardPage() {
       if (!user) {
         console.log('📖 DASHBOARD: No user logged in, checking localStorage');
         // If no user is logged in, try localStorage as fallback
-        const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-        const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
-        const finalReflection = storedReflection || backupReflection || '';
+        const finalReflection = getReflectionFromLocalStorage(dateId);
         console.log('📖 DASHBOARD: Found reflection in localStorage:', finalReflection ? 'Yes' : 'No');
         console.log('📖 DASHBOARD: Reflection content:', finalReflection);
         setReflection(finalReflection);
@@ -80,18 +78,14 @@ export default function DashboardPage() {
         } else {
           console.log('📖 DASHBOARD: No reflection in Firestore, checking localStorage fallback');
           // Fallback to localStorage
-          const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-          const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
-          const finalReflection = storedReflection || backupReflection || '';
+          const finalReflection = getReflectionFromLocalStorage(dateId);
           console.log('📖 DASHBOARD: Found reflection in localStorage fallback:', finalReflection ? 'Yes' : 'No');
           setReflection(finalReflection);
         }
       } catch (error) {
         console.error('📖 DASHBOARD: Error loading reflection from Firestore:', error);
         // Fallback to localStorage
-        const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-        const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
-        const finalReflection = storedReflection || backupReflection || '';
+        const finalReflection = getReflectionFromLocalStorage(dateId);
         console.log('📖 DASHBOARD: Using localStorage fallback due to error:', finalReflection ? 'Yes' : 'No');
         setReflection(finalReflection);
       } finally {
@@ -114,9 +108,7 @@ export default function DashboardPage() {
           const user = getCurrentUser();
           
           if (!user) {
-            const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-            const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
-            const finalReflection = storedReflection || backupReflection || '';
+            const finalReflection = getReflectionFromLocalStorage(dateId);
             setReflection(finalReflection);
             return;
           }
@@ -126,16 +118,12 @@ export default function DashboardPage() {
             if (result.success && result.reflection) {
               setReflection(result.reflection);
             } else {
-              const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-              const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
-              const finalReflection = storedReflection || backupReflection || '';
+              const finalReflection = getReflectionFromLocalStorage(dateId);
               setReflection(finalReflection);
             }
           } catch (error) {
             console.error('Error refreshing reflection:', error);
-            const storedReflection = localStorage.getItem(`reflection_${dateId}`);
-            const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
-            const finalReflection = storedReflection || backupReflection || '';
+            const finalReflection = getReflectionFromLocalStorage(dateId);
             setReflection(finalReflection);
           }
         };
@@ -151,15 +139,6 @@ export default function DashboardPage() {
     };
   }, [selectedDate]);
 
-  const formatDate = (date) => {
-    const options = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return date.toLocaleDateString('en-US', options);
-  };
 
   const handlePreviousDay = () => {
     const newDate = new Date(selectedDate);
@@ -572,7 +551,7 @@ export default function DashboardPage() {
                 <Calendar className="w-4 h-4" style={{ color: isDarkMode ? "#7DD3C0" : "#87A96B" }} />
                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Selected Date</span>
               </div>
-              <div className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{formatDate(selectedDate)}</div>
+              <div className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{formatDateForDisplay(selectedDate)}</div>
               <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Click to open calendar</div>
             </div>
             <button 

@@ -18,9 +18,17 @@ export const getIndiaDate = () => {
 
 /**
  * Format date for display
+ * @param {string|Date} dateInput - Date ID string (YYYY-MM-DD) or Date object
+ * @returns {string} Formatted date string
  */
-export const formatDateForDisplay = (dateId) => {
-  const date = new Date(dateId);
+export const formatDateForDisplay = (dateInput) => {
+  let date;
+  if (dateInput instanceof Date) {
+    date = dateInput;
+  } else {
+    // dateInput is a dateId string (YYYY-MM-DD)
+    date = new Date(dateInput + 'T00:00:00'); // Add time to avoid timezone issues
+  }
   return date.toLocaleDateString('en-US', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -43,4 +51,15 @@ export const getDateIdDaysAgo = (daysAgo) => {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   return getDateId(date);
+};
+
+/**
+ * Get reflection from localStorage (with fallback to backup)
+ * @param {string} dateId - Date ID in format "YYYY-MM-DD"
+ * @returns {string} Reflection text or empty string
+ */
+export const getReflectionFromLocalStorage = (dateId) => {
+  const storedReflection = localStorage.getItem(`reflection_${dateId}`);
+  const backupReflection = localStorage.getItem(`reflection_backup_${dateId}`);
+  return storedReflection || backupReflection || '';
 };
