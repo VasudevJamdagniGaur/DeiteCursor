@@ -1080,10 +1080,17 @@ export const signOutUser = async () => {
 
 // Listen to authentication state changes
 export const onAuthStateChange = (callback) => {
+  if (!auth) {
+    console.warn('⚠️ Auth not initialized yet, returning no-op');
+    return () => {}; // Return no-op unsubscribe
+  }
   return onAuthStateChanged(auth, callback);
 };
 
 // Get current user
 export const getCurrentUser = () => {
+  if (!auth) {
+    return null;
+  }
   return auth.currentUser;
 };
