@@ -38,6 +38,15 @@ function AppContent() {
     const handleAuthRedirect = async () => {
       try {
         const url = window.location.href;
+        const currentPath = window.location.pathname;
+        
+        // Only handle auth redirects if we're NOT on splash/landing page
+        // This prevents blocking the initial app load
+        if (currentPath === '/' || currentPath === '/landing') {
+          console.log('📍 On splash/landing page - skipping auth redirect check');
+          return;
+        }
+        
         const isLocalhost = window.location.origin === 'http://localhost' || 
                           window.location.origin === 'https://localhost';
         const hasPendingSignIn = localStorage.getItem('googleSignInPending') === 'true';
@@ -62,13 +71,16 @@ function AppContent() {
           if (isDeepLink || isAuthHandler) {
             console.log('🔗 Detected redirect return:', { isDeepLink, isAuthHandler, url });
             
-            // Check redirect result
-            const result = await handleGoogleRedirect();
+            // Check redirect result (non-blocking with timeout)
+            const redirectPromise = handleGoogleRedirect();
+            const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
             
-            if (result.success && result.user) {
+            const result = await Promise.race([redirectPromise, timeoutPromise]).catch(() => null);
+            
+            if (result && result.success && result.user) {
               console.log('✅ Google Sign-In successful via redirect, navigating to dashboard');
               navigate('/dashboard', { replace: true });
-            } else if (result.error && !result.isNormalLoad) {
+            } else if (result && result.error && !result.isNormalLoad) {
               console.warn('⚠️ Google redirect handling:', result.error || 'No redirect pending');
               
               // If on auth handler, navigate back to signup
@@ -86,7 +98,8 @@ function AppContent() {
     };
     
     // Run asynchronously after app has rendered (don't block startup)
-    setTimeout(handleAuthRedirect, 50); // Reduced delay for faster localhost detection
+    // Increased delay to ensure splash screen can navigate first
+    setTimeout(handleAuthRedirect, 3000);
     
     // Setup deep link listener for automatic return from browser
     let appUrlListener = null;

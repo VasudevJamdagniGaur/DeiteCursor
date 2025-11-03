@@ -6,11 +6,24 @@ export default function SplashScreen() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('🎬 SplashScreen mounted - setting timer to navigate to /landing');
+    
     const timer = setTimeout(() => {
-      navigate('/landing');
-    }, 3000); // 3 seconds loading time
+      console.log('⏰ Timer expired - navigating to /landing');
+      try {
+        navigate('/landing', { replace: true });
+        console.log('✅ Navigation called successfully');
+      } catch (error) {
+        console.error('❌ Navigation error:', error);
+        // Fallback: try window.location if navigate fails
+        window.location.href = '/landing';
+      }
+    }, 2000); // Reduced to 2 seconds for faster experience
 
-    return () => clearTimeout(timer);
+    return () => {
+      console.log('🧹 SplashScreen cleanup - clearing timer');
+      clearTimeout(timer);
+    };
   }, [navigate]);
 
   return (
