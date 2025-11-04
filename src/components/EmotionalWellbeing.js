@@ -2673,7 +2673,7 @@ Return in this JSON format:
                     <Target className="w-5 h-5" style={{ color: "#D4AF37" }} />
                   </div>
                   <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    Emotional Balance - {balancePeriod === 365 ? 'Lifetime' : `${balancePeriod} Day${balancePeriod > 1 ? 's' : ''}`} Overview
+                    Emotional Balance
                   </h3>
                 </div>
 
