@@ -2442,7 +2442,6 @@ Return in this JSON format:
 
     } catch (error) {
       console.error('❌ Error during AI update:', error);
-      alert('Failed to complete AI analysis. Please try again.');
     } finally {
       setIsUpdating(false);
     }
