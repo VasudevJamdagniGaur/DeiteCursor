@@ -12,7 +12,20 @@
           "package_name": "jamdagni.deite.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "92079931095-tdip85ek331pmdbcjo8337p2975idu66.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "jamdagni.deite.app",
+            "certificate_hash": "c465ffcb3d988222dc729c487e5fd50b3c9d9f8a"
+          }
+        },
+        {
+          "client_id": "92079931095-72m5g0oha5ivr1jjrp6mm8gl858p6712.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAOs1AjG0u50hTO7aJ7GYPqjNiPP64APyA"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "92079931095-72m5g0oha5ivr1jjrp6mm8gl858p6712.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
