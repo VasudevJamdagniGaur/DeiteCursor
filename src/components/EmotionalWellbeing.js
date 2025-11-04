@@ -2475,7 +2475,7 @@ Return in this JSON format:
                   <BarChart3 className="w-5 h-5" style={{ color: "#7DD3C0" }} />
                 </div>
                 <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Mood Chart - {selectedPeriod === 365 ? 'Lifetime' : `${selectedPeriod} Day`} Summary
+                  Mood Chart
                 </h3>
               </div>
               
