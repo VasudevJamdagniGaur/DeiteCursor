@@ -3261,9 +3261,9 @@ Return in this JSON format:
               ) : patternLoading ? (
                 <>
                   {/* Loading State */}
-                  <div className="flex items-center space-x-4 mb-6">
+                  <div className="flex items-center justify-center space-x-3 py-8">
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse"
+                      className="w-8 h-8 rounded-full flex items-center justify-center animate-pulse"
                       style={isDarkMode ? {
                         backgroundColor: "rgba(42, 42, 45, 0.6)",
                         border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -3272,16 +3272,11 @@ Return in this JSON format:
                         border: "1px solid rgba(0, 0, 0, 0.08)",
                       }}
                     >
-                      <BookOpen className="w-5 h-5" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
+                      <BookOpen className="w-4 h-4" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} />
                     </div>
-                    <div>
-                      <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                        Personalized Guidance
-                      </h3>
-                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Analyzing your patterns to generate personalized tips...
-                      </p>
-                    </div>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Analyzing your patterns to generate personalized tips...
+                    </p>
                   </div>
 
                   {/* Loading Skeleton */}
