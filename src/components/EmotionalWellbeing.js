@@ -3461,7 +3461,7 @@ Return in this JSON format:
         }}
       >
       {/* Header - Mobile Optimized */}
-      <div className={`sticky top-0 z-20 flex items-center justify-between p-4 border-b backdrop-blur-lg ${
+      <div className={`sticky top-0 z-20 flex items-center justify-between px-6 py-5 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-600/20' : 'border-gray-200/50'
       }`}
         style={{
@@ -3489,7 +3489,7 @@ Return in this JSON format:
 
         </div>
 
-        <div className="flex items-center space-x-3 flex-1 justify-center">
+        <div className="flex items-center space-x-6 flex-1 justify-center mx-4">
           <div
             className={`w-10 h-10 rounded-full flex items-center justify-center ${
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
@@ -3504,7 +3504,7 @@ Return in this JSON format:
           >
             <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
-          <div className="text-center">
+          <div className="text-center px-2">
             <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Emotional Wellbeing
             </h1>
