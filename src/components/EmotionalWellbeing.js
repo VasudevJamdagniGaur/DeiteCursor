@@ -2540,6 +2540,7 @@ Return in this JSON format:
                 <LineChart
                   key={chartKey}
                   data={weeklyMoodData}
+                  margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
                   onClick={(data) => {
                     if (data && data.activePayload && data.activePayload[0]) {
                       const clickedData = data.activePayload[0].payload;
@@ -2559,6 +2560,7 @@ Return in this JSON format:
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
+                    width={40}
                   />
                   <Tooltip 
                     content={<CustomTooltip />}
@@ -2734,7 +2736,11 @@ Return in this JSON format:
             </div>
           ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart key={`balance-${chartKey}`} data={moodBalance}>
+                  <LineChart 
+                    key={`balance-${chartKey}`} 
+                    data={moodBalance}
+                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                  >
                     <XAxis 
                       dataKey="day" 
                       axisLine={false}
@@ -2745,7 +2751,7 @@ Return in this JSON format:
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
-                      label={{ value: '%', angle: 0, position: 'insideLeft' }}
+                      width={40}
                       domain={[0, 100]}
                     />
                     <Tooltip 
