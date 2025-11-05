@@ -13,6 +13,7 @@ export default function SplashScreen() {
     let navigationTimeout = null;
     let authUnsubscribe = null;
     let hasNavigated = false;
+    let authStateDetermined = false;
 
     const navigateToDestination = (user) => {
       if (hasNavigated) return; // Prevent multiple navigations
@@ -38,36 +39,47 @@ export default function SplashScreen() {
       }
     };
 
-    // Check auth state immediately
-    const initialUser = getCurrentUser();
-    if (initialUser) {
-      // User is already authenticated, navigate after splash screen
-      console.log('✅ User found on mount - will navigate to dashboard after splash');
-      navigationTimeout = setTimeout(() => navigateToDestination(initialUser), 2000);
-    } else {
-      // Listen for auth state changes (handles async auth state restoration)
-      console.log('🔍 No user found initially - listening for auth state changes');
-      authUnsubscribe = onAuthStateChange((user) => {
-        console.log('🔄 Auth state changed in SplashScreen:', user ? 'User authenticated' : 'User signed out');
-        if (!hasNavigated) {
-          // Navigate immediately if user is authenticated, or wait for splash screen
-          if (user) {
-            navigationTimeout = setTimeout(() => navigateToDestination(user), 2000);
-          } else {
-            // Wait a bit longer if no user, in case auth state is still loading
-            navigationTimeout = setTimeout(() => navigateToDestination(null), 2500);
-          }
+    // Always subscribe to auth state changes first (this ensures we catch the user when Firebase restores the session)
+    console.log('🔍 Setting up auth state listener...');
+    authUnsubscribe = onAuthStateChange((user) => {
+      if (authStateDetermined) return; // Ignore subsequent changes after initial determination
+      
+      authStateDetermined = true;
+      console.log('🔄 Auth state determined:', user ? 'User authenticated' : 'No user');
+      
+      // Clear any fallback timeout since we got auth state
+      if (navigationTimeout) clearTimeout(navigationTimeout);
+      
+      if (!hasNavigated) {
+        // Navigate after splash screen duration (2 seconds)
+        if (user) {
+          console.log('✅ User is logged in - will navigate to dashboard after splash');
+          navigationTimeout = setTimeout(() => navigateToDestination(user), 2000);
+        } else {
+          console.log('ℹ️ No user found - will navigate to landing page after splash');
+          navigationTimeout = setTimeout(() => navigateToDestination(null), 2000);
         }
-      });
+      }
+    });
 
-      // Fallback: If no auth state change occurs within 3 seconds, navigate to landing
-      navigationTimeout = setTimeout(() => {
-        if (!hasNavigated) {
-          console.log('⏰ Timeout reached (3s) - navigating to landing page');
+    // Fallback timeout: If auth state isn't determined within 2.5 seconds, check current user
+    const fallbackTimeout = setTimeout(() => {
+      if (!authStateDetermined && !hasNavigated) {
+        console.log('⏰ Auth state not determined yet - checking current user directly');
+        const currentUser = getCurrentUser();
+        authStateDetermined = true;
+        if (currentUser) {
+          console.log('✅ Found user via getCurrentUser - navigating to dashboard');
+          navigateToDestination(currentUser);
+        } else {
+          console.log('ℹ️ No user found - navigating to landing page');
           navigateToDestination(null);
         }
-      }, 3000);
-    }
+      }
+    }, 2500);
+
+    // Store fallback timeout reference for cleanup
+    navigationTimeout = fallbackTimeout;
 
     return () => {
       console.log('🧹 SplashScreen cleanup');

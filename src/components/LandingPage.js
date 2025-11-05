@@ -1,9 +1,34 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { Brain, Heart, Star } from "lucide-react";
+import { getCurrentUser, onAuthStateChange } from '../services/authService';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  // Redirect to dashboard if user is already logged in
+  useEffect(() => {
+    const checkAuth = () => {
+      const user = getCurrentUser();
+      if (user) {
+        console.log('✅ User is logged in on LandingPage - redirecting to dashboard');
+        navigate('/dashboard', { replace: true });
+      }
+    };
+
+    // Check immediately
+    checkAuth();
+
+    // Also listen for auth state changes (in case user logs in while on this page)
+    const unsubscribe = onAuthStateChange((user) => {
+      if (user) {
+        console.log('✅ Auth state changed - user logged in, redirecting to dashboard');
+        navigate('/dashboard', { replace: true });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleGetStarted = () => {
     navigate('/signup');
