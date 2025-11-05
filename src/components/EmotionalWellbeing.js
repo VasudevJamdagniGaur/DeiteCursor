@@ -1596,11 +1596,6 @@ export default function EmotionalWellbeing() {
       await loadHabitAnalysis();
 
       console.log('✅ All data refreshed!');
-
-      // Don't show alert if called from force analysis
-      if (!window.isForceAnalysis) {
-        alert('✅ Data refreshed successfully!');
-      }
     } catch (error) {
       console.error('❌ Error refreshing data:', error);
       alert('Failed to refresh data: ' + error.message);
@@ -2339,7 +2334,6 @@ Return in this JSON format:
       await loadHabitAnalysis(true); // Force refresh habit analysis
       
       console.log('✅ All data refreshed from Firestore!');
-      alert('✅ Data refreshed successfully!');
 
       // Get emotional data for analysis (using current selected period)
       const userId = user.uid;
