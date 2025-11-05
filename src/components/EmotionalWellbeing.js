@@ -2514,7 +2514,7 @@ Return in this JSON format:
               </div>
             </div>
 
-            <div className="h-64 w-full">
+            <div className="h-96 w-full">
           {weeklyMoodData.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
@@ -2559,7 +2559,6 @@ Return in this JSON format:
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
-                    label={{ value: '%', angle: 0, position: 'insideLeft' }}
                   />
                   <Tooltip 
                     content={<CustomTooltip />}
@@ -2712,7 +2711,7 @@ Return in this JSON format:
                 </div>
               </div>
 
-              <div className="h-64 w-full">
+              <div className="h-96 w-full">
           {moodBalance.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
