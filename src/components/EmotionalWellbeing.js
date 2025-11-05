@@ -3489,23 +3489,9 @@ Return in this JSON format:
 
         </div>
 
-        <div className="flex items-center space-x-6 flex-1 justify-center mx-4">
-          <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              isDarkMode ? 'backdrop-blur-md' : 'bg-white'
-            }`}
-            style={isDarkMode ? {
-              backgroundColor: "rgba(42, 42, 45, 0.6)",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            } : {
-              boxShadow: "0 2px 8px rgba(134, 169, 107, 0.15)",
-            }}
-          >
-            <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
-          </div>
+        <div className="flex items-center flex-1 justify-center mx-4">
           <div className="text-center px-2">
-            <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h1 className={`text-2xl font-semibold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Emotional Wellbeing
             </h1>
           </div>
