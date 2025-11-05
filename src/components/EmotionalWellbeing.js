@@ -3500,12 +3500,9 @@ Return in this JSON format:
             <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
           <div className="text-center">
-            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               Emotional Wellbeing
             </h1>
-            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Track your emotional journey
-            </p>
           </div>
         </div>
 
