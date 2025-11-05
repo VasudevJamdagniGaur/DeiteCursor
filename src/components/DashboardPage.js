@@ -450,7 +450,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="relative z-10 max-w-sm mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="relative flex items-center mb-8">
+          {/* Left icon */}
           <div
             onClick={handleWellbeingClick}
             className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity ${
@@ -467,8 +468,9 @@ export default function DashboardPage() {
             <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
 
+          {/* Center brain icon - absolutely positioned */}
           <div
-            className={`w-14 h-14 rounded-full flex items-center justify-center ${
+            className={`absolute left-1/2 transform -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center ${
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
             }`}
             style={isDarkMode ? {
@@ -482,7 +484,8 @@ export default function DashboardPage() {
             <Brain className="w-7 h-7" style={{ color: isDarkMode ? "#8AB4F8" : "#87A96B" }} strokeWidth={1.5} />
           </div>
 
-          <div className="flex space-x-2">
+          {/* Right icons */}
+          <div className="flex space-x-2 ml-auto">
             <div
               onClick={toggleTheme}
               className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity ${
