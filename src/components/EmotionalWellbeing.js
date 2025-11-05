@@ -3414,14 +3414,6 @@ Return in this JSON format:
         )}
           </div>
 
-      {/* Data Summary - Only show when we have data */}
-      {emotionalData.length > 0 && (
-          <div className="text-center py-4">
-            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Showing real emotional data from {emotionalData.length} conversation{emotionalData.length !== 1 ? 's' : ''} over {selectedPeriod} days
-            </p>
-          </div>
-      )}
     </div>
   );
 
