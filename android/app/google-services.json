@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:92079931095:android:80a50e6b1551a951783a92",
         "android_client_info": {
-          "package_name": "jamdagni.deite.app"
+          "package_name": "therapist.deite.app"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "92079931095-tdip85ek331pmdbcjo8337p2975idu66.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "jamdagni.deite.app",
+            "package_name": "therapist.deite.app",
             "certificate_hash": "c465ffcb3d988222dc729c487e5fd50b3c9d9f8a"
           }
         },

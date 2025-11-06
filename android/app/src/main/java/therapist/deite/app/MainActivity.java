@@ -1,4 +1,4 @@
-package jamdagni.deite.app;
+package therapist.deite.app;
 
 import com.getcapacitor.BridgeActivity;
 
