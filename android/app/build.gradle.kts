@@ -27,9 +27,20 @@ android {
         }
     }
     
+    signingConfigs {
+        create("release") {
+            storeFile = file("my-release-key.jks")
+            storePassword = "Vasudev@123"
+            keyAlias = "my-key-alias"
+            keyPassword = "Vasudev@123"
+        }
+    }
+    
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
