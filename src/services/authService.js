@@ -596,7 +596,7 @@ export const handleGoogleRedirect = async () => {
   try {
     // Check if we're returning via deep link
     const currentUrl = window.location.href;
-    const isDeepLink = currentUrl.includes('jamdagni.deite.app://');
+    const isDeepLink = currentUrl.includes('therapist.deite.app://');
     const isOnAuthHandler = currentUrl.includes('__/auth/handler');
     const storedAppOrigin = localStorage.getItem('appOrigin');
     const appOrigin = storedAppOrigin || window.location.origin;
@@ -614,7 +614,7 @@ export const handleGoogleRedirect = async () => {
       
       // Parse deep link URL to extract auth parameters
       // Firebase might include auth tokens in the URL
-      const urlObj = new URL(currentUrl.replace('jamdagni.deite.app://', 'http://'));
+      const urlObj = new URL(currentUrl.replace('therapist.deite.app://', 'http://'));
       const code = urlObj.searchParams.get('code');
       const state = urlObj.searchParams.get('state');
       const error = urlObj.searchParams.get('error');
