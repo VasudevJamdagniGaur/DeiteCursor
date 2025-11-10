@@ -3,7 +3,7 @@ import { getDateId } from '../utils/dateUtils';
 
 class ReflectionService {
   constructor() {
-    this.baseURL = 'https://f86jl4i8p64dqs-11434.proxy.runpod.net/';
+    this.baseURL = 'https://g75uux69gnczn1-11434.proxy.runpod.net/';
     this.greetings = ['hey', 'hi', 'hello', 'hii', 'hiii', 'hiiii', 'sup', 'yo', 'what\'s up', 'wassup'];
   }
 

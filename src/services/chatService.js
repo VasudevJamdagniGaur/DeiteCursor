@@ -1,6 +1,6 @@
 class ChatService {
   constructor() {
-    this.baseURL = 'https://f86jl4i8p64dqs-11434.proxy.runpod.net/';
+    this.baseURL = 'https://g75uux69gnczn1-11434.proxy.runpod.net/';
     this.modelName = 'llama3:70b';
   }
 
