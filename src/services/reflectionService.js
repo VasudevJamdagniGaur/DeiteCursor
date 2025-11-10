@@ -62,21 +62,21 @@ class ReflectionService {
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
-    const reflectionPrompt = `You are helping someone write a diary entry summarizing their day. Analyze the conversation below CAREFULLY and write an empathetic, thoughtful summary that captures the ACTUAL events and emotions discussed.
+    const reflectionPrompt = `Write a natural, first-person diary entry about this day. Tell the story of what happened and how it felt.
 
 CRITICAL REQUIREMENTS:
-1. READ THE ENTIRE CONVERSATION - Pay close attention to what the user actually shared
-2. IDENTIFY THE EMOTIONAL TONE - Is it grief, sadness, joy, stress, anxiety, etc.? Reflect that tone appropriately
-3. WRITE LIKE A DIARY ENTRY - Use first person, empathetic tone, like a personal journal
-4. REFLECT WHAT WAS ACTUALLY DISCUSSED - If they mentioned losing a loved one, reflect grief. If they mentioned a happy event, reflect joy. DO NOT generate random summaries
-5. BE SPECIFIC - Mention key topics, events, or feelings they actually talked about
-6. SHOW EMPATHY - For difficult topics (loss, grief, stress), write with understanding and gentleness
-7. 3-4 sentences, capturing the essence and emotional weight of the conversation
+1. WRITE IN FIRST PERSON - Use "I", "my", "me" - this is a personal diary entry
+2. NO META-COMMENTARY - Do NOT say "Here is a diary entry" or "summarizing the day" or mention "user" - just tell the story directly
+3. FOCUS ON WHAT HAPPENED - Write about the actual events, conversations, and experiences from the day
+4. CAPTURE THE FEELING - Include emotions and how things felt, but naturally woven into the story
+5. BE SPECIFIC - Mention real events, people, or activities that were discussed
+6. NATURAL STORYTELLING - Write like someone naturally reflecting on their day, not like an analysis or summary
+7. 3-5 sentences that read like a real diary entry
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a diary entry summarizing this person's day based on what they ACTUALLY discussed. Match the emotional tone and reflect the real content of their conversation:`;
+Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt:`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);

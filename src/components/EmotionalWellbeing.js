@@ -1162,29 +1162,63 @@ export default function EmotionalWellbeing() {
     console.log('📝 Best day summary:', bestDay.summary);
     console.log('📝 Worst day summary:', worstDay.summary);
 
+    // Clean up summary text to remove unwanted phrases
+    const cleanSummary = (summary) => {
+      if (!summary) return summary;
+      
+      let cleaned = summary;
+      
+      // Remove common unwanted phrases
+      const unwantedPhrases = [
+        /Here is a diary entry summarizing the (user's|user) day:?\s*/gi,
+        /Here is a diary entry:?\s*/gi,
+        /Diary entry summarizing the (user's|user) day:?\s*/gi,
+        /Summarizing the (user's|user) day:?\s*/gi,
+        /Here's a diary entry:?\s*/gi,
+        /This is a diary entry:?\s*/gi,
+        /Diary entry:?\s*/gi,
+        /the user's day/gi,
+        /the user/gi,
+        /this person's day/gi,
+        /this person/gi,
+      ];
+      
+      unwantedPhrases.forEach(phrase => {
+        cleaned = cleaned.replace(phrase, '');
+      });
+      
+      // Remove quotes around the content if present
+      cleaned = cleaned.replace(/^["']|["']$/g, '');
+      cleaned = cleaned.trim();
+      
+      return cleaned;
+    };
+    
     // Generate natural storytelling descriptions based on the day's summary
     const generateBestDayDescription = (day) => {
       const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
       
       if (day.summary) {
-        // Use the summary directly as natural storytelling - no extra analysis or details
-        return day.summary;
+        // Clean and use the summary directly as natural storytelling
+        const cleanedSummary = cleanSummary(day.summary);
+        return cleanedSummary;
       }
       
       // Fallback if no summary available
-      return `On ${dateStr}, you experienced a day that felt particularly positive and uplifting.`;
+      return `On ${dateStr}, I experienced a day that felt particularly positive and uplifting.`;
     };
     
     const generateChallengingDayDescription = (day) => {
       const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
       
       if (day.summary) {
-        // Use the summary directly as natural storytelling - no extra analysis or details
-        return day.summary;
+        // Clean and use the summary directly as natural storytelling
+        const cleanedSummary = cleanSummary(day.summary);
+        return cleanedSummary;
       }
       
       // Fallback if no summary available
-      return `On ${dateStr}, you experienced a day that felt particularly challenging.`;
+      return `On ${dateStr}, I experienced a day that felt particularly challenging.`;
     };
     
     console.log('📝 Generating contextual descriptions based on data...');
