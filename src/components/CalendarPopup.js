@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays = [] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -142,14 +142,6 @@ const CalendarPopup = ({ isOpen, onClose, selectedDate, onDateSelect, chatDays =
             <ChevronRight className="w-5 h-5 text-gray-300" />
           </button>
         </div>
-
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-700/30 transition-colors"
-        >
-          <X className="w-4 h-4 text-gray-400" />
-        </button>
 
         {/* Day names */}
         <div className="grid grid-cols-7 gap-1 mb-2">
