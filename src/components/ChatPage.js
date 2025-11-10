@@ -255,6 +255,100 @@ export default function ChatPage() {
     }
 
     const userMessageText = inputMessage.trim();
+    
+    // Check for "day reflect" command
+    const isDayReflectCommand = /^(day reflect|\/day reflect|dayreflect)$/i.test(userMessageText);
+    
+    if (isDayReflectCommand) {
+      // Handle day reflect command - generate narrative diary story
+      console.log('📖 DAY REFLECT COMMAND: Generating narrative diary story...');
+      
+      const userMessage = {
+        id: Date.now(),
+        text: userMessageText,
+        sender: 'user',
+        timestamp: new Date(),
+        isWhisperSession: isWhisperMode
+      };
+
+      // Add user message immediately
+      const newMessages = [...messages, userMessage];
+      setMessages(newMessages);
+      setInputMessage('');
+      setIsLoading(true);
+      window.lastLoadingTime = Date.now();
+
+      try {
+        // Generate narrative diary story from current conversation (before the command)
+        // Use existing messages, not including the command itself
+        const narrativeStory = await reflectionService.generateNarrativeDiaryStory(messages);
+        
+        // Create AI message with the narrative story
+        const aiMessage = {
+          id: Date.now() + 1,
+          text: narrativeStory,
+          sender: 'ai',
+          timestamp: new Date(),
+          isWhisperSession: isWhisperMode
+        };
+
+        const finalMessages = [...newMessages, aiMessage];
+        setMessages(finalMessages);
+        saveMessages(finalMessages);
+
+        // Save AI message to Firestore
+        const user = getCurrentUser();
+        if (user) {
+          try {
+            await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
+              ...aiMessage,
+              isWhisperSession: isWhisperMode
+            });
+            console.log('💾 Day reflect narrative story saved to Firestore');
+          } catch (error) {
+            console.error('❌ Error saving day reflect story to Firestore:', error);
+          }
+        }
+
+        setIsLoading(false);
+        window.lastLoadingTime = 0;
+        
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 100);
+        
+        return; // Exit early, don't process as normal message
+      } catch (error) {
+        console.error('❌ Error generating day reflect narrative:', error);
+        
+        // Show error message
+        const errorMessage = {
+          id: Date.now() + 1,
+          text: "I'm sorry, I'm having trouble generating your day reflection right now. Please try again in a moment.",
+          sender: 'ai',
+          timestamp: new Date(),
+          isWhisperSession: isWhisperMode
+        };
+        
+        const finalMessages = [...newMessages, errorMessage];
+        setMessages(finalMessages);
+        saveMessages(finalMessages);
+        
+        setIsLoading(false);
+        window.lastLoadingTime = 0;
+        
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 100);
+        
+        return; // Exit early
+      }
+    }
+
     const userMessage = {
       id: Date.now(),
       text: userMessageText,

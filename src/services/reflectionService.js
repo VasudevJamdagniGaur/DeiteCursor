@@ -169,6 +169,133 @@ Write a diary entry summarizing this person's day based on what they ACTUALLY di
     return context.trim();
   }
 
+  async generateNarrativeDiaryStory(messages) {
+    console.log('📖 Starting narrative diary story generation...');
+    console.log('🔍 NARRATIVE DEBUG: messages type:', typeof messages, 'length:', messages?.length);
+    
+    // Safety check and fix for messages
+    if (!messages || !Array.isArray(messages)) {
+      console.error('❌ NARRATIVE ERROR: Invalid messages array, using fallback');
+      return "Today was a day like any other, filled with small moments and quiet thoughts.";
+    }
+    
+    console.log('💬 Total messages for narrative story:', messages.length);
+    
+    // Filter out system messages, whisper session messages, and get meaningful messages
+    const userMessages = messages
+      .filter(msg => msg.sender === 'user' && !msg.isWhisperSession)
+      .map(msg => msg.text.trim())
+      .filter(text => !this.isSimpleGreeting(text) && text.length > 3);
+
+    const aiMessages = messages
+      .filter(msg => msg.sender === 'ai' && !msg.isWhisperSession)
+      .map(msg => msg.text.trim());
+
+    console.log('📝 User messages:', userMessages.length);
+    console.log('🤖 AI messages:', aiMessages.length);
+
+    if (userMessages.length === 0) {
+      return "Today unfolded quietly, a gentle day where thoughts drifted like clouds across a calm sky.";
+    }
+
+    // Generate narrative diary story with safe fallback
+    try {
+      const narrativeStory = await this.generateAINarrativeStory(userMessages, aiMessages);
+      return narrativeStory;
+    } catch (err) {
+      console.error('⚠️ Narrative story generation via API failed, using fallback:', err?.message || err);
+      return this.createFallbackNarrative(userMessages, aiMessages);
+    }
+  }
+
+  async generateAINarrativeStory(userMessages, aiMessages) {
+    console.log('🤖 Starting AI narrative diary story generation...');
+    
+    // Create a conversation context for the AI
+    const conversationContext = this.buildConversationContext(userMessages, aiMessages);
+    console.log('📋 Conversation context created for narrative');
+    
+    const narrativePrompt = `You are helping someone write a personal diary entry about their day. Write ONLY a short, warm, narrative diary story based on the conversation below.
+
+CRITICAL REQUIREMENTS:
+1. Write as a natural, flowing narrative story - like someone telling their day to a close friend
+2. Use first person ("I", "my", "me") - this is their personal diary
+3. NO bullet points, NO lists, NO analysis - only storytelling
+4. Keep it warm and personal - capture the feeling and flow of their day
+5. Be specific about what they actually discussed - mention real events, feelings, or moments from the conversation
+6. Write 3-5 sentences that read like a natural diary entry
+7. Match the emotional tone of what they shared (if they were sad, reflect that gently; if happy, let that warmth show)
+8. Make it feel like a real person reflecting on their day, not an AI analysis
+
+Conversation with Deite:
+${conversationContext}
+
+Write a short, warm, narrative diary story about this person's day. Tell it like a story, not an analysis:`;
+
+    console.log('🧪 Narrative prompt length:', narrativePrompt.length);
+    console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));
+
+    console.log('🌐 Making API call to RunPod for narrative story...');
+
+    // Go directly to llama3:70b - skip model check
+    const modelToUse = 'llama3:70b';
+    
+    try {
+      console.log(`🔄 Using model: ${modelToUse} for narrative story`);
+        
+      const response = await fetch(`${this.baseURL}api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          prompt: narrativePrompt,
+          stream: false,
+          options: {
+            temperature: 0.7,  // Slightly higher temperature for more natural, creative storytelling
+            top_p: 0.9,
+            max_tokens: 300  // Allow for a warm, detailed narrative
+          }
+        })
+      });
+
+      console.log(`📥 Response status for ${modelToUse}:`, response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ RunPod API Error for ${modelToUse}:`, response.status, errorText);
+        throw new Error(`Narrative story generation failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ RunPod response received for narrative story with ${modelToUse}`);
+        
+      // Accept multiple possible fields from providers
+      const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
+      if (typeof text === 'string' && text.trim()) {
+        const story = text.trim();
+        console.log('📖 Generated narrative diary story:', story);
+        return story;
+      } else {
+        console.error(`❌ Invalid response format from ${modelToUse}:`, data);
+        console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
+        throw new Error('Invalid response format from narrative story API');
+      }
+    } catch (error) {
+      console.error(`💥 Error with model ${modelToUse}:`, error.message);
+      throw error;
+    }
+  }
+
+  createFallbackNarrative(userMessages, aiMessages) {
+    const lastUser = userMessages[userMessages.length - 1] || '';
+    const firstUser = userMessages[0] || '';
+    const combined = (firstUser !== lastUser) ? `${firstUser} ... ${lastUser}` : lastUser;
+    const trimmed = combined.slice(0, 200);
+    return `Today I found myself reflecting on ${trimmed}${combined.length > 200 ? '...' : ''}. It was a day that brought its own rhythm, its own quiet moments of thought and conversation.`;
+  }
+
   async saveReflection(userId, dateId, reflection) {
     try {
       console.log('💾 Saving reflection...');
