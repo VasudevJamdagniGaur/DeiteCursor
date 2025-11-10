@@ -1162,52 +1162,29 @@ export default function EmotionalWellbeing() {
     console.log('📝 Best day summary:', bestDay.summary);
     console.log('📝 Worst day summary:', worstDay.summary);
 
-    // Generate intelligent contextual descriptions based on the data
+    // Generate natural storytelling descriptions based on the day's summary
     const generateBestDayDescription = (day) => {
       const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
-      const hasHighEnergy = (day.energy || 0) >= 70;
-      const hasLowStress = (day.stress || 0) <= 30 && (day.anxiety || 0) <= 30;
-      const hasHighHappiness = (day.happiness || 0) >= 70;
       
       if (day.summary) {
-        return `On ${dateStr}, you reached a peak emotional state. ${day.summary} Your mood reflected this inner balance with ${day.happiness}% happiness and ${day.energy}% energy flowing through you.`;
+        // Use the summary directly as natural storytelling - no extra analysis or details
+        return day.summary;
       }
       
-      if (hasHighEnergy && hasLowStress) {
-        return `On ${dateStr}, your emotional energy was at its highest—${day.energy}% energy flowing through you with minimal stress interrupting your peace. You likely achieved something meaningful, felt deeply connected to something important, or experienced a moment of breakthrough that resonated with your authentic self. The calm confidence of that day speaks to your ability to thrive when you're truly aligned.`;
-      }
-      
-      if (hasHighHappiness) {
-        return `On ${dateStr}, happiness radiated at ${day.happiness}%—a day where joy wasn't just present, it was dominant. This wasn't random; something shifted internally or externally that day. Perhaps you overcame self-doubt, completed something meaningful, or simply felt fully alive in your own skin. That level of happiness suggests you were exactly where you needed to be.`;
-      }
-      
-      return `On ${dateStr}, your emotional state peaked with ${Math.round((day.happiness + day.energy) / 2)}% positive energy. Something meaningful happened that day—maybe you achieved a breakthrough, experienced genuine connection, or felt a deep sense of alignment with your values. These peaks remind you of your capacity for genuine joy.`;
+      // Fallback if no summary available
+      return `On ${dateStr}, you experienced a day that felt particularly positive and uplifting.`;
     };
     
     const generateChallengingDayDescription = (day) => {
       const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
-      const hasLowEnergy = (day.energy || 0) <= 40;
-      const hasHighStress = (day.stress || 0) >= 60;
-      const hasHighAnxiety = (day.anxiety || 0) >= 60;
-      const hasLowHappiness = (day.happiness || 0) <= 40;
       
       if (day.summary) {
-        return `On ${dateStr}, you faced significant emotional challenges. ${day.summary} Despite the difficulty, you got through it—and that resilience matters. Your stress peaked at ${day.stress}% while anxiety reached ${day.anxiety}%, but you still had ${day.happiness}% happiness and ${day.energy}% energy. This shows even on your toughest days, you don't completely lose yourself.`;
+        // Use the summary directly as natural storytelling - no extra analysis or details
+        return day.summary;
       }
       
-      if (hasHighStress && hasHighAnxiety) {
-        return `On ${dateStr}, you faced intense pressure with ${day.stress}% stress and ${day.anxiety}% anxiety weighing on you. Your energy dropped to ${day.energy}%, signaling that emotional demands were pushing your inner resources to their limits. Yet you navigated it—and navigating it is a form of growth. Sometimes the hardest days teach us about our capacity to endure.`;
-      }
-      
-      if (hasLowEnergy && hasLowHappiness) {
-        return `On ${dateStr}, both your happiness (${day.happiness}%) and energy (${day.energy}%) were at their lowest. This wasn't just a bad day—it was emotionally exhausting, possibly overwhelming. You might have been dealing with disappointment, loss, burnout, or simply felt disconnected from your usual sources of strength. These valleys, though painful, are part of the journey and don't define your ability to recover.`;
-      }
-      
-      if (hasHighAnxiety) {
-        return `On ${dateStr}, anxiety spiked to ${day.anxiety}%—a day where worry and uncertainty took over. Your body and mind were in alert mode, likely preparing for perceived threats or wrestling with inner conflicts. This kind of anxiety often stems from feeling unsafe, uncertain about the future, or caught between competing needs. The intensity of that day speaks to how deeply you feel things, and how much you care.`;
-      }
-      
-      return `On ${dateStr}, you experienced one of your most challenging emotional periods. With ${Math.round((day.happiness + day.energy) / 2)}% positive energy, you were running low—perhaps dealing with conflicts, overwhelm, or difficult decisions that tested your emotional resilience. What matters isn't that you struggled, but that you made it through. These challenging days often reveal unexpected strength.`;
+      // Fallback if no summary available
+      return `On ${dateStr}, you experienced a day that felt particularly challenging.`;
     };
     
     console.log('📝 Generating contextual descriptions based on data...');
