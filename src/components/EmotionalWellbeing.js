@@ -130,6 +130,7 @@ export default function EmotionalWellbeing() {
   const [hasEnoughData, setHasEnoughData] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedDateDetails, setSelectedDateDetails] = useState(null);
+  const [selectedGuidanceTip, setSelectedGuidanceTip] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [emotionExplanations, setEmotionExplanations] = useState(null);
   const [isLoadingFresh, setIsLoadingFresh] = useState(false);
@@ -3216,7 +3217,8 @@ Return in this JSON format:
                 patternAnalysis.guidanceTips.map((tip, index) => (
                   <div
                     key={index}
-                    className={`group p-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg`}
+                    onClick={() => setSelectedGuidanceTip(tip)}
+                    className={`group p-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer`}
                     style={isDarkMode ? {
                       backgroundColor: "rgba(138, 180, 248, 0.08)",
                       border: "1px solid rgba(138, 180, 248, 0.15)",
@@ -3244,15 +3246,11 @@ Return in this JSON format:
                         <div className="flex items-center justify-between mb-2">
                           <h4 className={`text-lg font-semibold group-hover:text-blue-300 transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                             {tip.title}
-                      </h4>
-                      <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                          </h4>
+                          <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                             {tip.category?.replace('_', ' ').toUpperCase()}
-                      </div>
-                    </div>
-                        
-                        <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          {tip.description}
-                        </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -3662,6 +3660,76 @@ Return in this JSON format:
             <div className="mt-6 text-center">
               <button
                 onClick={() => setShowDetailsModal(false)}
+                className="px-6 py-2 text-white rounded-full hover:opacity-90 transition-opacity"
+                style={isDarkMode ? {
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                } : {
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  border: "1px solid rgba(0, 0, 0, 0.08)",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Guidance Tip Detail Modal */}
+      {selectedGuidanceTip && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div
+            className={`rounded-2xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`}
+            style={isDarkMode ? {
+              backgroundColor: "#2A2A2D",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            } : {
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: "rgba(138, 180, 248, 0.2)",
+                    boxShadow: "0 0 15px rgba(138, 180, 248, 0.3)",
+                  }}
+                >
+                  <Lightbulb className="w-5 h-5 text-blue-400" />
+                </div>
+                <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedGuidanceTip.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedGuidanceTip(null)}
+                className={`w-8 h-8 rounded-full flex items-center justify-center touch-manipulation ${
+                  isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                }`}
+              >
+                <span className={`text-xl ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>×</span>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className={`inline-block text-xs px-3 py-1 rounded-full ${isDarkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                {selectedGuidanceTip.category?.replace('_', ' ').toUpperCase()}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className={`text-base leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                {selectedGuidanceTip.description}
+              </p>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={() => setSelectedGuidanceTip(null)}
                 className="px-6 py-2 text-white rounded-full hover:opacity-90 transition-opacity"
                 style={isDarkMode ? {
                   backgroundColor: "rgba(42, 42, 45, 0.8)",
