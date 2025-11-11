@@ -71,12 +71,17 @@ CRITICAL REQUIREMENTS:
 4. CAPTURE THE FEELING - Include emotions and how things felt, but naturally woven into the story
 5. BE SPECIFIC - Mention real events, people, or activities that were discussed
 6. NATURAL STORYTELLING - Write like someone naturally reflecting on their day, not like an analysis or summary
-7. 3-5 sentences that read like a real diary entry
+7. USE AS LITTLE TIME/SPACE AS APPROPRIATE - Keep it concise, focus on what matters most
+8. NO REPEATED "DEITE SAID..." - Do NOT repeatedly say "Deite said..." or "Deite told me..." - just mention what was discussed naturally
+9. NO "DEITE ASKED ME..." - Do NOT say "Deite asked me..." - just write about the topics naturally
+10. NO LONG DESCRIPTIONS OF DEITE'S ACTIONS - Do NOT write long descriptions of what Deite did or how Deite responded - focus on YOUR experience and reflections
+11. FEEL LIKE A PERSONAL REFLECTION - The diary should feel natural and personal, like you're reflecting on your own day, not describing an AI conversation
+12. 3-5 sentences that read like a real diary entry
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt:`;
+Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus on YOUR experience and reflections, not on describing what Deite said or did:`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
@@ -254,16 +259,20 @@ CRITICAL REQUIREMENTS:
 1. WRITE IN FIRST PERSON - Use "I", "my", "me" - this is a personal diary entry
 2. NO META-COMMENTARY - Do NOT say "Here is a diary entry" or "summarizing the day" or mention "user" or "person" - just tell the story directly
 3. NO ANALYSIS - Do NOT add analysis sections, bullet points, lists, or explanations - ONLY tell the story
-4. BE BRIEF - Write ${sentenceGuidance} maximum. Keep it short and concise.
+4. BE BRIEF - Write ${sentenceGuidance} maximum. Keep it short and concise. Use as little time/space as appropriate - focus on what matters most.
 5. COVER ALL TOPICS - Briefly mention the key events, conversations, or experiences discussed (about ${estimatedTopics} main topics)
 6. INCLUDE EMOTIONS - Naturally weave in how things felt (sad, happy, excited, etc.) without being explicit about it
 7. NATURAL STORYTELLING - Write like someone naturally reflecting on their day in a brief way
 8. BE SPECIFIC BUT CONCISE - Mention real events, people, or activities, but keep descriptions brief
+9. NO REPEATED "DEITE SAID..." - Do NOT repeatedly say "Deite said..." or "Deite told me..." - just mention what was discussed naturally
+10. NO "DEITE ASKED ME..." - Do NOT say "Deite asked me..." - just write about the topics naturally
+11. NO LONG DESCRIPTIONS OF DEITE'S ACTIONS - Do NOT write long descriptions of what Deite did or how Deite responded - focus on YOUR experience and reflections
+12. FEEL LIKE A PERSONAL REFLECTION - The diary should feel natural and personal, like you're reflecting on your own day, not describing an AI conversation
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a SHORT, natural diary entry about this day in first person. Write ${sentenceGuidance} maximum, briefly covering all key topics and emotions:`;
+Write a SHORT, natural diary entry about this day in first person. Write ${sentenceGuidance} maximum, briefly covering all key topics and emotions. Focus on YOUR experience and reflections, not on describing what Deite said or did:`;
 
     console.log('🧪 Narrative prompt length:', narrativePrompt.length);
     console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));
