@@ -215,50 +215,55 @@ Write a natural diary entry about this day in first person. Just tell the story 
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created for narrative');
     
-    // Calculate dynamic token limit based on number of messages
+    // Calculate dynamic token limit based on number of messages and topics
     const totalMessages = userMessages.length + aiMessages.length;
+    
+    // Estimate number of topics by looking at unique conversation themes
+    // Simple heuristic: more messages = more topics, but cap the growth
+    const estimatedTopics = Math.min(Math.ceil(totalMessages / 3), 5); // Cap at 5 topics
+    
     let maxTokens, sentenceGuidance;
     
     if (totalMessages <= 3) {
       // Very short conversation - brief reflection
-      maxTokens = 100;
+      maxTokens = 80;
       sentenceGuidance = "1-2 sentences";
     } else if (totalMessages <= 6) {
       // Short conversation - concise reflection
-      maxTokens = 150;
-      sentenceGuidance = "2-3 sentences";
+      maxTokens = 120;
+      sentenceGuidance = "2 sentences";
     } else if (totalMessages <= 10) {
       // Medium conversation - moderate reflection
-      maxTokens = 200;
-      sentenceGuidance = "3-4 sentences";
+      maxTokens = 150;
+      sentenceGuidance = "2-3 sentences";
     } else if (totalMessages <= 15) {
       // Longer conversation - detailed reflection
-      maxTokens = 250;
-      sentenceGuidance = "4-5 sentences";
+      maxTokens = 180;
+      sentenceGuidance = "3 sentences";
     } else {
-      // Very long conversation - comprehensive reflection
-      maxTokens = 300;
-      sentenceGuidance = "5-6 sentences";
+      // Very long conversation - comprehensive but still concise reflection
+      maxTokens = 200;
+      sentenceGuidance = "3-4 sentences";
     }
     
-    console.log(`📊 Message count: ${totalMessages}, Setting max_tokens to ${maxTokens} for ${sentenceGuidance} reflection`);
+    console.log(`📊 Message count: ${totalMessages}, Estimated topics: ${estimatedTopics}, Setting max_tokens to ${maxTokens} for ${sentenceGuidance} reflection`);
     
-    const narrativePrompt = `Write a natural, first-person diary entry about this day. The length should match the depth of the conversation - more topics discussed means a longer reflection.
+    const narrativePrompt = `Write a SHORT, natural, first-person diary entry about this day. Keep it brief and concise - mention all key topics but don't elaborate too much.
 
 CRITICAL REQUIREMENTS:
 1. WRITE IN FIRST PERSON - Use "I", "my", "me" - this is a personal diary entry
 2. NO META-COMMENTARY - Do NOT say "Here is a diary entry" or "summarizing the day" or mention "user" or "person" - just tell the story directly
 3. NO ANALYSIS - Do NOT add analysis sections, bullet points, lists, or explanations - ONLY tell the story
-4. MATCH CONVERSATION DEPTH - Write ${sentenceGuidance} that naturally covers all important topics and emotions discussed
-5. COVER ALL TOPICS - Mention the key events, conversations, or experiences discussed
+4. BE BRIEF - Write ${sentenceGuidance} maximum. Keep it short and concise.
+5. COVER ALL TOPICS - Briefly mention the key events, conversations, or experiences discussed (about ${estimatedTopics} main topics)
 6. INCLUDE EMOTIONS - Naturally weave in how things felt (sad, happy, excited, etc.) without being explicit about it
-7. NATURAL STORYTELLING - Write like someone naturally reflecting on their day
-8. BE SPECIFIC - Mention real events, people, or activities that were discussed
+7. NATURAL STORYTELLING - Write like someone naturally reflecting on their day in a brief way
+8. BE SPECIFIC BUT CONCISE - Mention real events, people, or activities, but keep descriptions brief
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a natural diary entry about this day in first person. Write ${sentenceGuidance}, covering all key topics and emotions:`;
+Write a SHORT, natural diary entry about this day in first person. Write ${sentenceGuidance} maximum, briefly covering all key topics and emotions:`;
 
     console.log('🧪 Narrative prompt length:', narrativePrompt.length);
     console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));
