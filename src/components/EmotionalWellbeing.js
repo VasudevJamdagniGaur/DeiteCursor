@@ -1187,10 +1187,14 @@ export default function EmotionalWellbeing() {
         cleaned = cleaned.replace(phrase, '');
       });
       
-      // Remove analysis sections - look for patterns like "Analysis:", "1. Key events", etc.
-      // Remove everything from "Analysis" onwards if it contains numbered lists or bullet points
+      // Remove "Analysis:" and everything after it - catch it anywhere in the text
+      const analysisIndex = cleaned.search(/Analysis:?\s*/i);
+      if (analysisIndex !== -1) {
+        cleaned = cleaned.substring(0, analysisIndex).trim();
+      }
+      
+      // Also remove analysis sections with patterns like "1. Key events", etc.
       const analysisPatterns = [
-        /\n\s*Analysis:?\s*\n?.*$/gi,
         /\n\s*1\.\s*Key events.*$/gi,
         /\n\s*2\.\s*Emotional tone.*$/gi,
         /\n\s*3\.\s*Important details.*$/gi,
