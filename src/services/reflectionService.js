@@ -215,21 +215,22 @@ Write a natural diary entry about this day in first person. Just tell the story 
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created for narrative');
     
-    const narrativePrompt = `Write a natural, first-person diary entry about this day. Just tell the story of what happened.
+    const narrativePrompt = `Write a short, natural, first-person diary entry about this day. Keep it concise but cover all the key topics and emotions.
 
 CRITICAL REQUIREMENTS:
 1. WRITE IN FIRST PERSON - Use "I", "my", "me" - this is a personal diary entry
 2. NO META-COMMENTARY - Do NOT say "Here is a diary entry" or "summarizing the day" or mention "user" or "person" - just tell the story directly
 3. NO ANALYSIS - Do NOT add analysis sections, bullet points, lists, or explanations - ONLY tell the story
-4. FOCUS ON WHAT HAPPENED - Write about the actual events, conversations, and experiences from the day
-5. NATURAL STORYTELLING - Write like someone naturally reflecting on their day, just telling what happened
-6. BE SPECIFIC - Mention real events, people, or activities that were discussed
-7. 3-5 sentences that read like a real diary entry - just the story, nothing else
+4. BE CONCISE - Keep it to 2-3 sentences maximum, but still cover all important topics and emotions
+5. COVER ALL TOPICS - Mention the key events, conversations, or experiences discussed
+6. INCLUDE EMOTIONS - Naturally weave in how things felt (sad, happy, excited, etc.) without being explicit about it
+7. NATURAL STORYTELLING - Write like someone naturally reflecting on their day in a brief way
+8. BE SPECIFIC - Mention real events, people, or activities that were discussed, but keep it brief
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a natural diary entry about this day in first person. Just tell the story of what happened:`;
+Write a short, natural diary entry about this day in first person. Keep it to 2-3 sentences, covering all key topics and emotions:`;
 
     console.log('🧪 Narrative prompt length:', narrativePrompt.length);
     console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));
@@ -254,7 +255,7 @@ Write a natural diary entry about this day in first person. Just tell the story 
           options: {
             temperature: 0.7,  // Slightly higher temperature for more natural, creative storytelling
             top_p: 0.9,
-            max_tokens: 300  // Allow for a warm, detailed narrative
+            max_tokens: 150  // Shorter, more concise narrative (2-3 sentences)
           }
         })
       });
