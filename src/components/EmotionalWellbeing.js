@@ -118,6 +118,7 @@ export default function EmotionalWellbeing() {
   const [moodBalance, setMoodBalance] = useState([]);
   const [topEmotions, setTopEmotions] = useState([]);
   const [highlights, setHighlights] = useState({});
+  const [highlightsLoading, setHighlightsLoading] = useState(false);
   const [triggers, setTriggers] = useState({});
   const [selectedPeriod, setSelectedPeriod] = useState(7); // 7, 15 days, or 365 (lifetime)
   const [balancePeriod, setBalancePeriod] = useState(7); // 1, 7, or 30 days for emotional balance
@@ -298,6 +299,7 @@ export default function EmotionalWellbeing() {
     if (cachedData) {
       console.log('⚡ Setting cached highlights data instantly');
       setHighlights(cachedData.highlights || {});
+      setHighlightsLoading(false);
       
       // Check if it's a new day after 12 PM
       const lastUpdateDate = cachedData.lastUpdateDate;
@@ -309,6 +311,9 @@ export default function EmotionalWellbeing() {
         console.log('📅 Same day or before 12 PM, using cached highlights data');
         return true; // Use cached data, no need to refresh
       }
+    } else {
+      // No cache - set loading to true
+      setHighlightsLoading(true);
     }
     return false;
   }, [shouldRefreshForNewDay]);
@@ -364,15 +369,20 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     if (!user) return;
 
-    const freshData = await loadHighlightsDataInternal();
-    if (freshData) {
-      const cacheKey = getCacheKey('highlights', '3months', user.uid);
-      const today = new Date().toDateString();
-      saveToCache(cacheKey, {
-        highlights: freshData.highlights,
-        timestamp: new Date().toISOString(),
-        lastUpdateDate: today // Track the date when highlights were last updated
-      });
+    setHighlightsLoading(true);
+    try {
+      const freshData = await loadHighlightsDataInternal();
+      if (freshData) {
+        const cacheKey = getCacheKey('highlights', '3months', user.uid);
+        const today = new Date().toDateString();
+        saveToCache(cacheKey, {
+          highlights: freshData.highlights,
+          timestamp: new Date().toISOString(),
+          lastUpdateDate: today // Track the date when highlights were last updated
+        });
+      }
+    } finally {
+      setHighlightsLoading(false);
     }
   };
 
@@ -1088,9 +1098,11 @@ export default function EmotionalWellbeing() {
     if (!user) {
       console.log('🏆 No user logged in for highlights');
       setHighlights({});
+      setHighlightsLoading(false);
       return { highlights: {} };
     }
 
+    setHighlightsLoading(true);
     try {
       // Use the same Firebase data source as other charts for consistency
       console.log('🔄 Loading highlights data from Firebase...');
@@ -1144,15 +1156,18 @@ export default function EmotionalWellbeing() {
         
         const highlightsData = await processHighlightsDataInternal(enrichedData, user.uid);
         setHighlights(highlightsData);
+        setHighlightsLoading(false);
         return { highlights: highlightsData };
       } else {
         console.log('📝 No highlights data found in Firebase');
         setHighlights({});
+        setHighlightsLoading(false);
         return { highlights: {} };
       }
     } catch (error) {
       console.error('❌ Error loading highlights data:', error);
       setHighlights({});
+      setHighlightsLoading(false);
       return { highlights: {} };
     }
   };
@@ -2530,6 +2545,7 @@ Return in this JSON format:
         };
 
         setHighlights(updatedHighlights);
+        setHighlightsLoading(false);
 
         // Cache the updated highlights
         try {
@@ -3042,12 +3058,21 @@ Return in this JSON format:
                     {highlights.peak?.title || 'Best Mood Day'}
                   </h4>
                 </div>
-                <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
-                  {highlights.peak?.description || 'Your highest emotional peak this period.'}
-                </p>
-                <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
-                  {highlights.peak?.date || 'No data available'}
-                </p>
+                {highlightsLoading ? (
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-400 border-t-transparent"></div>
+                    <p className="text-sm text-gray-400">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
+                      {highlights.peak?.description || 'Your highest emotional peak this period.'}
+                    </p>
+                    <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                      {highlights.peak?.date || 'No data available'}
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Challenging Day - Unified UI with Red Title */}
@@ -3074,12 +3099,21 @@ Return in this JSON format:
                     {highlights.toughestDay?.title || 'Challenging Day'}
                   </h4>
                 </div>
-                <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
-                  {highlights.toughestDay?.description || 'Your most challenging emotional period.'}
-                </p>
-                <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
-                  {highlights.toughestDay?.date || 'No data available'}
-                </p>
+                {highlightsLoading ? (
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-400 border-t-transparent"></div>
+                    <p className="text-sm text-gray-400">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
+                      {highlights.toughestDay?.description || 'Your most challenging emotional period.'}
+                    </p>
+                    <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                      {highlights.toughestDay?.date || 'No data available'}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
         )}
