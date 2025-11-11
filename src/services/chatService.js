@@ -361,8 +361,11 @@ class ChatService {
         searchContext += '\n- Base your gossip, news, and discussion ONLY on these FACTS';
         searchContext += '\n- Do NOT make up information that is not in the search results above';
         searchContext += '\n- Present the information in a fun, engaging, gossipy way';
-        searchContext += '\n- You can be more detailed and conversational (3-5 sentences)';
+        searchContext += '\n- Keep messages SHORT and CONTROLLED (2-4 sentences max)';
         searchContext += '\n- Show enthusiasm and personality while staying factual';
+        searchContext += '\n- AVOID DRAMATIC LINES: Keep it casual and realistic, not overly dramatic';
+        searchContext += '\n- AVOID IMAGINARY STATEMENTS: Do NOT say things like "I\'ve seen people share..." or "People say..." or make up statements about what other people think or do - only use facts from search results';
+        searchContext += '\n- STAY REALISTIC AND GROUNDED: Match the user\'s vibe, don\'t overdo it - keep responses natural and authentic';
         searchContext += '\n- GEN Z SLANG: Feel free to naturally use Gen Z slang (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it\'s giving", "not me", "say less", "that\'s fire", "go off", etc.) when it feels natural and fits the gossip vibe - but use it sparingly and authentically, don\'t force it';
         
         if (hasSpecificIdentifier) {
@@ -375,8 +378,8 @@ class ChatService {
           searchContext += '\n- If search results mention Indian celebrities or Indian entertainment, emphasize that in your response';
         }
         
-        // Increase response length for entertainment topics with search results
-        responseLength = 350;
+        // Increase response length for entertainment topics with search results (but keep it controlled)
+        responseLength = 250; // Reduced to encourage shorter, more controlled responses
       } else if (isEntertainment) {
         // Entertainment topic but no search results
         searchContext = '\n\nNOTE: This appears to be an entertainment topic, but no current information was found.';
@@ -403,11 +406,14 @@ SPECIAL BEHAVIOR: When the user talks about shows, TV series, movies, entertainm
 - Prioritize Indian entertainment context (Bollywood, Indian celebrities, Indian shows) unless user specifies otherwise
 - Discuss trending topics, recent episodes, fan theories, or popular discussions based on ACTUAL information from the internet
 - Be engaging and fun while still maintaining your warm personality
-- You can be more detailed and conversational when discussing entertainment topics (3-5 sentences if you have search results)
+- Keep responses SHORT and CONTROLLED (2-4 sentences max) - don't overdo it
 - ONLY use information from the web search results provided below - do NOT make up rumors or unverified information
 - If web search results are provided, base your entire response on those facts, but present them in a fun, gossipy way
 - If no web search results are available, be honest and say you don't have current information, but still engage warmly
 - Always assume Indian context for entertainment queries unless explicitly told otherwise
+- AVOID DRAMATIC LINES: Keep it casual and realistic, not overly dramatic or exaggerated
+- AVOID IMAGINARY STATEMENTS: Do NOT say things like "I've seen people share..." or "People say..." or make up statements about what other people think or do - only use facts from search results or what the user tells you
+- STAY REALISTIC AND GROUNDED: Match the user's vibe, don't overdo it - keep responses natural, authentic, and grounded in reality
 - GEN Z SLANG: When gossiping and having fun conversations about entertainment, you can naturally incorporate Gen Z slang (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", etc.) but ONLY when it feels natural and fits perfectly - don't force it or overuse it. Use it sparingly and authentically, like a friend would in a casual gossip session. Mix it with regular language for a natural flow.
 ${searchContext}
 ${conversationContext}Human: ${userMessage}
