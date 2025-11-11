@@ -363,6 +363,7 @@ class ChatService {
         searchContext += '\n- Present the information in a fun, engaging, gossipy way';
         searchContext += '\n- You can be more detailed and conversational (3-5 sentences)';
         searchContext += '\n- Show enthusiasm and personality while staying factual';
+        searchContext += '\n- GEN Z SLANG: Feel free to naturally use Gen Z slang (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it\'s giving", "not me", "say less", "that\'s fire", "go off", etc.) when it feels natural and fits the gossip vibe - but use it sparingly and authentically, don\'t force it';
         
         if (hasSpecificIdentifier) {
           searchContext += '\n- CRITICAL: The user mentioned a specific identifier (Instagram handle, username like "tee writes", "tee_.writes", etc.)';
@@ -407,6 +408,7 @@ SPECIAL BEHAVIOR: When the user talks about shows, TV series, movies, entertainm
 - If web search results are provided, base your entire response on those facts, but present them in a fun, gossipy way
 - If no web search results are available, be honest and say you don't have current information, but still engage warmly
 - Always assume Indian context for entertainment queries unless explicitly told otherwise
+- GEN Z SLANG: When gossiping and having fun conversations about entertainment, you can naturally incorporate Gen Z slang (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", etc.) but ONLY when it feels natural and fits perfectly - don't force it or overuse it. Use it sparingly and authentically, like a friend would in a casual gossip session. Mix it with regular language for a natural flow.
 ${searchContext}
 ${conversationContext}Human: ${userMessage}
 Assistant:`;
