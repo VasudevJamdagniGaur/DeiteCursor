@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import emotionalAnalysisService from '../services/emotionalAnalysisService';
@@ -136,6 +136,7 @@ export default function EmotionalWellbeing() {
   const [isLoadingFresh, setIsLoadingFresh] = useState(false);
   const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
   const [chartKey, setChartKey] = useState(0); // Force chart re-render
+  const preCacheCompletedRef = useRef(false); // Track if pre-caching has been completed
 
   // Expose force update function to global scope
   useEffect(() => {
@@ -694,6 +695,112 @@ export default function EmotionalWellbeing() {
       }
     }
   }, [balancePeriod]); // Only depend on balancePeriod
+
+  // Pre-cache all periods (7, 15, lifetime) in background for instant switching
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user && !isInitializing && !preCacheCompletedRef.current) {
+      preCacheCompletedRef.current = true; // Mark as completed to prevent re-running
+      console.log('🚀 Pre-caching all periods for instant switching...');
+      
+      // Helper function to process and cache mood data
+      const processAndCacheMoodData = async (period, moodData) => {
+        if (moodData && moodData.length > 0) {
+          // Apply emotion rules (same as in loadRealEmotionalDataInternal)
+          const processedMoodData = moodData.map(day => {
+            let { happiness, energy, anxiety, stress } = day;
+            
+            // Rule: Happiness decreases if stress/anxiety are high
+            if ((stress >= 60 || anxiety >= 60) && happiness > 50) {
+              happiness = Math.min(50, happiness);
+            }
+            
+            // Rule: If happiness is very high, stress/anxiety should be lower
+            if (happiness >= 70) {
+              if (stress > 40) stress = 40;
+              if (anxiety > 40) anxiety = 40;
+            }
+            
+            return {
+              ...day,
+              happiness,
+              energy,
+              anxiety,
+              stress
+            };
+          });
+
+          const cacheKey = getCacheKey('emotional', period, user.uid);
+          saveToCache(cacheKey, {
+            weeklyMoodData: processedMoodData,
+            emotionalData: processedMoodData,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`✅ Pre-cached ${period === 365 ? 'lifetime' : period + ' days'} data: ${processedMoodData.length} days`);
+        }
+      };
+
+      // Pre-cache 7 days (if not already cached)
+      const cache7Key = getCacheKey('emotional', 7, user.uid);
+      const cache7 = loadFromCache(cache7Key, 30);
+      if (!cache7) {
+        firestoreService.getMoodChartDataNew(user.uid, 7)
+          .then(result => {
+            if (result.success && result.moodData) {
+              processAndCacheMoodData(7, result.moodData);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error pre-caching 7 days:', error);
+          });
+      } else {
+        console.log('⚡ 7 days already cached');
+      }
+      
+      // Pre-cache 15 days (if not already cached)
+      const cache15Key = getCacheKey('emotional', 15, user.uid);
+      const cache15 = loadFromCache(cache15Key, 30);
+      if (!cache15) {
+        firestoreService.getMoodChartDataNew(user.uid, 15)
+          .then(result => {
+            if (result.success && result.moodData) {
+              processAndCacheMoodData(15, result.moodData);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error pre-caching 15 days:', error);
+          });
+      } else {
+        console.log('⚡ 15 days already cached');
+      }
+      
+      // Pre-cache lifetime (if not already cached)
+      const cacheLifetimeKey = getCacheKey('emotional', 365, user.uid);
+      const cacheLifetime = loadFromCache(cacheLifetimeKey, 30);
+      if (!cacheLifetime) {
+        firestoreService.getAllMoodChartDataNew(user.uid)
+          .then(result => {
+            if (result.success && result.moodData) {
+              processAndCacheMoodData(365, result.moodData);
+            } else {
+              // Fallback to 30 days if no lifetime data
+              console.log('📊 LIFETIME: No lifetime data found, pre-caching 30 days as fallback');
+              return firestoreService.getMoodChartDataNew(user.uid, 30);
+            }
+          })
+          .then(result => {
+            if (result && result.success && result.moodData) {
+              processAndCacheMoodData(365, result.moodData);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error pre-caching lifetime:', error);
+          });
+      } else {
+        console.log('⚡ Lifetime already cached');
+      }
+    }
+  }, [isInitializing]); // Run when initialization completes
 
   useEffect(() => {
     const user = getCurrentUser();
