@@ -19,7 +19,9 @@ import {
   Shield,
   Settings,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Camera,
+  Image
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -30,6 +32,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(null);
   const [editData, setEditData] = useState({
     displayName: '',
     age: '',
@@ -47,6 +50,11 @@ export default function ProfilePage() {
         gender: localStorage.getItem(`user_gender_${currentUser.uid}`) || '',
         bio: localStorage.getItem(`user_bio_${currentUser.uid}`) || ''
       });
+      // Load profile picture from localStorage
+      const savedPicture = localStorage.getItem(`user_profile_picture_${currentUser.uid}`);
+      if (savedPicture) {
+        setProfilePicture(savedPicture);
+      }
     } else {
       navigate('/login');
     }
@@ -66,13 +74,13 @@ export default function ProfilePage() {
       localStorage.setItem(`user_age_${user.uid}`, editData.age);
       localStorage.setItem(`user_gender_${user.uid}`, editData.gender);
       localStorage.setItem(`user_bio_${user.uid}`, editData.bio);
+      
+      // Save profile picture if it exists
+      if (profilePicture) {
+        localStorage.setItem(`user_profile_picture_${user.uid}`, profilePicture);
+      }
 
       setIsEditing(false);
-      
-      // Show success message
-      setTimeout(() => {
-        alert('Profile updated successfully! ✨');
-      }, 100);
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');
@@ -88,7 +96,40 @@ export default function ProfilePage() {
       gender: localStorage.getItem(`user_gender_${user?.uid}`) || '',
       bio: localStorage.getItem(`user_bio_${user?.uid}`) || ''
     });
+    // Reset profile picture to saved version
+    const savedPicture = localStorage.getItem(`user_profile_picture_${user?.uid}`);
+    setProfilePicture(savedPicture || null);
     setIsEditing(false);
+  };
+
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicture(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveProfilePicture = () => {
+    setProfilePicture(null);
+    if (user) {
+      localStorage.removeItem(`user_profile_picture_${user.uid}`);
+    }
   };
 
   const handleSignOut = async () => {
@@ -110,6 +151,7 @@ export default function ProfilePage() {
       localStorage.removeItem(`user_age_${user.uid}`);
       localStorage.removeItem(`user_gender_${user.uid}`);
       localStorage.removeItem(`user_bio_${user.uid}`);
+      localStorage.removeItem(`user_profile_picture_${user.uid}`);
       
       // Sign out and redirect
       await signOutUser();
@@ -199,15 +241,56 @@ export default function ProfilePage() {
           {/* Profile Header */}
           <div className="text-center pb-6 border-b border-gray-700/30">
             <div className="flex justify-center mb-4">
-              <div 
-                className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold text-white relative overflow-hidden"
-                style={{
-                  backgroundColor: "rgba(42, 42, 45, 0.8)",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                }}
-              >
-                {getInitials(user.displayName)}
+              <div className="relative">
+                <div 
+                  className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold text-white relative overflow-hidden"
+                  style={{
+                    backgroundColor: "rgba(42, 42, 45, 0.8)",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                  }}
+                >
+                  {profilePicture ? (
+                    <img 
+                      src={profilePicture} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getInitials(user.displayName)
+                  )}
+                </div>
+                {/* Change Picture Button */}
+                <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110"
+                  style={{
+                    backgroundColor: "rgba(138, 180, 248, 0.9)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                    border: "2px solid rgba(42, 42, 45, 0.8)",
+                  }}
+                  title="Change profile picture"
+                >
+                  <Camera className="w-4 h-4 text-white" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePictureChange}
+                    className="hidden"
+                  />
+                </label>
+                {/* Remove Picture Button (only show if picture exists) */}
+                {profilePicture && (
+                  <button
+                    onClick={handleRemoveProfilePicture}
+                    className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110"
+                    style={{
+                      backgroundColor: "rgba(242, 139, 130, 0.9)",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                    }}
+                    title="Remove picture"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                )}
               </div>
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">
@@ -306,6 +389,75 @@ export default function ProfilePage() {
             <>
               {/* Edit Mode */}
               <div className="space-y-4 mt-6">
+                {/* Profile Picture Upload Section */}
+                <div>
+                  <label className="block mb-3 font-medium text-gray-300">Profile Picture</label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div 
+                        className="w-20 h-20 rounded-full flex items-center justify-center text-xl font-bold text-white overflow-hidden"
+                        style={{
+                          backgroundColor: "rgba(42, 42, 45, 0.8)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                        }}
+                      >
+                        {profilePicture ? (
+                          <img 
+                            src={profilePicture} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getInitials(user.displayName)
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="cursor-pointer">
+                        <div className="flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-gray-600 hover:border-purple-400 transition-colors"
+                          style={{
+                            backgroundColor: "rgba(42, 42, 45, 0.6)",
+                          }}
+                        >
+                          <Image className="w-5 h-5 text-purple-400" />
+                          <span className="text-sm text-gray-300">Choose from Gallery</span>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfilePictureChange}
+                          className="hidden"
+                        />
+                      </label>
+                      <label className="cursor-pointer">
+                        <div className="flex items-center gap-2 p-3 rounded-xl border-2 border-dashed border-gray-600 hover:border-purple-400 transition-colors"
+                          style={{
+                            backgroundColor: "rgba(42, 42, 45, 0.6)",
+                          }}
+                        >
+                          <Camera className="w-5 h-5 text-purple-400" />
+                          <span className="text-sm text-gray-300">Take Photo</span>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleProfilePictureChange}
+                          className="hidden"
+                        />
+                      </label>
+                      {profilePicture && (
+                        <button
+                          onClick={handleRemoveProfilePicture}
+                          className="w-full p-2 rounded-xl text-sm text-red-400 hover:bg-red-400/10 transition-colors"
+                        >
+                          Remove Picture
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block mb-2 font-medium text-gray-300">Age</label>
                   <input
