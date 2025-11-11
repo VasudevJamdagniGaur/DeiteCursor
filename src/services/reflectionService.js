@@ -215,22 +215,21 @@ Write a natural diary entry about this day in first person. Just tell the story 
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created for narrative');
     
-    const narrativePrompt = `You are helping someone write a personal diary entry about their day. Write ONLY a short, warm, narrative diary story based on the conversation below.
+    const narrativePrompt = `Write a natural, first-person diary entry about this day. Just tell the story of what happened.
 
 CRITICAL REQUIREMENTS:
-1. Write as a natural, flowing narrative story - like someone telling their day to a close friend
-2. Use first person ("I", "my", "me") - this is their personal diary
-3. NO bullet points, NO lists, NO analysis - only storytelling
-4. Keep it warm and personal - capture the feeling and flow of their day
-5. Be specific about what they actually discussed - mention real events, feelings, or moments from the conversation
-6. Write 3-5 sentences that read like a natural diary entry
-7. Match the emotional tone of what they shared (if they were sad, reflect that gently; if happy, let that warmth show)
-8. Make it feel like a real person reflecting on their day, not an AI analysis
+1. WRITE IN FIRST PERSON - Use "I", "my", "me" - this is a personal diary entry
+2. NO META-COMMENTARY - Do NOT say "Here is a diary entry" or "summarizing the day" or mention "user" or "person" - just tell the story directly
+3. NO ANALYSIS - Do NOT add analysis sections, bullet points, lists, or explanations - ONLY tell the story
+4. FOCUS ON WHAT HAPPENED - Write about the actual events, conversations, and experiences from the day
+5. NATURAL STORYTELLING - Write like someone naturally reflecting on their day, just telling what happened
+6. BE SPECIFIC - Mention real events, people, or activities that were discussed
+7. 3-5 sentences that read like a real diary entry - just the story, nothing else
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a short, warm, narrative diary story about this person's day. Tell it like a story, not an analysis:`;
+Write a natural diary entry about this day in first person. Just tell the story of what happened:`;
 
     console.log('🧪 Narrative prompt length:', narrativePrompt.length);
     console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));

@@ -1162,7 +1162,7 @@ export default function EmotionalWellbeing() {
     console.log('📝 Best day summary:', bestDay.summary);
     console.log('📝 Worst day summary:', worstDay.summary);
 
-    // Clean up summary text to remove unwanted phrases
+    // Clean up summary text to remove unwanted phrases and analysis sections
     const cleanSummary = (summary) => {
       if (!summary) return summary;
       
@@ -1186,6 +1186,26 @@ export default function EmotionalWellbeing() {
       unwantedPhrases.forEach(phrase => {
         cleaned = cleaned.replace(phrase, '');
       });
+      
+      // Remove analysis sections - look for patterns like "Analysis:", "1. Key events", etc.
+      // Remove everything from "Analysis" onwards if it contains numbered lists or bullet points
+      const analysisPatterns = [
+        /\n\s*Analysis:?\s*\n?.*$/gi,
+        /\n\s*1\.\s*Key events.*$/gi,
+        /\n\s*2\.\s*Emotional tone.*$/gi,
+        /\n\s*3\.\s*Important details.*$/gi,
+        /\n\s*Key events or topics.*$/gi,
+        /\n\s*Emotional tone:.*$/gi,
+        /\n\s*Important details.*$/gi,
+      ];
+      
+      analysisPatterns.forEach(pattern => {
+        cleaned = cleaned.replace(pattern, '');
+      });
+      
+      // Remove any numbered lists or bullet points that might be analysis
+      cleaned = cleaned.replace(/\n\s*\d+\.\s*[^\n]*/g, '');
+      cleaned = cleaned.replace(/\n\s*[-•]\s*[^\n]*/g, '');
       
       // Remove quotes around the content if present
       cleaned = cleaned.replace(/^["']|["']$/g, '');
