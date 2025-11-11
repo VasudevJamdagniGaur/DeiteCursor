@@ -370,6 +370,8 @@ export default function EmotionalWellbeing() {
     if (!user) return;
 
     setHighlightsLoading(true);
+    // Clear highlights while loading to prevent showing old data
+    setHighlights({});
     try {
       const freshData = await loadHighlightsDataInternal();
       if (freshData) {
@@ -1103,6 +1105,8 @@ export default function EmotionalWellbeing() {
     }
 
     setHighlightsLoading(true);
+    // Clear highlights while loading to prevent showing old data
+    setHighlights({});
     try {
       // Use the same Firebase data source as other charts for consistency
       console.log('🔄 Loading highlights data from Firebase...');
@@ -3059,10 +3063,13 @@ Return in this JSON format:
                   </h4>
                 </div>
                 {highlightsLoading ? (
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-400 border-t-transparent"></div>
-                    <p className="text-sm text-gray-400">Loading...</p>
-                  </div>
+                  <>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-400 border-t-transparent"></div>
+                      <p className="text-sm text-gray-400">Loading...</p>
+                    </div>
+                    <p className="text-xs text-gray-500">Loading your highlights...</p>
+                  </>
                 ) : (
                   <>
                     <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
@@ -3100,10 +3107,13 @@ Return in this JSON format:
                   </h4>
                 </div>
                 {highlightsLoading ? (
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-400 border-t-transparent"></div>
-                    <p className="text-sm text-gray-400">Loading...</p>
-                  </div>
+                  <>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-400 border-t-transparent"></div>
+                      <p className="text-sm text-gray-400">Loading...</p>
+                    </div>
+                    <p className="text-xs text-gray-500">Loading your highlights...</p>
+                  </>
                 ) : (
                   <>
                     <p className="text-sm text-gray-300 group-hover:text-gray-200 transition-colors duration-300 leading-relaxed mb-2">
