@@ -42,21 +42,51 @@ class ChatService {
   /**
    * Extract a better search query from the user message
    * Removes common words and focuses on key terms
+   * Preserves Instagram handles, usernames, and specific identifiers
    */
   extractSearchQuery(message) {
+    // Detect Instagram handles, usernames, or specific identifiers
+    const instagramHandlePattern = /(@\w+|[\w_]+\.writes|writes|instagram|insta)/i;
+    const hasSpecificIdentifier = instagramHandlePattern.test(message);
+    
     // Common words to remove
     const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'about', 'what', 'who', 'where', 'when', 'why', 'how', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them'];
     
-    // Split message into words and filter out stop words
+    // If there's a specific identifier, preserve it carefully
+    if (hasSpecificIdentifier) {
+      // Extract the name and the identifier
+      const words = message.toLowerCase()
+        .replace(/[^\w\s@._]/g, ' ') // Keep @, ., _ for handles
+        .split(/\s+/)
+        .filter(word => word.length > 0);
+      
+      // Find the identifier part (writes, instagram handle, etc.)
+      const identifierIndex = words.findIndex(w => 
+        w.includes('writes') || w.includes('insta') || w.includes('@') || w.includes('_') || w.includes('.')
+      );
+      
+      if (identifierIndex > 0) {
+        // Get name before identifier and identifier itself
+        const name = words.slice(0, identifierIndex).filter(w => !stopWords.includes(w)).join(' ');
+        const identifier = words.slice(identifierIndex).join(' ');
+        const query = `${name} ${identifier}`.trim();
+        console.log('🔍 Extracted search query with identifier:', query);
+        return query;
+      } else if (identifierIndex === 0) {
+        // Identifier is at the start, get the full message with identifier
+        const query = words.join(' ').trim();
+        console.log('🔍 Extracted search query with identifier at start:', query);
+        return query;
+      }
+    }
+    
+    // Regular extraction for other cases
     const words = message.toLowerCase()
-      .replace(/[^\w\s]/g, ' ') // Remove punctuation
+      .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(word => word.length > 2 && !stopWords.includes(word));
     
-    // Take first 5-7 meaningful words
     const keyTerms = words.slice(0, 7);
-    
-    // If we have key terms, join them; otherwise use original message
     const query = keyTerms.length > 0 ? keyTerms.join(' ') : message;
     
     console.log('🔍 Extracted search query:', query);
@@ -201,9 +231,13 @@ class ChatService {
   /**
    * Enhance entertainment queries for better DuckDuckGo results
    * Prioritizes Indian context (Bollywood, Indian celebrities, Indian shows)
+   * Skips adding "Bollywood" when specific identifiers (Instagram handles, usernames) are present
    */
   enhanceEntertainmentQuery(query) {
     const lowerQuery = query.toLowerCase();
+    
+    // Check for specific identifiers (Instagram handles, usernames, unique identifiers)
+    const hasSpecificIdentifier = /(writes|insta|instagram|@|_|\.writes|\._)/i.test(query);
     
     // Indian context keywords to add
     const indianContexts = ['india', 'indian', 'bollywood', 'tollywood', 'kollywood', 'mollywood', 'south indian'];
@@ -223,8 +257,9 @@ class ChatService {
     // Build enhanced query with Indian context
     let enhancedQuery = query;
     
-    // Add Indian context if not already present (for entertainment queries)
-    if (!hasIndianContext) {
+    // DON'T add Bollywood context if there's a specific identifier (Instagram handle, username, etc.)
+    // This prevents confusion with famous Bollywood celebrities
+    if (!hasIndianContext && !hasSpecificIdentifier) {
       // Check if it's likely an entertainment query
       const isEntertainmentQuery = this.isEntertainmentTopic(query) || 
                                    lowerQuery.includes('who') || 
@@ -238,10 +273,15 @@ class ChatService {
         // Add Indian context to prioritize Indian results
         enhancedQuery = `${query} India Indian Bollywood`;
       }
+    } else if (hasSpecificIdentifier) {
+      // For specific identifiers, add "Instagram" or "social media" to make search more specific
+      if (!lowerQuery.includes('instagram') && !lowerQuery.includes('insta') && !lowerQuery.includes('social media')) {
+        enhancedQuery = `${query} Instagram social media`;
+      }
     }
     
-    // If it's about a person/celebrity, add "news" or "latest"
-    if (!hasContext && (lowerQuery.includes('who') || lowerQuery.length < 20)) {
+    // If it's about a person/celebrity, add "news" or "latest" (but not if there's a specific identifier)
+    if (!hasContext && !hasSpecificIdentifier && (lowerQuery.includes('who') || lowerQuery.length < 20)) {
       return `${enhancedQuery} news latest`;
     }
     
@@ -309,6 +349,9 @@ class ChatService {
       let responseLength = 200; // Default response length
       
       if (isEntertainment && webSearchResults && webSearchResults.length > 0) {
+        // Check if user message has specific identifiers
+        const hasSpecificIdentifier = /(writes|insta|instagram|@|_|\.writes|\._)/i.test(userMessage);
+        
         searchContext = '\n\n📰 REAL-TIME INFORMATION FROM THE INTERNET:\n';
         webSearchResults.forEach((result, index) => {
           searchContext += `${index + 1}. ${result.title}: ${result.snippet}\n`;
@@ -320,8 +363,16 @@ class ChatService {
         searchContext += '\n- Present the information in a fun, engaging, gossipy way';
         searchContext += '\n- You can be more detailed and conversational (3-5 sentences)';
         searchContext += '\n- Show enthusiasm and personality while staying factual';
-        searchContext += '\n- PRIORITIZE INDIAN CONTEXT: Focus on Indian celebrities, Bollywood, Indian shows, Indian entertainment unless the search results clearly indicate international/Western context';
-        searchContext += '\n- If search results mention Indian celebrities or Indian entertainment, emphasize that in your response';
+        
+        if (hasSpecificIdentifier) {
+          searchContext += '\n- CRITICAL: The user mentioned a specific identifier (Instagram handle, username like "tee writes", "tee_.writes", etc.)';
+          searchContext += '\n- PRIORITIZE search results that match that EXACT identifier the user mentioned';
+          searchContext += '\n- If search results mention different people with the same name, use ONLY the one that matches the specific identifier the user mentioned';
+          searchContext += '\n- Do NOT confuse with other people who have the same name but different identifiers';
+        } else {
+          searchContext += '\n- PRIORITIZE INDIAN CONTEXT: Focus on Indian celebrities, Bollywood, Indian shows, Indian entertainment unless the search results clearly indicate international/Western context';
+          searchContext += '\n- If search results mention Indian celebrities or Indian entertainment, emphasize that in your response';
+        }
         
         // Increase response length for entertainment topics with search results
         responseLength = 350;
