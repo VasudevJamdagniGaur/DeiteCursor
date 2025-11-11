@@ -1,3 +1,5 @@
+import { getCurrentUser } from './authService';
+
 class ChatService {
   constructor() {
     this.baseURL = 'https://g75uux69gnczn1-11434.proxy.runpod.net/';
@@ -307,12 +309,46 @@ class ChatService {
     return [];
   }
 
+  /**
+   * Get user profile context from localStorage
+   */
+  getUserProfileContext() {
+    try {
+      // Get current user from authService
+      const user = getCurrentUser();
+      
+      if (!user || !user.uid) {
+        return null;
+      }
+      
+      const profileContext = {
+        name: user.displayName || null,
+        age: localStorage.getItem(`user_age_${user.uid}`) || null,
+        gender: localStorage.getItem(`user_gender_${user.uid}`) || null,
+        bio: localStorage.getItem(`user_bio_${user.uid}`) || null
+      };
+      
+      // Only return if we have at least some information
+      if (profileContext.name || profileContext.age || profileContext.gender || profileContext.bio) {
+        return profileContext;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting user profile context:', error);
+      return null;
+    }
+  }
+
   async sendMessage(userMessage, conversationHistory = [], onToken = null) {
     console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
     console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
     console.log('🚀 CHAT DEBUG: Using model:', this.modelName);
     
     try {
+      // Get user profile context
+      const userProfile = this.getUserProfileContext();
+      
       // Check if this is an entertainment topic
       const isEntertainment = this.isEntertainmentTopic(userMessage);
       let webSearchResults = null;
@@ -389,8 +425,28 @@ class ChatService {
         searchContext += '\n- Assume Indian context (Bollywood, Indian celebrities) unless user specifies otherwise';
       }
       
+      // Build user profile context string
+      let userContext = '';
+      if (userProfile) {
+        userContext = '\n\n👤 USER PROFILE INFORMATION:\n';
+        if (userProfile.name) {
+          userContext += `- Name: ${userProfile.name}\n`;
+        }
+        if (userProfile.age) {
+          userContext += `- Age: ${userProfile.age} years old\n`;
+        }
+        if (userProfile.gender) {
+          userContext += `- Gender: ${userProfile.gender}\n`;
+        }
+        if (userProfile.bio) {
+          userContext += `- About: ${userProfile.bio}\n`;
+        }
+        const userName = userProfile.name || 'they';
+        userContext += `\nIMPORTANT: Use the user's name (${userName}) naturally in conversations when appropriate. Reference their age, gender, or bio context when relevant to make responses more personalized and meaningful.`;
+      }
+      
       // Create the prompt
-      const simplePrompt = `You are Deite, a warm and emotionally intelligent AI companion. Keep your responses empathetic but concise (1-3 sentences).
+      const simplePrompt = `You are Deite, a warm and emotionally intelligent AI companion. Keep your responses empathetic but concise (1-3 sentences).${userContext}
 
 IMPORTANT CONTEXT: The user is from India and prefers Indian entertainment context. When discussing entertainment topics, prioritize:
 - Indian celebrities, Bollywood, Tollywood, Kollywood actors/actresses
