@@ -17,11 +17,26 @@ class ChatService {
       'amazon prime', 'streaming', 'gossip', 'rumor', 'news', 'entertainment',
       'hollywood', 'bollywood', 'trailer', 'premiere', 'release', 'award',
       'oscar', 'grammy', 'emmy', 'star', 'famous', 'influencer', 'youtuber',
-      'tiktok', 'instagram', 'social media', 'trending', 'viral'
+      'tiktok', 'instagram', 'social media', 'trending', 'viral', 'singer',
+      'rapper', 'artist', 'musician', 'comedian', 'host', 'anchor', 'reporter',
+      'model', 'fashion', 'red carpet', 'awards show', 'premiere', 'debut',
+      'album', 'song', 'track', 'music video', 'podcast', 'interview'
     ];
     
     const lowerMessage = message.toLowerCase();
-    return entertainmentKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    // Check for entertainment keywords
+    const hasKeyword = entertainmentKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    // Also check for common celebrity name patterns or questions about people
+    const celebrityPatterns = [
+      /^(who is|what about|tell me about|do you know)/i,
+      /\b(he|she|they)\s+(is|was|are|were)\s+(a|an|the)\s+(actor|actress|singer|star|celebrity)/i
+    ];
+    
+    const hasCelebrityPattern = celebrityPatterns.some(pattern => pattern.test(message));
+    
+    return hasKeyword || hasCelebrityPattern;
   }
 
   /**
@@ -50,15 +65,18 @@ class ChatService {
 
   /**
    * Search the web for information about entertainment topics
-   * Uses DuckDuckGo API (free, no API key needed) or Serper API (better results)
+   * Uses DuckDuckGo API (free, no API key needed) - optimized for better results
    */
   async searchWeb(query) {
     try {
       console.log('🔍 Searching web for:', query);
       
-      // Option 1: Use Serper API (better results, requires free API key)
+      // Option 1: Use Serper API (better results, requires free API key) - optional
       if (this.serperApiKey) {
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
           const response = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: {
@@ -67,9 +85,12 @@ class ChatService {
             },
             body: JSON.stringify({
               q: query,
-              num: 5 // Get top 5 results
-            })
+              num: 5
+            }),
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           
           if (response.ok) {
             const data = await response.json();
@@ -85,60 +106,87 @@ class ChatService {
             }
           }
         } catch (serperError) {
-          console.log('⚠️ Serper API failed, trying DuckDuckGo...', serperError);
+          if (serperError.name !== 'AbortError') {
+            console.log('⚠️ Serper API failed, trying DuckDuckGo...', serperError);
+          }
         }
       }
       
-      // Option 2: Use DuckDuckGo Instant Answer API (free, no API key)
+      // Option 2: Use DuckDuckGo Instant Answer API (free, no API key) - PRIMARY METHOD
       try {
-        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-        const response = await fetch(ddgUrl);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        // Enhanced DuckDuckGo query - add "news" or "latest" for better entertainment results
+        const enhancedQuery = this.enhanceEntertainmentQuery(query);
+        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(enhancedQuery)}&format=json&no_html=1&skip_disambig=1`;
+        
+        const response = await fetch(ddgUrl, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
         
         if (response.ok) {
           const data = await response.json();
           const results = [];
           
-          // Extract Abstract (main result)
+          // Extract Abstract (main result) - most relevant
           if (data.AbstractText) {
             results.push({
               title: data.Heading || query,
-              snippet: data.AbstractText,
+              snippet: data.AbstractText.substring(0, 300), // Limit snippet length
               link: data.AbstractURL || ''
             });
           }
           
-          // Extract Related Topics
+          // Extract Related Topics - additional context
           if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-            data.RelatedTopics.slice(0, 2).forEach(topic => {
+            data.RelatedTopics.slice(0, 3).forEach(topic => {
               if (topic.Text) {
                 const parts = topic.Text.split(' - ');
+                const snippet = topic.Text.length > 300 ? topic.Text.substring(0, 300) + '...' : topic.Text;
                 results.push({
-                  title: parts[0] || topic.Text.substring(0, 50),
-                  snippet: topic.Text,
+                  title: parts[0] || topic.Text.substring(0, 60),
+                  snippet: snippet,
                   link: topic.FirstURL || ''
                 });
               }
             });
           }
           
-          if (results.length > 0) {
-            console.log('✅ Web search results (DuckDuckGo):', results);
-            return results;
+          // Extract Answer (if available) - direct answers
+          if (data.Answer && data.Answer !== data.AbstractText) {
+            results.push({
+              title: data.Heading || 'Quick Answer',
+              snippet: data.Answer.substring(0, 300),
+              link: data.AbstractURL || ''
+            });
+          }
+          
+          // Extract Definition (if available) - for celebrities/people
+          if (data.Definition && data.Definition !== data.AbstractText) {
+            results.push({
+              title: data.Heading || 'Definition',
+              snippet: data.Definition.substring(0, 300),
+              link: data.AbstractURL || ''
+            });
+          }
+          
+          // Remove duplicates and limit to 4 results
+          const uniqueResults = results.filter((result, index, self) =>
+            index === self.findIndex(r => r.snippet === result.snippet)
+          ).slice(0, 4);
+          
+          if (uniqueResults.length > 0) {
+            console.log(`✅ Web search results (DuckDuckGo): ${uniqueResults.length} results found`);
+            return uniqueResults;
           }
         }
       } catch (ddgError) {
-        console.log('⚠️ DuckDuckGo search failed:', ddgError);
-      }
-      
-      // Option 3: Try DuckDuckGo HTML search via proxy (if CORS issues)
-      // This is a fallback that might work better in some cases
-      try {
-        // Use a CORS proxy or direct DuckDuckGo HTML search
-        const proxyUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-        // Note: This might have CORS issues, so we'll skip it for now
-        // If needed, you can set up a backend proxy endpoint
-      } catch (proxyError) {
-        console.log('⚠️ Proxy search not available');
+        if (ddgError.name !== 'AbortError') {
+          console.log('⚠️ DuckDuckGo search failed:', ddgError);
+        }
       }
       
       console.log('⚠️ Web search unavailable, proceeding without search results');
@@ -148,6 +196,34 @@ class ChatService {
       console.error('❌ Error in web search:', error);
       return [];
     }
+  }
+
+  /**
+   * Enhance entertainment queries for better DuckDuckGo results
+   */
+  enhanceEntertainmentQuery(query) {
+    const lowerQuery = query.toLowerCase();
+    
+    // Add context keywords for better results
+    const entertainmentContexts = [
+      'news', 'latest', 'recent', 'update', 'gossip', 'rumor',
+      'celebrity', 'actor', 'actress', 'show', 'series', 'movie'
+    ];
+    
+    // Check if query already has context
+    const hasContext = entertainmentContexts.some(ctx => lowerQuery.includes(ctx));
+    
+    // If it's about a person/celebrity, add "news" or "latest"
+    if (!hasContext && (lowerQuery.includes('who') || lowerQuery.length < 20)) {
+      return `${query} news latest`;
+    }
+    
+    // If it's about a show/movie, add "updates" or "news"
+    if (!hasContext && (lowerQuery.includes('show') || lowerQuery.includes('movie') || lowerQuery.includes('series'))) {
+      return `${query} updates news`;
+    }
+    
+    return query;
   }
 
   async checkModelsAvailable() {
@@ -203,12 +279,29 @@ class ChatService {
       
       // Build the prompt with web search results if available
       let searchContext = '';
+      let responseLength = 200; // Default response length
+      
       if (isEntertainment && webSearchResults && webSearchResults.length > 0) {
         searchContext = '\n\n📰 REAL-TIME INFORMATION FROM THE INTERNET:\n';
         webSearchResults.forEach((result, index) => {
           searchContext += `${index + 1}. ${result.title}: ${result.snippet}\n`;
         });
-        searchContext += '\nIMPORTANT: Use this REAL information from the internet to respond. Base your gossip, news, and discussion ONLY on these FACTS. Do NOT make up information that is not in the search results above.';
+        searchContext += '\nIMPORTANT INSTRUCTIONS FOR ENTERTAINMENT TOPICS:';
+        searchContext += '\n- Use this REAL information from the internet to respond';
+        searchContext += '\n- Base your gossip, news, and discussion ONLY on these FACTS';
+        searchContext += '\n- Do NOT make up information that is not in the search results above';
+        searchContext += '\n- Present the information in a fun, engaging, gossipy way';
+        searchContext += '\n- You can be more detailed and conversational (3-5 sentences)';
+        searchContext += '\n- Show enthusiasm and personality while staying factual';
+        
+        // Increase response length for entertainment topics with search results
+        responseLength = 350;
+      } else if (isEntertainment) {
+        // Entertainment topic but no search results
+        searchContext = '\n\nNOTE: This appears to be an entertainment topic, but no current information was found.';
+        searchContext += '\n- Still engage warmly and enthusiastically';
+        searchContext += '\n- Be honest that you don\'t have current information';
+        searchContext += '\n- Ask the user to share what they know or what they\'re interested in';
       }
       
       // Create the prompt
@@ -219,7 +312,7 @@ SPECIAL BEHAVIOR: When the user talks about shows, TV series, movies, entertainm
 - Use the REAL information provided from web search to share factual gossip, news, and interesting tidbits
 - Discuss trending topics, recent episodes, fan theories, or popular discussions based on ACTUAL information from the internet
 - Be engaging and fun while still maintaining your warm personality
-- You can be more detailed and conversational when discussing entertainment topics
+- You can be more detailed and conversational when discussing entertainment topics (3-5 sentences if you have search results)
 - ONLY use information from the web search results provided below - do NOT make up rumors or unverified information
 - If web search results are provided, base your entire response on those facts, but present them in a fun, gossipy way
 - If no web search results are available, be honest and say you don't have current information, but still engage warmly
@@ -241,7 +334,7 @@ Assistant:`;
         stream: !!onToken, // Enable streaming if callback provided
         options: {
           temperature: 0.7,
-          num_predict: 200
+          num_predict: responseLength // Dynamic response length based on topic type
         }
       };
       
