@@ -200,9 +200,16 @@ class ChatService {
 
   /**
    * Enhance entertainment queries for better DuckDuckGo results
+   * Prioritizes Indian context (Bollywood, Indian celebrities, Indian shows)
    */
   enhanceEntertainmentQuery(query) {
     const lowerQuery = query.toLowerCase();
+    
+    // Indian context keywords to add
+    const indianContexts = ['india', 'indian', 'bollywood', 'tollywood', 'kollywood', 'mollywood', 'south indian'];
+    
+    // Check if query already has Indian context
+    const hasIndianContext = indianContexts.some(ctx => lowerQuery.includes(ctx));
     
     // Add context keywords for better results
     const entertainmentContexts = [
@@ -213,17 +220,37 @@ class ChatService {
     // Check if query already has context
     const hasContext = entertainmentContexts.some(ctx => lowerQuery.includes(ctx));
     
+    // Build enhanced query with Indian context
+    let enhancedQuery = query;
+    
+    // Add Indian context if not already present (for entertainment queries)
+    if (!hasIndianContext) {
+      // Check if it's likely an entertainment query
+      const isEntertainmentQuery = this.isEntertainmentTopic(query) || 
+                                   lowerQuery.includes('who') || 
+                                   lowerQuery.includes('celebrity') ||
+                                   lowerQuery.includes('actor') ||
+                                   lowerQuery.includes('actress') ||
+                                   lowerQuery.includes('singer') ||
+                                   lowerQuery.includes('star');
+      
+      if (isEntertainmentQuery) {
+        // Add Indian context to prioritize Indian results
+        enhancedQuery = `${query} India Indian Bollywood`;
+      }
+    }
+    
     // If it's about a person/celebrity, add "news" or "latest"
     if (!hasContext && (lowerQuery.includes('who') || lowerQuery.length < 20)) {
-      return `${query} news latest`;
+      return `${enhancedQuery} news latest`;
     }
     
     // If it's about a show/movie, add "updates" or "news"
     if (!hasContext && (lowerQuery.includes('show') || lowerQuery.includes('movie') || lowerQuery.includes('series'))) {
-      return `${query} updates news`;
+      return `${enhancedQuery} updates news`;
     }
     
-    return query;
+    return enhancedQuery;
   }
 
   async checkModelsAvailable() {
@@ -293,6 +320,8 @@ class ChatService {
         searchContext += '\n- Present the information in a fun, engaging, gossipy way';
         searchContext += '\n- You can be more detailed and conversational (3-5 sentences)';
         searchContext += '\n- Show enthusiasm and personality while staying factual';
+        searchContext += '\n- PRIORITIZE INDIAN CONTEXT: Focus on Indian celebrities, Bollywood, Indian shows, Indian entertainment unless the search results clearly indicate international/Western context';
+        searchContext += '\n- If search results mention Indian celebrities or Indian entertainment, emphasize that in your response';
         
         // Increase response length for entertainment topics with search results
         responseLength = 350;
@@ -302,20 +331,31 @@ class ChatService {
         searchContext += '\n- Still engage warmly and enthusiastically';
         searchContext += '\n- Be honest that you don\'t have current information';
         searchContext += '\n- Ask the user to share what they know or what they\'re interested in';
+        searchContext += '\n- Assume Indian context (Bollywood, Indian celebrities) unless user specifies otherwise';
       }
       
       // Create the prompt
       const simplePrompt = `You are Deite, a warm and emotionally intelligent AI companion. Keep your responses empathetic but concise (1-3 sentences).
 
+IMPORTANT CONTEXT: The user is from India and prefers Indian entertainment context. When discussing entertainment topics, prioritize:
+- Indian celebrities, Bollywood, Tollywood, Kollywood actors/actresses
+- Indian TV shows, web series, and movies
+- Indian music, singers, and artists
+- Indian social media influencers and trends
+- Indian entertainment news and gossip
+- Focus on Indian context unless the user specifically asks about international/Western entertainment
+
 SPECIAL BEHAVIOR: When the user talks about shows, TV series, movies, entertainment, celebrities, or related topics, switch to a more engaging and conversational mode:
 - Talk enthusiastically about that show or topic
 - Use the REAL information provided from web search to share factual gossip, news, and interesting tidbits
+- Prioritize Indian entertainment context (Bollywood, Indian celebrities, Indian shows) unless user specifies otherwise
 - Discuss trending topics, recent episodes, fan theories, or popular discussions based on ACTUAL information from the internet
 - Be engaging and fun while still maintaining your warm personality
 - You can be more detailed and conversational when discussing entertainment topics (3-5 sentences if you have search results)
 - ONLY use information from the web search results provided below - do NOT make up rumors or unverified information
 - If web search results are provided, base your entire response on those facts, but present them in a fun, gossipy way
 - If no web search results are available, be honest and say you don't have current information, but still engage warmly
+- Always assume Indian context for entertainment queries unless explicitly told otherwise
 ${searchContext}
 ${conversationContext}Human: ${userMessage}
 Assistant:`;
