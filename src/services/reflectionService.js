@@ -215,22 +215,50 @@ Write a natural diary entry about this day in first person. Just tell the story 
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created for narrative');
     
-    const narrativePrompt = `Write a short, natural, first-person diary entry about this day. Keep it concise but cover all the key topics and emotions.
+    // Calculate dynamic token limit based on number of messages
+    const totalMessages = userMessages.length + aiMessages.length;
+    let maxTokens, sentenceGuidance;
+    
+    if (totalMessages <= 3) {
+      // Very short conversation - brief reflection
+      maxTokens = 100;
+      sentenceGuidance = "1-2 sentences";
+    } else if (totalMessages <= 6) {
+      // Short conversation - concise reflection
+      maxTokens = 150;
+      sentenceGuidance = "2-3 sentences";
+    } else if (totalMessages <= 10) {
+      // Medium conversation - moderate reflection
+      maxTokens = 200;
+      sentenceGuidance = "3-4 sentences";
+    } else if (totalMessages <= 15) {
+      // Longer conversation - detailed reflection
+      maxTokens = 250;
+      sentenceGuidance = "4-5 sentences";
+    } else {
+      // Very long conversation - comprehensive reflection
+      maxTokens = 300;
+      sentenceGuidance = "5-6 sentences";
+    }
+    
+    console.log(`📊 Message count: ${totalMessages}, Setting max_tokens to ${maxTokens} for ${sentenceGuidance} reflection`);
+    
+    const narrativePrompt = `Write a natural, first-person diary entry about this day. The length should match the depth of the conversation - more topics discussed means a longer reflection.
 
 CRITICAL REQUIREMENTS:
 1. WRITE IN FIRST PERSON - Use "I", "my", "me" - this is a personal diary entry
 2. NO META-COMMENTARY - Do NOT say "Here is a diary entry" or "summarizing the day" or mention "user" or "person" - just tell the story directly
 3. NO ANALYSIS - Do NOT add analysis sections, bullet points, lists, or explanations - ONLY tell the story
-4. BE CONCISE - Keep it to 2-3 sentences maximum, but still cover all important topics and emotions
+4. MATCH CONVERSATION DEPTH - Write ${sentenceGuidance} that naturally covers all important topics and emotions discussed
 5. COVER ALL TOPICS - Mention the key events, conversations, or experiences discussed
 6. INCLUDE EMOTIONS - Naturally weave in how things felt (sad, happy, excited, etc.) without being explicit about it
-7. NATURAL STORYTELLING - Write like someone naturally reflecting on their day in a brief way
-8. BE SPECIFIC - Mention real events, people, or activities that were discussed, but keep it brief
+7. NATURAL STORYTELLING - Write like someone naturally reflecting on their day
+8. BE SPECIFIC - Mention real events, people, or activities that were discussed
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a short, natural diary entry about this day in first person. Keep it to 2-3 sentences, covering all key topics and emotions:`;
+Write a natural diary entry about this day in first person. Write ${sentenceGuidance}, covering all key topics and emotions:`;
 
     console.log('🧪 Narrative prompt length:', narrativePrompt.length);
     console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));
@@ -255,7 +283,7 @@ Write a short, natural diary entry about this day in first person. Keep it to 2-
           options: {
             temperature: 0.7,  // Slightly higher temperature for more natural, creative storytelling
             top_p: 0.9,
-            max_tokens: 150  // Shorter, more concise narrative (2-3 sentences)
+            max_tokens: maxTokens  // Dynamic token limit based on message count
           }
         })
       });
