@@ -77,12 +77,13 @@ CRITICAL REQUIREMENTS:
 10. NO LONG DESCRIPTIONS OF DEITE'S ACTIONS - Do NOT write long descriptions of what Deite did or how Deite responded - focus on YOUR experience and reflections
 11. FEEL LIKE A PERSONAL REFLECTION - The diary should feel natural and personal, like you're reflecting on your own day, not describing an AI conversation
 12. AVOID DRAMATIC LINES - Do NOT use overly dramatic phrases like "It was crazy", "it gave me all the feels", "it was absolutely amazing", etc. UNLESS something truly extraordinary or life-changing happened. Keep the tone grounded and realistic - avoid too much dramatic storytelling for ordinary days.
-13. 3-5 sentences that read like a real diary entry
+13. NO REFLECTIVE CLOSING SENTENCES - Do NOT include reflective or moral closing sentences such as "it lifted my mood", "it made me feel seen", "it reminded me of something", "it was a good day", "it helped me realize", etc. End the diary naturally after describing the events or thoughts of the day, without summarizing emotions or giving life lessons. Just describe what happened and stop - no need to wrap it up with emotional conclusions.
+14. 3-5 sentences that read like a real diary entry
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus on YOUR experience and reflections, not on describing what Deite said or did. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened:`;
+Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus on YOUR experience and reflections, not on describing what Deite said or did. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened. End naturally after describing events - do NOT add reflective closing sentences about how things made you feel or what you learned:`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
@@ -270,11 +271,12 @@ CRITICAL REQUIREMENTS:
 11. NO LONG DESCRIPTIONS OF DEITE'S ACTIONS - Do NOT write long descriptions of what Deite did or how Deite responded - focus on YOUR experience and reflections
 12. FEEL LIKE A PERSONAL REFLECTION - The diary should feel natural and personal, like you're reflecting on your own day, not describing an AI conversation
 13. AVOID DRAMATIC LINES - Do NOT use overly dramatic phrases like "It was crazy", "it gave me all the feels", "it was absolutely amazing", etc. UNLESS something truly extraordinary or life-changing happened. Keep the tone grounded and realistic - avoid too much dramatic storytelling for ordinary days.
+14. NO REFLECTIVE CLOSING SENTENCES - Do NOT include reflective or moral closing sentences such as "it lifted my mood", "it made me feel seen", "it reminded me of something", "it was a good day", "it helped me realize", etc. End the diary naturally after describing the events or thoughts of the day, without summarizing emotions or giving life lessons. Just describe what happened and stop - no need to wrap it up with emotional conclusions.
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a SHORT, natural diary entry about this day in first person. Write ${sentenceGuidance} maximum, briefly covering all key topics and emotions. Focus on YOUR experience and reflections, not on describing what Deite said or did. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened:`;
+Write a SHORT, natural diary entry about this day in first person. Write ${sentenceGuidance} maximum, briefly covering all key topics and emotions. Focus on YOUR experience and reflections, not on describing what Deite said or did. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened. End naturally after describing events - do NOT add reflective closing sentences about how things made you feel or what you learned:`;
 
     console.log('🧪 Narrative prompt length:', narrativePrompt.length);
     console.log('🧪 Narrative prompt preview:', narrativePrompt.slice(0, 200));
