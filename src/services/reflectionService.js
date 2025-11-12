@@ -62,6 +62,13 @@ class ReflectionService {
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
+    // Size instructions based on message count
+    const sizeInstructions = `14. REFLECTION LENGTH - Adjust the length based on the number of messages in the conversation:
+- If there are only 1–3 messages: write a very short reflection (2–3 sentences).
+- If there are 4–7 messages: write a short reflection (about 4–5 sentences).
+- If there are 8–15 messages: write a medium reflection (1 short paragraph).
+- If there are more than 15 messages: write a slightly longer reflection (2 short paragraphs).`;
+    
     const reflectionPrompt = `Write a natural, first-person diary entry about this day. Tell the story of what happened and how it felt.
 
 CRITICAL REQUIREMENTS:
@@ -78,7 +85,7 @@ CRITICAL REQUIREMENTS:
 11. FEEL LIKE A PERSONAL REFLECTION - The diary should feel natural and personal, like you're reflecting on your own day, not describing an AI conversation
 12. AVOID DRAMATIC LINES - Do NOT use overly dramatic phrases like "It was crazy", "it gave me all the feels", "it was absolutely amazing", etc. UNLESS something truly extraordinary or life-changing happened. Keep the tone grounded and realistic - avoid too much dramatic storytelling for ordinary days.
 13. NO REFLECTIVE CLOSING SENTENCES - Do NOT include reflective or moral closing sentences such as "it lifted my mood", "it made me feel seen", "it reminded me of something", "it was a good day", "it helped me realize", etc. End the diary naturally after describing the events or thoughts of the day, without summarizing emotions or giving life lessons. Just describe what happened and stop - no need to wrap it up with emotional conclusions.
-14. 3-5 sentences that read like a real diary entry
+${sizeInstructions}
 
 Conversation with Deite:
 ${conversationContext}
