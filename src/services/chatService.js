@@ -2,7 +2,7 @@ import { getCurrentUser } from './authService';
 
 class ChatService {
   constructor() {
-    this.baseURL = 'https://g75uux69gnczn1-11434.proxy.runpod.net/';
+    this.baseURL = 'https://uklqo1rhs5bebp-11434.proxy.runpod.net/';
     this.modelName = 'llama3:70b';
     // Optional: Add your Serper API key here for better results
     // Get free API key at: https://serper.dev (2,500 free searches/month)
