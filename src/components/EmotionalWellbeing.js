@@ -1432,6 +1432,11 @@ export default function EmotionalWellbeing() {
           positiveScore = Math.round((positiveTotal / total) * 100);
           negativeScore = Math.round((negativeTotal / total) * 100);
           neutralScore = 100 - positiveScore - negativeScore;
+          
+          // Ensure all values are between 0 and 100 (clamp to prevent negative values)
+          positiveScore = Math.max(0, Math.min(100, positiveScore));
+          negativeScore = Math.max(0, Math.min(100, negativeScore));
+          neutralScore = Math.max(0, Math.min(100, neutralScore));
         } else {
           // Default values if no data
           positiveScore = 40;
@@ -2274,14 +2279,19 @@ export default function EmotionalWellbeing() {
       // Calculate and save emotional balance
       const total = emotionalScores.happiness + emotionalScores.energy + 
                     emotionalScores.stress + emotionalScores.anxiety;
-      const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
-      const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
-      const neutral = 100 - positive - negative;
+      let positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+      let negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+      let neutral = 100 - positive - negative;
+
+      // Ensure all values are between 0 and 100 (clamp to prevent negative values)
+      positive = Math.max(0, Math.min(100, Math.round(positive)));
+      negative = Math.max(0, Math.min(100, Math.round(negative)));
+      neutral = Math.max(0, Math.min(100, Math.round(neutral)));
 
       await firestoreService.saveEmotionalBalanceNew(user.uid, todayId, {
-        positive: Math.round(positive),
-        negative: Math.round(negative),
-        neutral: Math.round(neutral)
+        positive: positive,
+        negative: negative,
+        neutral: neutral
       });
 
       // Auto-refresh the data FIRST
@@ -2572,9 +2582,14 @@ Return in this JSON format:
       const avgAnxiety = validData.reduce((sum, day) => sum + day.anxiety, 0) / validData.length;
       const avgStress = validData.reduce((sum, day) => sum + day.stress, 0) / validData.length;
 
-      const positiveScore = Math.round((avgHappiness + avgEnergy) / 2);
-      const negativeScore = Math.round((avgAnxiety + avgStress) / 2);
-      const neutralScore = Math.max(0, 100 - positiveScore - negativeScore);
+      let positiveScore = Math.round((avgHappiness + avgEnergy) / 2);
+      let negativeScore = Math.round((avgAnxiety + avgStress) / 2);
+      let neutralScore = 100 - positiveScore - negativeScore;
+
+      // Ensure all values are between 0 and 100 (clamp to prevent negative values)
+      positiveScore = Math.max(0, Math.min(100, positiveScore));
+      negativeScore = Math.max(0, Math.min(100, negativeScore));
+      neutralScore = Math.max(0, Math.min(100, neutralScore));
 
       setMoodBalance([
         { name: 'Positive', value: positiveScore, color: '#7DD3C0' },

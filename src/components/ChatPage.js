@@ -150,14 +150,19 @@ export default function ChatPage() {
       
       // Also save emotional balance
       const total = emotionalScores.happiness + emotionalScores.energy + emotionalScores.stress + emotionalScores.anxiety;
-      const positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
-      const negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
-      const neutral = 100 - positive - negative;
+      let positive = ((emotionalScores.happiness + emotionalScores.energy) / total) * 100;
+      let negative = ((emotionalScores.stress + emotionalScores.anxiety) / total) * 100;
+      let neutral = 100 - positive - negative;
+      
+      // Ensure all values are between 0 and 100 (clamp to prevent negative values)
+      positive = Math.max(0, Math.min(100, Math.round(positive)));
+      negative = Math.max(0, Math.min(100, Math.round(negative)));
+      neutral = Math.max(0, Math.min(100, Math.round(neutral)));
       
       await firestoreService.saveEmotionalBalanceNew(uid, dateId, {
-        positive: Math.round(positive),
-        negative: Math.round(negative),
-        neutral: Math.round(neutral)
+        positive: positive,
+        negative: negative,
+        neutral: neutral
       });
       console.log('💾 Emotional balance saved to Firestore');
       
