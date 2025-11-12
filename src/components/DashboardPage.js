@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-import { Brain, MessageCircle, Calendar, Heart, Sparkles, User, Sun, Moon, RefreshCw } from "lucide-react";
+import { Brain, MessageCircle, Calendar, Heart, Sparkles, User, Sun, Moon } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import CalendarPopup from './CalendarPopup';
 import reflectionService from '../services/reflectionService';
@@ -581,36 +581,17 @@ export default function DashboardPage() {
             borderTop: "3px solid #E6B3BA30",
           }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{
-                  backgroundColor: isDarkMode ? "#FDD663" : "#E6B3BA",
-                  boxShadow: isDarkMode ? "0 4px 16px rgba(0, 0, 0, 0.15)" : "none",
-                }}
-              >
-                <span className={isDarkMode ? "text-black" : "text-white"} style={{ fontSize: '14px' }}>⚡</span>
-              </div>
-              <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Day's Reflect</h2>
+          <div className="flex items-center space-x-3 mb-4">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{
+                backgroundColor: isDarkMode ? "#FDD663" : "#E6B3BA",
+                boxShadow: isDarkMode ? "0 4px 16px rgba(0, 0, 0, 0.15)" : "none",
+              }}
+            >
+              <span className={isDarkMode ? "text-black" : "text-white"} style={{ fontSize: '14px' }}>⚡</span>
             </div>
-            {reflection && !isLoadingReflection && (
-              <button
-                onClick={handleGenerateReflection}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:opacity-80 transition-all duration-300"
-                style={isDarkMode ? {
-                  backgroundColor: "rgba(42, 42, 45, 0.6)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                } : {
-                  backgroundColor: "rgba(255, 255, 255, 0.8)",
-                  border: "1px solid rgba(0, 0, 0, 0.1)",
-                }}
-                title="Regenerate reflection"
-              >
-                <RefreshCw className={`w-4 h-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
-                <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Regenerate</span>
-              </button>
-            )}
+            <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Day's Reflect</h2>
           </div>
           <div
             className={`rounded-xl p-5 min-h-24 relative overflow-hidden ${
