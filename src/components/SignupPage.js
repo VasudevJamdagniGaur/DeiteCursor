@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUpUser, onAuthStateChange, getCurrentUser } from '../services/authService';
-import Shuffle from './ShuffleAdvanced';
+import { Brain } from 'lucide-react';
 import LaserFlow from './LaserFlow';
 
 const SignupPage = () => {
   const navigate = useNavigate();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  
-  // Words for the shuffle text animation
-  const shuffleWords = ['Feel', 'Reflect', 'Heal', 'Deite'];
 
   // Listen for auth state changes (handles popup completion on mobile)
   useEffect(() => {
@@ -36,15 +32,6 @@ const SignupPage = () => {
     // Trigger fade-in animation on component mount
     setIsLoaded(true);
   }, []);
-
-  useEffect(() => {
-    // Change shuffle word every 2.5 seconds
-    const interval = setInterval(() => {
-      setCurrentWordIndex((prevIndex) => (prevIndex + 1) % shuffleWords.length);
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, [shuffleWords.length]);
 
   return (
     <div
@@ -98,35 +85,17 @@ const SignupPage = () => {
           {/* Inner logo circle */}
           <div
             className={`relative mobile-logo rounded-full flex items-center justify-center transition-all duration-1500 delay-300 logo-glow ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
+            style={{
+              width: '120px',
+              height: '120px',
+              backgroundColor: "rgba(42, 42, 45, 0.8)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              backdropFilter: 'blur(10px)',
+            }}
           >
-            <div className="text-3xl font-bold tracking-wider">
-              <Shuffle
-                key={currentWordIndex}
-                text={shuffleWords[currentWordIndex]}
-                shuffleDirection="right"
-                duration={0.9}
-                animationMode="evenodd"
-                shuffleTimes={1}
-                ease="power3.out"
-                stagger={0.07}
-                threshold={0}
-                rootMargin="0px"
-                triggerOnce={false}
-                triggerOnHover={false}
-                respectReducedMotion={true}
-                tag="span"
-                style={{
-                  background: 'linear-gradient(135deg, #8BC34A 0%, #A5D6A7 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  fontSize: 'inherit',
-                  fontWeight: 'inherit',
-                }}
-                className="shuffle-text"
-              />
-            </div>
-            </div>
+            <Brain className="w-14 h-14" style={{ color: "#8AB4F8" }} strokeWidth={1.5} />
+          </div>
           </div>
         </div>
 
