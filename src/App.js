@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { handleGoogleRedirect } from './services/authService';
 import { Capacitor } from '@capacitor/core';
@@ -28,9 +28,18 @@ const getAppPlugin = async () => {
   }
 };
 
-// Component to handle Google Sign-In redirects
+// Component to handle Google Sign-In redirects and route transitions
 function AppContent() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [displayLocation, setDisplayLocation] = useState(location);
+  const [transitionStage, setTransitionStage] = useState('fadeIn');
+
+  useEffect(() => {
+    if (location.pathname !== displayLocation.pathname) {
+      setTransitionStage('fadeOut');
+    }
+  }, [location.pathname, displayLocation.pathname]);
 
   useEffect(() => {
     // Handle Google Sign-In redirect on app load
@@ -50,18 +59,32 @@ function AppContent() {
   }, [navigate]);
 
   return (
-    <Routes>
-      <Route path="/" element={<SplashScreen />} />
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/welcome" element={<WelcomePage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/signup/email" element={<EmailSignupPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/dashboard" element={<DashboardPage />} />
-      <Route path="/chat" element={<ChatPage />} />
-      <Route path="/wellbeing" element={<EmotionalWellbeing />} />
-      <Route path="/profile" element={<ProfilePage />} />
-    </Routes>
+    <div
+      className={transitionStage}
+      onAnimationEnd={() => {
+        if (transitionStage === 'fadeOut') {
+          setTransitionStage('fadeIn');
+          setDisplayLocation(location);
+        }
+      }}
+      style={{
+        width: '100%',
+        minHeight: '100vh',
+      }}
+    >
+      <Routes location={displayLocation}>
+        <Route path="/" element={<SplashScreen />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/welcome" element={<WelcomePage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/signup/email" element={<EmailSignupPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/wellbeing" element={<EmotionalWellbeing />} />
+        <Route path="/profile" element={<ProfilePage />} />
+      </Routes>
+    </div>
   );
 }
 
@@ -69,7 +92,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="App">
+        <div className="App" style={{ backgroundColor: '#202124', minHeight: '100vh' }}>
           <AppContent />
         </div>
       </Router>
