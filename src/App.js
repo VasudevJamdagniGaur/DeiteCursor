@@ -58,6 +58,67 @@ function AppContent() {
     setTimeout(handleAuthRedirect, 500);
   }, [navigate]);
 
+  // Global Android back button handler
+  useEffect(() => {
+    let backButtonListener = null;
+
+    const setupGlobalBackButton = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { App } = await import('@capacitor/app');
+          
+          // Add global listener for back button
+          // This acts as a fallback for all routes
+          backButtonListener = await App.addListener('backButton', () => {
+            console.log('🔙 Global Android back button pressed, current route:', location.pathname);
+            
+            // Handle navigation based on current route
+            // Note: ChatPage has its own handler for whisper session logic
+            if (location.pathname === '/chat') {
+              // ChatPage handles its own navigation (including whisper session warnings)
+              // This handler will also fire but navigation is idempotent
+              console.log('📍 ChatPage will handle its own navigation');
+              return;
+            } else if (location.pathname === '/wellbeing' || location.pathname === '/profile') {
+              // Navigate to dashboard from these pages
+              console.log('📍 Navigating to dashboard from', location.pathname);
+              navigate('/dashboard', { replace: true });
+            } else if (location.pathname === '/dashboard') {
+              // If already on dashboard, exit app
+              console.log('📍 Already on dashboard, exiting app');
+              App.exitApp();
+            } else {
+              // For other routes (landing, login, signup, etc.), navigate to dashboard or exit
+              if (location.pathname === '/' || location.pathname === '/landing') {
+                // Exit app from landing/splash
+                console.log('📍 Exiting app from', location.pathname);
+                App.exitApp();
+              } else {
+                // Navigate to dashboard from other pages
+                console.log('📍 Navigating to dashboard from', location.pathname);
+                navigate('/dashboard', { replace: true });
+              }
+            }
+          });
+
+          console.log('✅ Global Android back button listener registered');
+        } catch (error) {
+          console.warn('⚠️ Could not set up global back button listener:', error);
+        }
+      }
+    };
+
+    setupGlobalBackButton();
+
+    // Cleanup listener on unmount
+    return () => {
+      if (backButtonListener) {
+        backButtonListener.remove();
+        console.log('🧹 Removed global Android back button listener');
+      }
+    };
+  }, [navigate, location.pathname]);
+
   return (
     <div
       className={transitionStage}
