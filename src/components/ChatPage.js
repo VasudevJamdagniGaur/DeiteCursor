@@ -8,6 +8,7 @@ import emotionalAnalysisService from '../services/emotionalAnalysisService';
 import firestoreService from '../services/firestoreService';
 import { getCurrentUser } from '../services/authService';
 import { getDateId } from '../utils/dateUtils';
+import { Capacitor } from '@capacitor/core';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function ChatPage() {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const handleBackRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -866,6 +868,49 @@ export default function ChatPage() {
     // Navigate back to dashboard (regular chat)
     navigate('/dashboard');
   };
+
+  // Keep handleBack ref updated
+  handleBackRef.current = handleBack;
+
+  // Handle Android hardware back button
+  useEffect(() => {
+    let backButtonListener = null;
+
+    const setupBackButton = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { App } = await import('@capacitor/app');
+          
+          // Add listener for back button
+          // When a listener is registered, it automatically prevents app exit
+          backButtonListener = await App.addListener('backButton', () => {
+            console.log('🔙 Android back button pressed on ChatPage');
+            // Call our handleBack function to navigate to dashboard
+            // This will handle both regular chat and whisper session cases
+            // Use ref to access the latest handleBack function
+            if (handleBackRef.current) {
+              handleBackRef.current();
+            }
+          });
+
+          console.log('✅ Android back button listener registered for ChatPage');
+        } catch (error) {
+          console.warn('⚠️ Could not set up back button listener:', error);
+        }
+      }
+    };
+
+    setupBackButton();
+
+    // Cleanup listener on unmount
+    return () => {
+      if (backButtonListener) {
+        backButtonListener.remove();
+        console.log('🧹 Removed Android back button listener from ChatPage');
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only set up once on mount - handleBack will have access to latest state via closure
 
   const handleConfirmDelete = async () => {
     setShowDeleteWarning(false);
