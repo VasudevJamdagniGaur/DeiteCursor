@@ -880,7 +880,6 @@ export default function ChatPage() {
       if (Capacitor.isNativePlatform()) {
         try {
           const { App } = await import('@capacitor/app');
-          
           // Add listener for back button
           // When a listener is registered, it automatically prevents app exit
           backButtonListener = await App.addListener('backButton', () => {
