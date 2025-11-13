@@ -909,8 +909,7 @@ export default function ChatPage() {
         console.log('🧹 Removed Android back button listener from ChatPage');
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only set up once on mount - handleBack will have access to latest state via closure
+  }, [navigate]); // navigate is stable, handleBack ref will have latest state
 
   const handleConfirmDelete = async () => {
     setShowDeleteWarning(false);
