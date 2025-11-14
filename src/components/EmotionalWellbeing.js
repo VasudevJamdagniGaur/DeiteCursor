@@ -1699,40 +1699,7 @@ export default function EmotionalWellbeing() {
     navigate('/dashboard');
   };
 
-  // Handle Android hardware back button
-  useEffect(() => {
-    let backButtonListener = null;
-
-    const setupBackButton = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const { App } = await import('@capacitor/app');
-          
-          // Add listener for back button
-          // When a listener is registered, it automatically prevents app exit
-          backButtonListener = await App.addListener('backButton', () => {
-            console.log('🔙 Android back button pressed on EmotionalWellbeing');
-            // Navigate to dashboard instead of exiting
-            handleBack();
-          });
-
-          console.log('✅ Android back button listener registered for EmotionalWellbeing');
-        } catch (error) {
-          console.warn('⚠️ Could not set up back button listener:', error);
-        }
-      }
-    };
-
-    setupBackButton();
-
-    // Cleanup listener on unmount
-    return () => {
-      if (backButtonListener) {
-        backButtonListener.remove();
-        console.log('🧹 Removed Android back button listener from EmotionalWellbeing');
-      }
-    };
-  }, [navigate]);
+  // Note: Android hardware back button is handled globally in App.js
 
   const handleRefreshData = async () => {
     console.log('🔄 Manual data refresh triggered...');

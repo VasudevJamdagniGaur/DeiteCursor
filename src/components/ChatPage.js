@@ -873,6 +873,7 @@ export default function ChatPage() {
   handleBackRef.current = handleBack;
 
   // Handle Android hardware back button - handles whisper session warnings
+  // This listener fires FIRST and handles ChatPage-specific logic
   useEffect(() => {
     let backButtonListener = null;
 
@@ -880,18 +881,16 @@ export default function ChatPage() {
       if (Capacitor.isNativePlatform()) {
         try {
           const { App } = await import('@capacitor/app');
-          // Add listener for back button - this will fire before the global handler
-          // When a listener is registered, it automatically prevents app exit
+          // Add listener for back button
+          // Registering ANY listener prevents app exit by default
           backButtonListener = await App.addListener('backButton', () => {
-            console.log('🔙 Android back button pressed on ChatPage');
+            console.log('🔙 Android hardware back button pressed on ChatPage');
             // Call our handleBack function to navigate to dashboard
             // This will handle both regular chat and whisper session cases
             // Use ref to access the latest handleBack function
             if (handleBackRef.current) {
               handleBackRef.current();
             }
-            // Note: The global handler in App.js will also fire, but handleBack
-            // will navigate, so the global handler's navigation will be a no-op
           });
 
           console.log('✅ Android back button listener registered for ChatPage');

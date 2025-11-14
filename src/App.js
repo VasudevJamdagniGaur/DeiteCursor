@@ -67,37 +67,37 @@ function AppContent() {
         try {
           const { App } = await import('@capacitor/app');
           
-          // Add global listener for back button
-          // This acts as a fallback for all routes
+          // Add global listener for back button - handles ALL routes
+          // Registering a listener automatically prevents app exit
           backButtonListener = await App.addListener('backButton', () => {
-            console.log('🔙 Global Android back button pressed, current route:', location.pathname);
+            console.log('🔙 Android hardware back button pressed, current route:', location.pathname);
             
             // Handle navigation based on current route
-            // Note: ChatPage has its own handler for whisper session logic
             if (location.pathname === '/chat') {
-              // ChatPage handles its own navigation (including whisper session warnings)
-              // This handler will also fire but navigation is idempotent
+              // ChatPage has its own handler for whisper session warnings
+              // Let it handle the navigation
               console.log('📍 ChatPage will handle its own navigation');
-              return;
-            } else if (location.pathname === '/wellbeing' || location.pathname === '/profile') {
-              // Navigate to dashboard from these pages
-              console.log('📍 Navigating to dashboard from', location.pathname);
+              // Don't do anything here - ChatPage's handler will take care of it
+            } else if (location.pathname === '/wellbeing') {
+              // Navigate to dashboard from Emotional Wellbeing
+              console.log('📍 Navigating to dashboard from Emotional Wellbeing');
+              navigate('/dashboard', { replace: true });
+            } else if (location.pathname === '/profile') {
+              // Navigate to dashboard from Profile
+              console.log('📍 Navigating to dashboard from Profile');
               navigate('/dashboard', { replace: true });
             } else if (location.pathname === '/dashboard') {
               // If already on dashboard, exit app
               console.log('📍 Already on dashboard, exiting app');
               App.exitApp();
+            } else if (location.pathname === '/' || location.pathname === '/landing') {
+              // Exit app from landing/splash
+              console.log('📍 Exiting app from', location.pathname);
+              App.exitApp();
             } else {
-              // For other routes (landing, login, signup, etc.), navigate to dashboard or exit
-              if (location.pathname === '/' || location.pathname === '/landing') {
-                // Exit app from landing/splash
-                console.log('📍 Exiting app from', location.pathname);
-                App.exitApp();
-              } else {
-                // Navigate to dashboard from other pages
-                console.log('📍 Navigating to dashboard from', location.pathname);
-                navigate('/dashboard', { replace: true });
-              }
+              // For other routes (login, signup, etc.), navigate to dashboard
+              console.log('📍 Navigating to dashboard from', location.pathname);
+              navigate('/dashboard', { replace: true });
             }
           });
 
