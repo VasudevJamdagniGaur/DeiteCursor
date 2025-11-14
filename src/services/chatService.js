@@ -1,4 +1,6 @@
 import { getCurrentUser } from './authService';
+import firestoreService from './firestoreService';
+import { getDateId } from '../utils/dateUtils';
 
 class ChatService {
   constructor() {
@@ -603,9 +605,67 @@ Assistant:`;
     }
   }
 
-  async generateDayDescription(dayData, type, periodText) {
+  async generateDayDescription(dayData, type, periodText, userCharacterCount = null) {
     try {
       console.log(`🤖 Generating ${type} day description for`, dayData.date);
+      
+      // Calculate user character count if not provided
+      let actualUserCharacterCount = userCharacterCount;
+      if (actualUserCharacterCount === null && dayData.date) {
+        try {
+          const user = getCurrentUser();
+          if (user) {
+            // Convert date to dateId format
+            let dateId;
+            if (dayData.date instanceof Date) {
+              dateId = getDateId(dayData.date);
+            } else if (typeof dayData.date === 'string') {
+              // Check if it's already in YYYY-MM-DD format
+              if (/^\d{4}-\d{2}-\d{2}$/.test(dayData.date)) {
+                dateId = dayData.date;
+              } else {
+                // Try parsing as date string
+                const dateObj = new Date(dayData.date);
+                dateId = getDateId(dateObj);
+              }
+            } else if (dayData.timestamp) {
+              // If timestamp is available, use that
+              const dateObj = new Date(dayData.timestamp);
+              dateId = getDateId(dateObj);
+            } else {
+              // Fallback: try to parse as date
+              const dateObj = new Date(dayData.date);
+              dateId = getDateId(dateObj);
+            }
+            
+            // Fetch user messages for that day
+            const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+            if (messagesResult.success && messagesResult.messages) {
+              // Calculate total character count from user messages
+              actualUserCharacterCount = messagesResult.messages
+                .filter(msg => msg.sender === 'user' && msg.text)
+                .reduce((total, msg) => total + msg.text.length, 0);
+              console.log(`📊 User wrote ${actualUserCharacterCount} characters on ${dayData.date} (dateId: ${dateId})`);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not fetch user messages for character count:', error);
+        }
+      }
+      
+      // Calculate character limit (2x user character count)
+      const maxReflectionCharacters = actualUserCharacterCount ? actualUserCharacterCount * 2 : null;
+      
+      if (maxReflectionCharacters) {
+        console.log(`📊 Reflection limit: ${maxReflectionCharacters} characters (2x user input: ${actualUserCharacterCount})`);
+      }
+      
+      // Estimate max tokens from character count (conservative: 3 chars per token)
+      const estimatedMaxTokens = maxReflectionCharacters ? Math.floor(maxReflectionCharacters / 3) : 200;
+      
+      const characterLimitInstruction = maxReflectionCharacters 
+        ? `\n\nCRITICAL CHARACTER LIMIT: The response must NEVER exceed ${maxReflectionCharacters} characters (which is 2x the ${actualUserCharacterCount} characters the user wrote on this day). Always stay within this strict character limit.`
+        : '';
       
       const prompt = `You are Deite — a compassionate AI therapist and emotional analyst.
 You are analyzing a user's emotional wellbeing based on their daily reflections, moods, and emotional summaries.
@@ -630,10 +690,32 @@ Stress: ${dayData.stress}% stress, ${dayData.anxiety}% anxiety
 
 ${dayData.summary ? `Summary from that day: ${dayData.summary}` : 'No daily summary available for this day.'}
 
-Keep the response warm, natural, and empathetic (3-5 sentences). Focus on meaning and emotional cause, not numbers.`;
+Keep the response warm, natural, and empathetic (3-5 sentences). Focus on meaning and emotional cause, not numbers.${characterLimitInstruction}`;
 
+      // Use sendMessage but with token limit
       const response = await this.sendMessage(prompt);
-      return response.trim();
+      let description = response.trim();
+      
+      // Enforce character limit: description must not exceed 2x user character count
+      if (maxReflectionCharacters && description.length > maxReflectionCharacters) {
+        console.warn(`⚠️ Generated description (${description.length} chars) exceeds limit (${maxReflectionCharacters} chars). Truncating...`);
+        // Truncate to the character limit, trying to end at a sentence boundary
+        description = description.substring(0, maxReflectionCharacters);
+        // Try to find the last sentence ending (., !, ?) before the limit
+        const lastSentenceEnd = Math.max(
+          description.lastIndexOf('.'),
+          description.lastIndexOf('!'),
+          description.lastIndexOf('?')
+        );
+        if (lastSentenceEnd > maxReflectionCharacters * 0.7) {
+          // If we found a sentence end reasonably close to the limit, use it
+          description = description.substring(0, lastSentenceEnd + 1);
+        }
+        console.log(`✅ Truncated description to ${description.length} characters (within ${maxReflectionCharacters} limit)`);
+      }
+      
+      console.log(`📖 Generated ${type} day description: ${description.length} characters${maxReflectionCharacters ? ` (limit: ${maxReflectionCharacters})` : ''}`);
+      return description;
     } catch (error) {
       console.error(`❌ Error generating ${type} day description:`, error);
       return `You experienced ${type === 'best' ? 'a significantly positive day' : 'a challenging emotional period'} during ${periodText}. Reflect on what contributed to this experience and how it relates to your ongoing emotional journey.`;
