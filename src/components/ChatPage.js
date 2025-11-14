@@ -30,6 +30,7 @@ export default function ChatPage() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const handleBackRef = useRef(null);
@@ -37,6 +38,34 @@ export default function ChatPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Load profile picture
+  useEffect(() => {
+    const loadProfilePicture = () => {
+      const user = getCurrentUser();
+      if (user) {
+        const savedPicture = localStorage.getItem(`user_profile_picture_${user.uid}`);
+        if (savedPicture) {
+          setProfilePicture(savedPicture);
+        } else {
+          setProfilePicture(null);
+        }
+      }
+    };
+
+    loadProfilePicture();
+
+    // Listen for profile picture updates
+    const handleProfilePictureUpdate = () => {
+      loadProfilePicture();
+    };
+
+    window.addEventListener('profilePictureUpdated', handleProfilePictureUpdate);
+
+    return () => {
+      window.removeEventListener('profilePictureUpdated', handleProfilePictureUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -1045,18 +1074,26 @@ export default function ChatPage() {
 
         <button
           onClick={() => navigate('/profile')}
-          className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity overflow-hidden ${
             isDarkMode ? 'backdrop-blur-md' : 'bg-white'
           }`}
           style={isDarkMode ? {
-            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            backgroundColor: profilePicture ? "transparent" : "rgba(42, 42, 45, 0.6)",
             boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: profilePicture ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
           } : {
             boxShadow: "0 2px 8px rgba(177, 156, 217, 0.15)",
           }}
         >
-          <User className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#B19CD9" }} strokeWidth={1.5} />
+          {profilePicture ? (
+            <img 
+              src={profilePicture} 
+              alt="Profile" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <User className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#B19CD9" }} strokeWidth={1.5} />
+          )}
         </button>
       </div>
 

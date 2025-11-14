@@ -78,9 +78,18 @@ export default function ProfilePage() {
       // Save profile picture if it exists
       if (profilePicture) {
         localStorage.setItem(`user_profile_picture_${user.uid}`, profilePicture);
+        console.log('✅ Profile picture saved to localStorage');
+      } else {
+        // If profile picture was removed, clear it from localStorage
+        localStorage.removeItem(`user_profile_picture_${user.uid}`);
+        console.log('✅ Profile picture removed from localStorage');
       }
 
+      // Trigger a custom event to notify other components (like Dashboard) of the change
+      window.dispatchEvent(new Event('profilePictureUpdated'));
+
       setIsEditing(false);
+      alert('Profile saved successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');

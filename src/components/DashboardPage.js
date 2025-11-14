@@ -16,6 +16,59 @@ export default function DashboardPage() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isLoadingReflection, setIsLoadingReflection] = useState(false);
   const [chatDays, setChatDays] = useState([]);
+  const [profilePicture, setProfilePicture] = useState(null);
+
+  // Load profile picture
+  useEffect(() => {
+    const loadProfilePicture = () => {
+      const user = getCurrentUser();
+      if (user) {
+        const savedPicture = localStorage.getItem(`user_profile_picture_${user.uid}`);
+        if (savedPicture) {
+          setProfilePicture(savedPicture);
+        } else {
+          setProfilePicture(null);
+        }
+      }
+    };
+
+    loadProfilePicture();
+
+    // Listen for storage changes and custom events (when profile picture is updated from ProfilePage)
+    const handleStorageChange = (e) => {
+      if (e.key && e.key.startsWith('user_profile_picture_')) {
+        loadProfilePicture();
+      }
+    };
+
+    const handleProfilePictureUpdate = () => {
+      loadProfilePicture();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('profilePictureUpdated', handleProfilePictureUpdate);
+    
+    // Also check on focus and visibility change (when returning from ProfilePage)
+    const handleFocus = () => {
+      loadProfilePicture();
+    };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadProfilePicture();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('profilePictureUpdated', handleProfilePictureUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
 
   // Load all chat days for calendar indicators
   useEffect(() => {
@@ -173,6 +226,16 @@ export default function DashboardPage() {
 
   const handleProfileClick = () => {
     navigate('/profile');
+  };
+
+  // Helper function to get user initials
+  const getUserInitials = (displayName) => {
+    if (!displayName) return 'U';
+    const names = displayName.trim().split(' ');
+    if (names.length >= 2) {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+    return displayName[0].toUpperCase();
   };
 
   const handleCalendarClick = async () => {
@@ -506,18 +569,26 @@ export default function DashboardPage() {
             </div>
             <div
               onClick={handleProfileClick}
-              className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity overflow-hidden ${
                 isDarkMode ? 'backdrop-blur-md' : 'bg-white'
               }`}
               style={isDarkMode ? {
-                backgroundColor: "rgba(42, 42, 45, 0.6)",
+                backgroundColor: profilePicture ? "transparent" : "rgba(42, 42, 45, 0.6)",
                 boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                border: profilePicture ? "none" : "1px solid rgba(255, 255, 255, 0.08)",
               } : {
                 boxShadow: "0 2px 8px rgba(177, 156, 217, 0.15)",
               }}
             >
-              <User className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#B19CD9" }} strokeWidth={1.5} />
+              {profilePicture ? (
+                <img 
+                  src={profilePicture} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-5 h-5" style={{ color: isDarkMode ? "#81C995" : "#B19CD9" }} strokeWidth={1.5} />
+              )}
             </div>
           </div>
         </div>
