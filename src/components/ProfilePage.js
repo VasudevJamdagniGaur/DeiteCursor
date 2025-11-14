@@ -269,25 +269,27 @@ export default function ProfilePage() {
                     getInitials(user.displayName)
                   )}
                 </div>
-                {/* Change Picture Button */}
-                <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110"
-                  style={{
-                    backgroundColor: "rgba(138, 180, 248, 0.9)",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
-                    border: "2px solid rgba(42, 42, 45, 0.8)",
-                  }}
-                  title="Change profile picture"
-                >
-                  <Camera className="w-4 h-4 text-white" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfilePictureChange}
-                    className="hidden"
-                  />
-                </label>
-                {/* Remove Picture Button (only show if picture exists) */}
-                {profilePicture && (
+                {/* Change Picture Button - Only show in edit mode */}
+                {isEditing && (
+                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110"
+                    style={{
+                      backgroundColor: "rgba(138, 180, 248, 0.9)",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                      border: "2px solid rgba(42, 42, 45, 0.8)",
+                    }}
+                    title="Change profile picture"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePictureChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                {/* Remove Picture Button - Only show in edit mode and if picture exists */}
+                {isEditing && profilePicture && (
                   <button
                     onClick={handleRemoveProfilePicture}
                     className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110"
