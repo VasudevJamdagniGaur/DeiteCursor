@@ -1346,12 +1346,72 @@ export default function EmotionalWellbeing() {
     };
     
     // Generate natural storytelling descriptions based on the day's summary
-    const generateBestDayDescription = (day) => {
+    // Apply 2x character limit based on user's conversation that day
+    const generateBestDayDescription = async (day) => {
       const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
       
       if (day.summary) {
         // Clean and use the summary directly as natural storytelling
-        const cleanedSummary = cleanSummary(day.summary);
+        let cleanedSummary = cleanSummary(day.summary);
+        
+        // Calculate user character count for that day and apply 2x limit
+        try {
+          const user = getCurrentUser();
+          if (user && day.date) {
+            // Convert date to dateId format
+            let dateId;
+            if (day.date instanceof Date) {
+              dateId = getDateId(day.date);
+            } else if (typeof day.date === 'string') {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(day.date)) {
+                dateId = day.date;
+              } else {
+                const dateObj = new Date(day.date);
+                dateId = getDateId(dateObj);
+              }
+            } else if (day.timestamp) {
+              const dateObj = new Date(day.timestamp);
+              dateId = getDateId(dateObj);
+            } else {
+              const dateObj = new Date(day.date);
+              dateId = getDateId(dateObj);
+            }
+            
+            // Fetch user messages for that day
+            const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+            if (messagesResult.success && messagesResult.messages) {
+              // Calculate total character count from user messages
+              const userCharacterCount = messagesResult.messages
+                .filter(msg => msg.sender === 'user' && msg.text)
+                .reduce((total, msg) => total + msg.text.length, 0);
+              
+              const maxReflectionCharacters = userCharacterCount * 2;
+              
+              console.log(`📊 Best Mood Day: User wrote ${userCharacterCount} characters. Description limit: ${maxReflectionCharacters} characters.`);
+              
+              // Enforce character limit: description must not exceed 2x user character count
+              if (cleanedSummary.length > maxReflectionCharacters) {
+                console.warn(`⚠️ Best Mood Day description (${cleanedSummary.length} chars) exceeds limit (${maxReflectionCharacters} chars). Truncating...`);
+                // Truncate to the character limit, trying to end at a sentence boundary
+                cleanedSummary = cleanedSummary.substring(0, maxReflectionCharacters);
+                // Try to find the last sentence ending (., !, ?) before the limit
+                const lastSentenceEnd = Math.max(
+                  cleanedSummary.lastIndexOf('.'),
+                  cleanedSummary.lastIndexOf('!'),
+                  cleanedSummary.lastIndexOf('?')
+                );
+                if (lastSentenceEnd > maxReflectionCharacters * 0.7) {
+                  // If we found a sentence end reasonably close to the limit, use it
+                  cleanedSummary = cleanedSummary.substring(0, lastSentenceEnd + 1);
+                }
+                console.log(`✅ Truncated Best Mood Day description to ${cleanedSummary.length} characters (within ${maxReflectionCharacters} limit)`);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not fetch user messages for Best Mood Day character count:', error);
+        }
+        
         return cleanedSummary;
       }
       
@@ -1359,12 +1419,71 @@ export default function EmotionalWellbeing() {
       return `On ${dateStr}, I experienced a day that felt particularly positive and uplifting.`;
     };
     
-    const generateChallengingDayDescription = (day) => {
+    const generateChallengingDayDescription = async (day) => {
       const dateStr = day.date ? new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'this day';
       
       if (day.summary) {
         // Clean and use the summary directly as natural storytelling
-        const cleanedSummary = cleanSummary(day.summary);
+        let cleanedSummary = cleanSummary(day.summary);
+        
+        // Calculate user character count for that day and apply 2x limit
+        try {
+          const user = getCurrentUser();
+          if (user && day.date) {
+            // Convert date to dateId format
+            let dateId;
+            if (day.date instanceof Date) {
+              dateId = getDateId(day.date);
+            } else if (typeof day.date === 'string') {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(day.date)) {
+                dateId = day.date;
+              } else {
+                const dateObj = new Date(day.date);
+                dateId = getDateId(dateObj);
+              }
+            } else if (day.timestamp) {
+              const dateObj = new Date(day.timestamp);
+              dateId = getDateId(dateObj);
+            } else {
+              const dateObj = new Date(day.date);
+              dateId = getDateId(dateObj);
+            }
+            
+            // Fetch user messages for that day
+            const messagesResult = await firestoreService.getChatMessagesNew(user.uid, dateId);
+            if (messagesResult.success && messagesResult.messages) {
+              // Calculate total character count from user messages
+              const userCharacterCount = messagesResult.messages
+                .filter(msg => msg.sender === 'user' && msg.text)
+                .reduce((total, msg) => total + msg.text.length, 0);
+              
+              const maxReflectionCharacters = userCharacterCount * 2;
+              
+              console.log(`📊 Challenging Day: User wrote ${userCharacterCount} characters. Description limit: ${maxReflectionCharacters} characters.`);
+              
+              // Enforce character limit: description must not exceed 2x user character count
+              if (cleanedSummary.length > maxReflectionCharacters) {
+                console.warn(`⚠️ Challenging Day description (${cleanedSummary.length} chars) exceeds limit (${maxReflectionCharacters} chars). Truncating...`);
+                // Truncate to the character limit, trying to end at a sentence boundary
+                cleanedSummary = cleanedSummary.substring(0, maxReflectionCharacters);
+                // Try to find the last sentence ending (., !, ?) before the limit
+                const lastSentenceEnd = Math.max(
+                  cleanedSummary.lastIndexOf('.'),
+                  cleanedSummary.lastIndexOf('!'),
+                  cleanedSummary.lastIndexOf('?')
+                );
+                if (lastSentenceEnd > maxReflectionCharacters * 0.7) {
+                  // If we found a sentence end reasonably close to the limit, use it
+                  cleanedSummary = cleanedSummary.substring(0, lastSentenceEnd + 1);
+                }
+                console.log(`✅ Truncated Challenging Day description to ${cleanedSummary.length} characters (within ${maxReflectionCharacters} limit)`);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not fetch user messages for Challenging Day character count:', error);
+        }
+        
         return cleanedSummary;
       }
       
@@ -1373,8 +1492,8 @@ export default function EmotionalWellbeing() {
     };
     
     console.log('📝 Generating contextual descriptions based on data...');
-    const bestDayDescription = generateBestDayDescription(bestDay);
-    const worstDayDescription = generateChallengingDayDescription(worstDay);
+    const bestDayDescription = await generateBestDayDescription(bestDay);
+    const worstDayDescription = await generateChallengingDayDescription(worstDay);
     console.log('✅ Generated Best day description:', bestDayDescription);
     console.log('✅ Generated Challenging day description:', worstDayDescription);
 
