@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from
 import { ThemeProvider } from './contexts/ThemeContext';
 import { handleGoogleRedirect } from './services/authService';
 import { Capacitor } from '@capacitor/core';
-import SplashScreen from './components/SplashScreen';
 import LandingPage from './components/LandingPage';
 import WelcomePage from './components/WelcomePage';
 import SignupPage from './components/SignupPage';
@@ -134,7 +133,7 @@ function AppContent() {
       }}
     >
       <Routes location={displayLocation}>
-        <Route path="/" element={<SplashScreen />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/signup" element={<SignupPage />} />
