@@ -62,12 +62,24 @@ class ReflectionService {
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
-    // Size instructions based on message count
-    const sizeInstructions = `14. REFLECTION LENGTH - Adjust the length based on the number of messages in the conversation:
-- If there are only 1–3 messages: write a very short reflection (2–3 sentences).
-- If there are 4–7 messages: write a short reflection (about 4–5 sentences).
-- If there are 8–15 messages: write a medium reflection (1 short paragraph).
-- If there are more than 15 messages: write a slightly longer reflection (2 short paragraphs).`;
+    // Count total meaningful messages for length adjustment
+    const totalMessages = userMessages.length;
+    
+    // Size instructions based on message count - STRICT length control
+    let sizeInstructions, maxTokens;
+    if (totalMessages <= 3) {
+      sizeInstructions = `14. REFLECTION LENGTH - CRITICAL: Write ONLY 2-3 sentences maximum. Keep it very short and concise.`;
+      maxTokens = 100;
+    } else if (totalMessages <= 7) {
+      sizeInstructions = `14. REFLECTION LENGTH - Write a short reflection (3-4 sentences maximum). Keep it concise.`;
+      maxTokens = 150;
+    } else if (totalMessages <= 15) {
+      sizeInstructions = `14. REFLECTION LENGTH - Write a medium reflection (4-5 sentences maximum). Still keep it concise.`;
+      maxTokens = 200;
+    } else {
+      sizeInstructions = `14. REFLECTION LENGTH - Write a slightly longer reflection (5-6 sentences maximum). Keep it concise and focused.`;
+      maxTokens = 250;
+    }
     
     const reflectionPrompt = `Write a natural, first-person diary entry about this day. Tell the story of what happened and how it felt.
 
@@ -85,12 +97,14 @@ CRITICAL REQUIREMENTS:
 11. FEEL LIKE A PERSONAL REFLECTION - The diary should feel natural and personal, like you're reflecting on your own day, not describing an AI conversation
 12. AVOID DRAMATIC LINES - Do NOT use overly dramatic phrases like "It was crazy", "it gave me all the feels", "it was absolutely amazing", etc. UNLESS something truly extraordinary or life-changing happened. Keep the tone grounded and realistic - avoid too much dramatic storytelling for ordinary days.
 13. NO REFLECTIVE CLOSING SENTENCES - Do NOT include reflective or moral closing sentences such as "it lifted my mood", "it made me feel seen", "it reminded me of something", "it was a good day", "it helped me realize", etc. End the diary naturally after describing the events or thoughts of the day, without summarizing emotions or giving life lessons. Just describe what happened and stop - no need to wrap it up with emotional conclusions.
+14. NO POSITIVITY ABOUT TALKING TO DEITE - Do NOT add statements like "talking to Deite made me feel better", "chatting with Deite helped", "Deite made me feel", or any positive statements about the conversation itself. ONLY summarize what the user expressed and how their day emotionally felt - do NOT comment on the conversation or its effects.
+15. ONLY SUMMARIZE USER'S EXPRESSION - Focus ONLY on summarizing what the user expressed in their messages and how their day emotionally felt. Do NOT add commentary about the conversation, Deite's responses, or how talking to Deite affected them.
 ${sizeInstructions}
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus on YOUR experience and reflections, not on describing what Deite said or did. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened. End naturally after describing events - do NOT add reflective closing sentences about how things made you feel or what you learned:`;
+Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus ONLY on summarizing what the user expressed and how their day emotionally felt. Do NOT add any statements about talking to Deite, how Deite helped, or how the conversation made you feel. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened. End naturally after describing events - do NOT add reflective closing sentences about how things made you feel or what you learned:`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
@@ -116,7 +130,7 @@ Write a natural diary entry about this day in first person. Just tell the story 
             options: {
               temperature: 0.5,  // Lower temperature for more accurate, focused summaries
               top_p: 0.9,
-              max_tokens: 250  // Increased to allow for more detailed, empathetic summaries
+              max_tokens: maxTokens  // Dynamic token limit based on message count for concise reflections
             }
           })
         });
