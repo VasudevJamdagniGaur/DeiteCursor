@@ -62,24 +62,38 @@ class ReflectionService {
     const conversationContext = this.buildConversationContext(userMessages, aiMessages);
     console.log('📋 Conversation context created');
     
+    // Calculate total character count from user messages
+    const userCharacterCount = userMessages.reduce((total, msg) => total + msg.length, 0);
+    const maxReflectionCharacters = userCharacterCount * 2; // Reflection must not exceed 2x user characters
+    
+    console.log(`📊 User wrote ${userCharacterCount} characters. Reflection limit: ${maxReflectionCharacters} characters (2x user input).`);
+    
     // Count total meaningful messages for length adjustment
     const totalMessages = userMessages.length;
+    
+    // Estimate tokens from character count (roughly 1 token = 4 characters for English text)
+    // But we'll use a more conservative estimate to ensure we stay under the limit
+    const estimatedMaxTokensFromChars = Math.floor(maxReflectionCharacters / 3); // Conservative: 3 chars per token
     
     // Size instructions based on message count - STRICT length control
     let sizeInstructions, maxTokens;
     if (totalMessages <= 3) {
       sizeInstructions = `14. REFLECTION LENGTH - CRITICAL: Write ONLY 2-3 sentences maximum. Keep it very short and concise.`;
-      maxTokens = 100;
+      maxTokens = Math.min(100, estimatedMaxTokensFromChars);
     } else if (totalMessages <= 7) {
       sizeInstructions = `14. REFLECTION LENGTH - Write a short reflection (3-4 sentences maximum). Keep it concise.`;
-      maxTokens = 150;
+      maxTokens = Math.min(150, estimatedMaxTokensFromChars);
     } else if (totalMessages <= 15) {
       sizeInstructions = `14. REFLECTION LENGTH - Write a medium reflection (4-5 sentences maximum). Still keep it concise.`;
-      maxTokens = 200;
+      maxTokens = Math.min(200, estimatedMaxTokensFromChars);
     } else {
       sizeInstructions = `14. REFLECTION LENGTH - Write a slightly longer reflection (5-6 sentences maximum). Keep it concise and focused.`;
-      maxTokens = 250;
+      maxTokens = Math.min(250, estimatedMaxTokensFromChars);
     }
+    
+    // Ensure we never exceed the character limit
+    // Add explicit character limit instruction
+    const characterLimitInstruction = `16. CHARACTER LIMIT - CRITICAL: The reflection must NEVER exceed ${maxReflectionCharacters} characters (which is 2x the ${userCharacterCount} characters the user wrote). Always stay within this strict limit.`;
     
     const reflectionPrompt = `Write a natural, first-person diary entry about this day. Tell the story of what happened and how it felt.
 
@@ -100,11 +114,14 @@ CRITICAL REQUIREMENTS:
 14. NO POSITIVITY ABOUT TALKING TO DEITE - Do NOT add statements like "talking to Deite made me feel better", "chatting with Deite helped", "Deite made me feel", or any positive statements about the conversation itself. ONLY summarize what the user expressed and how their day emotionally felt - do NOT comment on the conversation or its effects.
 15. ONLY SUMMARIZE USER'S EXPRESSION - Focus ONLY on summarizing what the user expressed in their messages and how their day emotionally felt. Do NOT add commentary about the conversation, Deite's responses, or how talking to Deite affected them.
 ${sizeInstructions}
+${characterLimitInstruction}
 
 Conversation with Deite:
 ${conversationContext}
 
-Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus ONLY on summarizing what the user expressed and how their day emotionally felt. Do NOT add any statements about talking to Deite, how Deite helped, or how the conversation made you feel. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened. End naturally after describing events - do NOT add reflective closing sentences about how things made you feel or what you learned:`;
+Write a natural diary entry about this day in first person. Just tell the story of what happened and how it felt. Focus ONLY on summarizing what the user expressed and how their day emotionally felt. Do NOT add any statements about talking to Deite, how Deite helped, or how the conversation made you feel. Keep it grounded and realistic, avoiding dramatic language unless something truly extraordinary happened. End naturally after describing events - do NOT add reflective closing sentences about how things made you feel or what you learned.
+
+CRITICAL: The reflection must NEVER exceed ${maxReflectionCharacters} characters (2x the ${userCharacterCount} characters the user wrote). Always stay within this strict character limit.`;
 
     // Minimal diagnostics to ensure we're not sending an empty prompt
     console.log('🧪 Reflection prompt length:', reflectionPrompt.length);
@@ -149,8 +166,27 @@ Write a natural diary entry about this day in first person. Just tell the story 
         // Accept multiple possible fields from providers
         const text = (data && (data.response ?? data.output ?? data.message?.content)) || '';
         if (typeof text === 'string' && text.trim()) {
-          const summary = text.trim();
-          console.log('📖 Generated day summary:', summary);
+          let summary = text.trim();
+          
+          // Enforce character limit: reflection must not exceed 2x user character count
+          if (summary.length > maxReflectionCharacters) {
+            console.warn(`⚠️ Generated reflection (${summary.length} chars) exceeds limit (${maxReflectionCharacters} chars). Truncating...`);
+            // Truncate to the character limit, trying to end at a sentence boundary
+            summary = summary.substring(0, maxReflectionCharacters);
+            // Try to find the last sentence ending (., !, ?) before the limit
+            const lastSentenceEnd = Math.max(
+              summary.lastIndexOf('.'),
+              summary.lastIndexOf('!'),
+              summary.lastIndexOf('?')
+            );
+            if (lastSentenceEnd > maxReflectionCharacters * 0.7) {
+              // If we found a sentence end reasonably close to the limit, use it
+              summary = summary.substring(0, lastSentenceEnd + 1);
+            }
+            console.log(`✅ Truncated reflection to ${summary.length} characters (within ${maxReflectionCharacters} limit)`);
+          }
+          
+          console.log(`📖 Generated day summary: ${summary.length} characters (limit: ${maxReflectionCharacters})`);
           return summary;
         } else {
         console.error(`❌ Invalid response format from ${modelToUse}:`, data);
