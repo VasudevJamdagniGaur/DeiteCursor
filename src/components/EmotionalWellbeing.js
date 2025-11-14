@@ -2897,7 +2897,7 @@ Return in this JSON format:
                 </div>
               </div>
 
-              <div className="h-96 w-full">
+              <div className="w-full" style={{ height: '280px', minHeight: '280px' }}>
           {moodBalance.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
@@ -2923,19 +2923,22 @@ Return in this JSON format:
                   <LineChart 
                     key={`balance-${chartKey}`} 
                     data={moodBalance}
-                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                    margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
                   >
                     <XAxis 
                       dataKey="day" 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
+                      tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
                     />
                     <YAxis 
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 12 }}
-                      width={40}
+                      tick={{ fill: isDarkMode ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                      width={35}
                       domain={[0, 100]}
                     />
                     <Tooltip 
