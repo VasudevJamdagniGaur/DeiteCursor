@@ -3669,7 +3669,7 @@ Return in this JSON format:
         }}
       >
       {/* Header - Mobile Optimized */}
-      <div className={`sticky top-0 z-20 flex items-center justify-between px-6 py-5 border-b backdrop-blur-lg ${
+      <div className={`sticky top-0 z-20 flex items-center justify-between pl-6 pr-8 py-5 border-b backdrop-blur-lg ${
         isDarkMode ? 'border-gray-600/20' : 'border-gray-200/50'
       }`}
         style={{
