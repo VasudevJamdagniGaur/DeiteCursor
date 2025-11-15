@@ -15,7 +15,7 @@ export default function SplashScreen() {
     let hasNavigated = false;
     let authStateDetermined = false;
 
-    const navigateToDestination = (user) => {
+    const navigateToDestination = (user, skipDelay = false) => {
       if (hasNavigated) return; // Prevent multiple navigations
       hasNavigated = true;
       
@@ -23,23 +23,45 @@ export default function SplashScreen() {
       if (navigationTimeout) clearTimeout(navigationTimeout);
       if (authUnsubscribe) authUnsubscribe();
       
-      try {
-        if (user) {
-          console.log('✅ User is logged in - navigating to dashboard');
-          navigate('/dashboard', { replace: true });
-        } else {
-          console.log('ℹ️ No user found - navigating to landing page');
+      const performNavigation = () => {
+        try {
+          if (user) {
+            console.log('✅ User is logged in - navigating to dashboard');
+            navigate('/dashboard', { replace: true });
+          } else {
+            console.log('ℹ️ No user found - navigating to landing page');
+            navigate('/landing', { replace: true });
+          }
+          setHasCheckedAuth(true);
+        } catch (error) {
+          console.error('❌ Navigation error:', error);
+          // Fallback: navigate to landing page
           navigate('/landing', { replace: true });
         }
-        setHasCheckedAuth(true);
-      } catch (error) {
-        console.error('❌ Navigation error:', error);
-        // Fallback: navigate to landing page
-        navigate('/landing', { replace: true });
+      };
+
+      // If user is logged in, navigate immediately (skip splash screen)
+      // Otherwise, wait 2 seconds to show splash screen
+      if (skipDelay || user) {
+        performNavigation();
+      } else {
+        navigationTimeout = setTimeout(performNavigation, 2000);
       }
     };
 
-    // Always subscribe to auth state changes first (this ensures we catch the user when Firebase restores the session)
+    // First, check if user is already logged in immediately (skip splash if logged in)
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      console.log('✅ User already logged in - skipping splash screen');
+      navigateToDestination(currentUser, true);
+      return () => {
+        console.log('🧹 SplashScreen cleanup');
+        if (navigationTimeout) clearTimeout(navigationTimeout);
+        if (authUnsubscribe) authUnsubscribe();
+      };
+    }
+
+    // User is not logged in, show splash screen and set up auth listener
     console.log('🔍 Setting up auth state listener...');
     authUnsubscribe = onAuthStateChange((user) => {
       if (authStateDetermined) return; // Ignore subsequent changes after initial determination
@@ -51,13 +73,14 @@ export default function SplashScreen() {
       if (navigationTimeout) clearTimeout(navigationTimeout);
       
       if (!hasNavigated) {
-        // Navigate after splash screen duration (2 seconds)
+        // If user logged in during splash, navigate immediately
+        // Otherwise, wait for splash screen duration (2 seconds)
         if (user) {
-          console.log('✅ User is logged in - will navigate to dashboard after splash');
-          navigationTimeout = setTimeout(() => navigateToDestination(user), 2000);
+          console.log('✅ User logged in during splash - navigating to dashboard immediately');
+          navigateToDestination(user, true);
         } else {
           console.log('ℹ️ No user found - will navigate to landing page after splash');
-          navigationTimeout = setTimeout(() => navigateToDestination(null), 2000);
+          navigateToDestination(null, false);
         }
       }
     });
@@ -66,14 +89,14 @@ export default function SplashScreen() {
     const fallbackTimeout = setTimeout(() => {
       if (!authStateDetermined && !hasNavigated) {
         console.log('⏰ Auth state not determined yet - checking current user directly');
-        const currentUser = getCurrentUser();
+        const fallbackUser = getCurrentUser();
         authStateDetermined = true;
-        if (currentUser) {
+        if (fallbackUser) {
           console.log('✅ Found user via getCurrentUser - navigating to dashboard');
-          navigateToDestination(currentUser);
+          navigateToDestination(fallbackUser, true);
         } else {
           console.log('ℹ️ No user found - navigating to landing page');
-          navigateToDestination(null);
+          navigateToDestination(null, false);
         }
       }
     }, 2500);
