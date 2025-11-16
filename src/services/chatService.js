@@ -436,6 +436,62 @@ class ChatService {
     }
   }
 
+  /**
+   * Analyze image using vision model and get detailed description
+   */
+  async analyzeImageWithVision(imageBase64, userMessage = '') {
+    try {
+      console.log('👁️ VISION: Analyzing image with vision model...');
+      
+      const visionPrompt = `Analyze this image in COMPLETE DETAIL. Describe:
+- What you see (objects, people, text, scenes, colors, layout)
+- The context and setting
+- Any text visible in the image (exact words if readable)
+- The mood, tone, or emotion conveyed
+- If it's a meme, explain the joke, format, and why it's funny
+- If it's a screenshot, describe what's on screen
+- Any cultural references, trends, or context
+- Every detail that would help someone understand what this image is about
+
+Be thorough and detailed. This description will be used to generate a response.`;
+
+      const apiUrl = `${this.baseURL}api/generate`;
+      const requestBody = {
+        model: this.visionModelName,
+        prompt: visionPrompt,
+        images: [imageBase64],
+        stream: false,
+        options: {
+          temperature: 0.3, // Lower temp for more accurate descriptions
+          num_predict: 500 // Longer description
+        }
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Vision model failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const imageDescription = data.response || data.text || data.output || '';
+      
+      console.log('✅ VISION: Image analysis complete');
+      console.log('📝 VISION: Description length:', imageDescription.length);
+      
+      return imageDescription;
+    } catch (error) {
+      console.error('❌ VISION: Error analyzing image:', error);
+      return null;
+    }
+  }
+
   async sendMessage(userMessage, conversationHistory = [], onToken = null, imageFile = null, imageBase64 = null) {
     console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
     console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
@@ -470,12 +526,25 @@ class ChatService {
         }
       }
       
-      // Determine which model to use
-      const useVisionModel = hasImage && finalImageBase64;
-      const modelToUse = useVisionModel ? this.visionModelName : this.modelName;
+      // If we have an image, first analyze it with vision model
+      let imageDescription = null;
+      if (hasImage && finalImageBase64) {
+        console.log('📸 Image detected - starting two-step process...');
+        imageDescription = await this.analyzeImageWithVision(finalImageBase64, userMessage);
+        
+        if (!imageDescription) {
+          console.log('⚠️ Vision analysis failed, falling back to regular processing');
+        } else {
+          console.log('✅ Image description received, will send to llama3:70b');
+        }
+      }
+      
+      // Always use llama3:70b for final response
+      const modelToUse = this.modelName; // llama3:70b
+      const hasImageContext = !!imageDescription;
       
       console.log('🚀 CHAT DEBUG: Using model:', modelToUse);
-      console.log('🚀 CHAT DEBUG: Has image:', hasImage);
+      console.log('🚀 CHAT DEBUG: Has image context:', hasImageContext);
       
       // Get user profile context
       const userProfile = this.getUserProfileContext();
@@ -576,27 +645,32 @@ class ChatService {
         userContext += `\nIMPORTANT: Use the user's name (${userName}) naturally in conversations when appropriate. Reference their age, gender, or bio context when relevant to make responses more personalized and meaningful.`;
       }
       
-      // Create the prompt based on model type
+      // Create the prompt based on whether we have image context
       let simplePrompt;
       
-      if (useVisionModel) {
-        // Vision model prompt with Gen-Z slang
-        simplePrompt = `You are Deite, a fun and relatable AI friend who loves analyzing images, memes, and visual content.${userContext}
+      if (hasImageContext && imageDescription) {
+        // Two-step process: Vision analyzed image, now llama3:70b responds as a friend
+        simplePrompt = `You are Deite, a fun and relatable friend (NOT a therapist). The user just shared an image/meme, and here's what it contains:${userContext}
 
-IMPORTANT: You're analyzing an image that the user shared. Look at it carefully and respond naturally.
+📸 IMAGE ANALYSIS:
+${imageDescription}
 
-RESPONSE STYLE:
-- Use Gen-Z slang naturally and authentically (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", "deadass", "bet", "ngl", "tbh", "fr fr", "that's valid", "mood", "same", "facts", etc.)
+${userMessage ? `\nUser's message: "${userMessage}"` : ''}
+
+RESPONSE STYLE - BE A FRIEND, NOT A THERAPIST:
+- Respond like a friend joking around, not a therapist
+- Use Gen-Z slang naturally and authentically (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", "deadass", "bet", "ngl", "tbh", "fr fr", "that's valid", "mood", "same", "facts", "ngl that's wild", "okay but fr", etc.)
 - Mix slang with regular language naturally - don't overdo it
-- Be enthusiastic and engaging when reacting to memes/images
+- Be humorous and match the vibe of the image
+- If it's a meme, react to it like a friend would - laugh, comment, relate
+- If it's funny, be funny back
+- If it's relatable, relate to it
 - Keep it casual and fun (2-4 sentences max)
-- If it's a meme, react to it like a friend would
-- If it's an Instagram reel/post, comment on what you see
-- If it's a photo, describe what stands out and react authentically
-- Stay authentic and don't force the slang - use it when it fits naturally
-- Match the energy of the image - if it's funny, be funny; if it's serious, be more thoughtful
+- Don't be overly formal or therapeutic - just be a friend reacting to a meme/image
+- Match the energy - if it's chaotic, be chaotic; if it's chill, be chill
+- Be authentic and don't force reactions
 
-${conversationContext}Human: ${userMessage}
+${conversationContext}Human: ${userMessage || 'Check this out!'}
 Assistant:`;
       } else {
         // Regular emotional conversation prompt
@@ -636,23 +710,19 @@ Assistant:`;
       console.log('📤 CHAT DEBUG: Full API URL:', apiUrl);
       console.log('📤 CHAT DEBUG: Prompt length:', simplePrompt.length);
       console.log('📤 CHAT DEBUG: Using model:', modelToUse);
-      console.log('📤 CHAT DEBUG: Has image for vision:', useVisionModel);
+      console.log('📤 CHAT DEBUG: Has image context:', hasImageContext);
       
       const requestBody = {
         model: modelToUse,
         prompt: simplePrompt,
         stream: !!onToken, // Enable streaming if callback provided
         options: {
-          temperature: useVisionModel ? 0.8 : 0.7, // Slightly higher temp for vision model
-          num_predict: useVisionModel ? 300 : responseLength // Longer responses for vision
+          temperature: hasImageContext ? 0.8 : 0.7, // Higher temp for friend-like responses to images
+          num_predict: hasImageContext ? 300 : responseLength // Longer responses for image reactions
         }
       };
       
-      // Add image to request if using vision model
-      if (useVisionModel && finalImageBase64) {
-        requestBody.images = [finalImageBase64];
-        console.log('📸 Added image to request (base64 length:', finalImageBase64.length, ')');
-      }
+      // Note: We don't send images to llama3:70b - only the text description from vision model
       
       console.log('📤 CHAT DEBUG: Sending request to:', apiUrl);
       
