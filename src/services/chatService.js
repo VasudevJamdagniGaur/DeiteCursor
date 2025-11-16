@@ -795,18 +795,22 @@ Be thorough and detailed. This description will be used to generate a response.`
           if (instagramData) {
             // Build comprehensive description from Instagram data
             const isReel = instagramData.type === 'video' || instagramUrl.includes('/reel/') || instagramUrl.includes('/tv/');
-            let linkDescription = `The user shared an Instagram ${isReel ? 'reel' : 'post'} from @${instagramData.user.username || 'unknown'}. `;
+            const accountUsername = instagramData.user.username || 'unknown';
             
-            // Add caption (CRITICAL - this is the main content)
+            // IMPORTANT: User is sharing someone else's meme/reel, not their own
+            let linkDescription = `The user shared a MEME (an Instagram ${isReel ? 'reel' : 'post'}) from @${accountUsername}'s account. This is NOT the user's own content - they found and shared this meme from @${accountUsername}. `;
+            
+            // Add caption (CRITICAL - this is the main content of the meme)
             if (instagramData.caption) {
-              linkDescription += `CAPTION: "${instagramData.caption}". `;
+              linkDescription += `MEME CAPTION: "${instagramData.caption}". `;
             } else {
-              linkDescription += `(No caption available). `;
+              linkDescription += `(No caption available for this meme). `;
             }
             
-            // Add user info (less important but context)
+            // Add account info (important context - whose meme this is)
+            linkDescription += `This meme is from @${accountUsername}'s account. `;
             if (instagramData.user.followers) {
-              linkDescription += `User @${instagramData.user.username} has ${instagramData.user.followers} followers. `;
+              linkDescription += `@${accountUsername} has ${instagramData.user.followers} followers. `;
             }
             
             // Add comments (especially funny ones) - prioritize these for humor
@@ -1083,23 +1087,27 @@ ${imageDescription}
 
 ${userMessage ? `\nUser's message: "${userMessage}"` : ''}
 
-CRITICAL RESPONSE RULES - INSTAGRAM QUIRKY ONE-LINER MODE:
+CRITICAL RESPONSE RULES - INSTAGRAM MEME ONE-LINER MODE:
+- IMPORTANT: The user is sharing a MEME from someone else's Instagram account (@[account_name]), NOT their own content
 - Respond with ONLY ONE funny, quirky, Gen-Z style one-liner (1 sentence max)
-- READ THE CAPTION CAREFULLY - that's the MAIN CONTENT of the post
+- READ THE CAPTION CAREFULLY - that's the MAIN CONTENT of the meme
 - The one-liner MUST be DIRECTLY RELATED to what the CAPTION says - if the caption mentions "dancing", "comedy", "salony", "Arabic Kuthu", etc., your response MUST reference those EXACT things
+- MENTION THE ACCOUNT NAME (@[account_name]) in your response if it's provided - like "The way @[account_name] did [thing from caption] and I'm deceased fr" or "Not @[account_name] posting [thing from caption] and thinking it's slay periodt"
+- DO NOT assume the user made this meme - they're sharing someone else's meme
 - DO NOT make up content - ONLY use what's in the CAPTION and COMMENTS provided above
 - If the CAPTION says something specific (like "dancing to Arabic Kuthu" or "comedy reel" or "salony"), your response MUST react to that SPECIFIC content
-- Reference the CAPTION FIRST, then COMMENTS if they're funny
-- If there are FUNNY COMMENTS mentioned, you can QUOTE them in your response like: "The way @[username] said '[comment text]' and I'm deceased fr" or "Not @[username] commenting '[comment text]' and being absolutely right periodt" or "The way '[comment text]' is sending me no cap"
+- Reference the CAPTION FIRST, then COMMENTS if they're funny, and mention @[account_name] if available
+- If there are FUNNY COMMENTS mentioned, you can QUOTE them in your response like: "The way @[commenter] said '[comment text]' and I'm deceased fr" or "Not @[commenter] commenting '[comment text]' and being absolutely right periodt"
 - Use Gen-Z slang naturally: "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", "deadass", "bet", "ngl", "tbh", "fr fr", "that's valid", "mood", "same", "facts", "ngl that's wild", "okay but fr", "I'm deceased", "this is sending me", "the way I just-", "the way @[username] said", "not @[username]", etc.
-- Be QUIRKY and FUNNY - react to the SPECIFIC CAPTION CONTENT, quote funny comments, or roast what's mentioned in the caption
+- Be QUIRKY and FUNNY - react to the SPECIFIC MEME CONTENT, mention the account if relevant, quote funny comments, or roast what's mentioned in the caption
 - If comments are mentioned, prioritize quoting the FUNNIEST ones in your response
 - DO NOT give generic reactions - your one-liner must reference the EXACT CONTENT from the CAPTION
 - DO NOT make up jokes or content that's not in the caption/comments
+- DO NOT assume the user created this - they're sharing a meme
 - DO NOT explain the joke, DO NOT analyze, DO NOT be therapeutic
-- Just drop the one-liner that directly relates to the SPECIFIC CAPTION CONTENT and leave it - let it hit like a reaction meme
+- Just drop the one-liner that directly relates to the SPECIFIC MEME CONTENT and leave it - let it hit like a reaction meme
 - Match the energy: if it's chaotic, be chaotic; if it's relatable, relate hard
-- Think: "What would I comment on THIS specific Instagram post based on the CAPTION?" - that's your response
+- Think: "What would I comment on THIS specific meme from @[account_name] based on the CAPTION?" - that's your response
 
 ${conversationContext}Human: ${userMessage || 'Check this out!'}
 Assistant:`;
