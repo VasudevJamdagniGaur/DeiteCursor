@@ -419,11 +419,24 @@ export default function ChatPage() {
     const user = getCurrentUser();
     if (user) {
       try {
-        await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
+        const saveResult = await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
           ...userMessage,
           isWhisperSession: isWhisperMode
         });
         console.log('💾 User message saved to Firestore');
+        
+        // Update message ID to match Firestore ID for proper image matching
+        if (saveResult.success && saveResult.messageId) {
+          userMessage.id = saveResult.messageId;
+          // Update the message in the messages array with the Firestore ID
+          const updatedMessages = [...newMessages];
+          const messageIndex = updatedMessages.findIndex(msg => msg.id === userMessage.id || (msg.text === userMessage.text && msg.sender === 'user'));
+          if (messageIndex !== -1) {
+            updatedMessages[messageIndex] = { ...updatedMessages[messageIndex], id: saveResult.messageId };
+            setMessages(updatedMessages);
+            saveMessages(updatedMessages);
+          }
+        }
       } catch (error) {
         console.error('❌ Error saving user message to Firestore:', error);
       }
@@ -574,11 +587,23 @@ export default function ChatPage() {
         try {
           const aiMessage = finalMessagesLocal[finalMessagesLocal.length - 1];
           if (aiMessage.sender === 'ai') {
-            await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
+            const saveResult = await firestoreService.saveChatMessageNew(user.uid, selectedDateId, {
               ...aiMessage,
               isWhisperSession: isWhisperMode
             });
             console.log('💾 AI message saved to Firestore NEW structure');
+            
+            // Update message ID to match Firestore ID for proper persistence
+            if (saveResult.success && saveResult.messageId) {
+              // Update in state and localStorage with Firestore ID
+              setMessages(prevMessages => {
+                const updated = prevMessages.map(msg => 
+                  msg.id === aiMessage.id ? { ...msg, id: saveResult.messageId } : msg
+                );
+                saveMessages(updated);
+                return updated;
+              });
+            }
           }
         } catch (error) {
           console.error('❌ Error saving AI message to Firestore:', error);
@@ -827,9 +852,72 @@ export default function ChatPage() {
           
           if (result.success && result.messages && result.messages.length > 0) {
             console.log('✅ Loaded', result.messages.length, 'messages from Firestore');
-            setMessages(result.messages);
-            // Also save to localStorage as backup
-            saveMessages(result.messages);
+            
+            // Merge with localStorage to get any images that might be missing from Firestore
+            const storedMessagesJson = localStorage.getItem(`chatMessages_${selectedDateId}`);
+            if (storedMessagesJson) {
+              try {
+                const storedMessages = JSON.parse(storedMessagesJson);
+                console.log('📸 Merging Firestore messages with localStorage images...');
+                
+                // Create maps for quick lookup: by ID and by content (text + sender + timestamp)
+                const storedMapById = new Map();
+                const storedMapByContent = new Map();
+                
+                storedMessages.forEach(msg => {
+                  if (msg.image) {
+                    // Map by ID
+                    if (msg.id) {
+                      storedMapById.set(msg.id, msg.image);
+                    }
+                    // Map by content (text + sender + approximate timestamp)
+                    // Use timestamp within 5 seconds as match (to handle slight differences)
+                    const contentKey = `${msg.sender}:${msg.text}`;
+                    storedMapByContent.set(contentKey, { image: msg.image, timestamp: msg.timestamp });
+                  }
+                });
+                
+                // Merge images from localStorage into Firestore messages
+                const mergedMessages = result.messages.map(msg => {
+                  // If Firestore message doesn't have image, try to restore from localStorage
+                  if (!msg.image) {
+                    // First try matching by ID
+                    if (msg.id && storedMapById.has(msg.id)) {
+                      msg.image = storedMapById.get(msg.id);
+                      console.log('📸 Restored image from localStorage by ID for message:', msg.id);
+                    } else {
+                      // Fallback: try matching by content (text + sender)
+                      const contentKey = `${msg.sender}:${msg.text}`;
+                      if (storedMapByContent.has(contentKey)) {
+                        const storedData = storedMapByContent.get(contentKey);
+                        // Check if timestamps are close (within 10 seconds)
+                        const timeDiff = Math.abs(
+                          (msg.timestamp?.getTime() || 0) - 
+                          (storedData.timestamp instanceof Date ? storedData.timestamp.getTime() : new Date(storedData.timestamp).getTime())
+                        );
+                        if (timeDiff < 10000) { // 10 seconds
+                          msg.image = storedData.image;
+                          console.log('📸 Restored image from localStorage by content for message:', msg.id);
+                        }
+                      }
+                    }
+                  }
+                  return msg;
+                });
+                
+                setMessages(mergedMessages);
+                // Save merged messages back to localStorage
+                saveMessages(mergedMessages);
+              } catch (mergeError) {
+                console.error('❌ Error merging messages:', mergeError);
+                // Fallback to just Firestore messages
+                setMessages(result.messages);
+                saveMessages(result.messages);
+              }
+            } else {
+              setMessages(result.messages);
+              saveMessages(result.messages);
+            }
             
             // Check if we need to generate emotional analysis for these messages
             await checkAndGenerateEmotionalAnalysis(user.uid, selectedDateId, result.messages);

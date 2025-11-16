@@ -414,15 +414,36 @@ class FirestoreService {
     try {
       console.log('💾 FIRESTORE NEW: Saving chat message...');
       console.log('💾 FIRESTORE NEW: uid:', uid, 'dateId:', dateId, 'messageData:', messageData);
+      console.log('📸 FIRESTORE NEW: Has image:', !!messageData.image);
       
-      // Create message in new structure
-      const messageRef = doc(collection(this.db, `users/${uid}/days/${dateId}/messages`));
-      await setDoc(messageRef, {
+      // Prepare message data
+      const messageDoc = {
         role: messageData.sender === 'user' ? 'user' : 'assistant',
         text: messageData.text,
         ts: serverTimestamp(),
         isWhisperSession: messageData.isWhisperSession || false
-      });
+      };
+      
+      // Add image if present (base64 data URL)
+      if (messageData.image) {
+        // Check image size (Firestore has 1MB limit per document)
+        // Base64 is ~33% larger than binary, so we check for ~750KB base64 = ~1MB binary
+        const imageSize = messageData.image.length;
+        const maxSize = 750000; // ~750KB base64
+        
+        if (imageSize > maxSize) {
+          console.warn('⚠️ FIRESTORE NEW: Image too large for Firestore (' + (imageSize / 1024).toFixed(2) + 'KB). Saving without image.');
+          // Still save the message, but without the image
+          // The image will remain in localStorage as backup
+        } else {
+          messageDoc.image = messageData.image;
+          console.log('📸 FIRESTORE NEW: Image included in message (' + (imageSize / 1024).toFixed(2) + 'KB)');
+        }
+      }
+      
+      // Create message in new structure
+      const messageRef = doc(collection(this.db, `users/${uid}/days/${dateId}/messages`));
+      await setDoc(messageRef, messageDoc);
 
       console.log('💾 FIRESTORE NEW: Message saved with ID:', messageRef.id);
 
@@ -438,6 +459,27 @@ class FirestoreService {
       return { success: true, messageId: messageRef.id };
     } catch (error) {
       console.error('❌ FIRESTORE NEW: Error saving chat message:', error);
+      
+      // Check if error is due to document size limit
+      if (error.message && error.message.includes('size')) {
+        console.error('❌ FIRESTORE NEW: Document too large. Image may be too big for Firestore.');
+        // Try saving without image
+        try {
+          const messageRef = doc(collection(this.db, `users/${uid}/days/${dateId}/messages`));
+          await setDoc(messageRef, {
+            role: messageData.sender === 'user' ? 'user' : 'assistant',
+            text: messageData.text,
+            ts: serverTimestamp(),
+            isWhisperSession: messageData.isWhisperSession || false
+            // Image omitted due to size
+          });
+          console.log('💾 FIRESTORE NEW: Message saved without image (too large)');
+          return { success: true, messageId: messageRef.id, imageOmitted: true };
+        } catch (retryError) {
+          console.error('❌ FIRESTORE NEW: Retry also failed:', retryError);
+        }
+      }
+      
       return { success: false, error: error.message };
     }
   }
@@ -455,16 +497,25 @@ class FirestoreService {
       const messages = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        messages.push({
+        const message = {
           id: doc.id,
           sender: data.role === 'user' ? 'user' : 'ai',
           text: data.text,
           timestamp: data.ts?.toDate() || new Date(),
           isWhisperSession: data.isWhisperSession || false // Preserve the isWhisperSession flag
-        });
+        };
+        
+        // Include image if present
+        if (data.image) {
+          message.image = data.image;
+          console.log('📸 FIRESTORE NEW: Loaded message with image (ID:', doc.id + ')');
+        }
+        
+        messages.push(message);
       });
 
       console.log('📖 FIRESTORE NEW: Retrieved', messages.length, 'messages');
+      console.log('📖 FIRESTORE NEW: Messages with images:', messages.filter(m => m.image).length);
       console.log('📖 FIRESTORE NEW: Whisper messages count:', messages.filter(m => m.isWhisperSession).length);
       console.log('📖 FIRESTORE NEW: Regular messages count:', messages.filter(m => !m.isWhisperSession).length);
       return { success: true, messages };

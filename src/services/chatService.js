@@ -608,7 +608,7 @@ Be thorough and detailed. This description will be used to generate a response.`
       const userProfile = this.getUserProfileContext();
       
       // Check if this is an entertainment topic (only for non-vision messages)
-      const isEntertainment = !useVisionModel && this.isEntertainmentTopic(userMessage);
+      const isEntertainment = !hasImageContext && this.isEntertainmentTopic(userMessage);
       let webSearchResults = null;
       
       // Search the web for entertainment topics
@@ -784,13 +784,34 @@ Assistant:`;
       
       console.log('📤 CHAT DEBUG: Sending request to:', apiUrl);
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // Add timeout to prevent hanging requests (60 seconds for chat)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
+      let response;
+      try {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error('❌ CHAT DEBUG: Request timed out after 60 seconds');
+          throw new Error('Request timed out. The RunPod server may be slow or unavailable. Please try again.');
+        }
+        // Check for network errors
+        if (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('NetworkError')) {
+          console.error('❌ CHAT DEBUG: Network error - RunPod server may be unreachable');
+          throw new Error('Unable to connect to the AI server. Please check your internet connection and try again.');
+        }
+        throw fetchError;
+      }
 
       console.log('📥 CHAT DEBUG: Response status:', response.status);
       console.log('📥 CHAT DEBUG: Response ok:', response.ok);
@@ -798,6 +819,16 @@ Assistant:`;
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ CHAT DEBUG: Error response:', errorText);
+        
+        // Provide more specific error messages
+        if (response.status === 404) {
+          throw new Error('AI model not found. Please check if the model is available on RunPod.');
+        } else if (response.status === 500 || response.status === 502 || response.status === 503) {
+          throw new Error('AI server is temporarily unavailable. Please try again in a moment.');
+        } else if (response.status === 504) {
+          throw new Error('Request timed out. The AI server is taking too long to respond.');
+        }
+        
         throw new Error(`Model ${modelToUse} failed: ${response.status} ${response.statusText}`);
       }
       
@@ -809,9 +840,21 @@ Assistant:`;
         const decoder = new TextDecoder();
         let fullResponse = '';
         
+        // Add timeout for streaming (90 seconds total)
+        const streamTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            console.error('❌ CHAT DEBUG: Streaming timeout after 90 seconds');
+            reader.cancel();
+            reject(new Error('Streaming response timed out. The AI server may be slow. Please try again.'));
+          }, 90000);
+        });
+        
         try {
           while (true) {
-            const { done, value } = await reader.read();
+            const { done, value } = await Promise.race([
+              reader.read(),
+              streamTimeoutPromise
+            ]);
             
             if (done) {
               console.log('🌊 Streaming completed for', modelToUse);
@@ -849,10 +892,19 @@ Assistant:`;
           if (fullResponse) {
             console.log('✅ Streaming response completed from', modelToUse);
             return fullResponse;
+          } else {
+            throw new Error('Streaming completed but no response received');
           }
           
         } catch (streamError) {
           console.error('❌ Streaming error for', modelToUse, ':', streamError);
+          
+          // Provide more helpful error messages
+          if (streamError.message.includes('timeout')) {
+            throw streamError;
+          } else if (streamError.name === 'AbortError' || streamError.message.includes('canceled')) {
+            throw new Error('Stream was canceled. The connection may have been interrupted.');
+          }
           throw streamError;
         }
       } else {
