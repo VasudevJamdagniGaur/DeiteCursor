@@ -34,6 +34,16 @@ export default function ChatPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const messagesEndRef = useRef(null);
+  
+  // Debug: Log when imagePreview changes
+  useEffect(() => {
+    console.log('📸 imagePreview state changed:', !!imagePreview, imagePreview ? `Length: ${imagePreview.length}` : 'null');
+  }, [imagePreview]);
+  
+  // Debug: Log when selectedImage changes
+  useEffect(() => {
+    console.log('📸 selectedImage state changed:', !!selectedImage, selectedImage ? `Name: ${selectedImage.name}, Size: ${selectedImage.size}` : 'null');
+  }, [selectedImage]);
   const inputRef = useRef(null);
   const handleBackRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1256,19 +1266,38 @@ export default function ChatPage() {
       <div className="relative z-10 p-4 border-t border-gray-700/30">
         {/* Image Preview */}
         {imagePreview && (
-          <div className="mb-3 relative inline-block">
-            <div className="relative">
+          <div className="mb-3 relative inline-block" style={{ display: 'block' }}>
+            <div className="relative" style={{ display: 'inline-block' }}>
               <img 
                 src={imagePreview} 
                 alt="Preview" 
                 className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
-              />
-              <button
-                onClick={() => {
+                style={{ 
+                  display: 'block',
+                  maxWidth: '200px',
+                  maxHeight: '200px',
+                  borderRadius: '8px',
+                  objectFit: 'cover'
+                }}
+                onLoad={() => console.log('📸 Image preview loaded successfully')}
+                onError={(e) => {
+                  console.error('❌ Image preview failed to load:', e);
+                  alert('Failed to load image preview. Please try selecting the image again.');
                   setSelectedImage(null);
                   setImagePreview(null);
                 }}
+              />
+              <button
+                onClick={() => {
+                  console.log('📸 Removing image preview');
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
                 className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors"
+                style={{ zIndex: 10 }}
               >
                 <X className="w-4 h-4 text-white" />
               </button>
@@ -1282,18 +1311,69 @@ export default function ChatPage() {
             type="file"
             accept="image/*"
             onChange={(e) => {
+              console.log('📸 Image input changed');
               const file = e.target.files?.[0];
               if (file) {
+                console.log('📸 File selected:', file.name, 'Size:', (file.size / 1024).toFixed(2), 'KB', 'Type:', file.type);
+                
                 if (file.size > 10 * 1024 * 1024) { // 10MB limit
                   alert('Image size should be less than 10MB');
+                  e.target.value = ''; // Reset input
                   return;
                 }
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                  alert('Please select a valid image file');
+                  e.target.value = ''; // Reset input
+                  return;
+                }
+                
                 setSelectedImage(file);
+                console.log('📸 Setting selectedImage state');
+                
                 const reader = new FileReader();
-                reader.onload = () => {
-                  setImagePreview(reader.result);
+                
+                reader.onload = (event) => {
+                  console.log('📸 FileReader onload triggered');
+                  const result = event.target?.result;
+                  if (result) {
+                    console.log('📸 Setting imagePreview, length:', result.length);
+                    setImagePreview(result);
+                    console.log('📸 Image preview should now be visible');
+                  } else {
+                    console.error('❌ FileReader result is null or undefined');
+                  }
                 };
-                reader.readAsDataURL(file);
+                
+                reader.onerror = (error) => {
+                  console.error('❌ FileReader error:', error);
+                  alert('Error reading image file. Please try again.');
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                  e.target.value = ''; // Reset input
+                };
+                
+                reader.onabort = () => {
+                  console.warn('⚠️ FileReader aborted');
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                };
+                
+                try {
+                  reader.readAsDataURL(file);
+                  console.log('📸 Started reading file as data URL');
+                } catch (error) {
+                  console.error('❌ Error starting FileReader:', error);
+                  alert('Error processing image. Please try again.');
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                  e.target.value = ''; // Reset input
+                }
+              } else {
+                console.log('📸 No file selected');
+                setSelectedImage(null);
+                setImagePreview(null);
               }
             }}
             className="hidden"
@@ -1301,18 +1381,26 @@ export default function ChatPage() {
           
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              console.log('📸 Image button clicked, fileInputRef:', fileInputRef.current);
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              } else {
+                console.error('❌ fileInputRef is null!');
+              }
+            }}
             disabled={isLoading}
             className="w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
             style={{
-              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              backgroundColor: selectedImage ? "rgba(129, 201, 149, 0.3)" : "rgba(42, 42, 45, 0.6)",
               boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              border: selectedImage ? "1px solid rgba(129, 201, 149, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
             }}
+            title={selectedImage ? `Image selected: ${selectedImage.name}` : "Select image"}
           >
             <ImageIcon 
               className="w-5 h-5" 
-              style={{ color: "#8AB4F8" }} 
+              style={{ color: selectedImage ? "#81C995" : "#8AB4F8" }} 
               strokeWidth={1.5} 
             />
           </button>
