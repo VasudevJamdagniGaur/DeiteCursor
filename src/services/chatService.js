@@ -124,6 +124,18 @@ class ChatService {
   }
 
   /**
+   * Check if URL is an Instagram link (post, reel, or story)
+   */
+  isInstagramLink(url) {
+    const instagramPatterns = [
+      /instagram\.com\/(reel|p|tv|stories)\//i,
+      /instagram\.com\/[^\/]+\/(reel|p|tv)\//i
+    ];
+    
+    return instagramPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
    * Check if URL is a social media post/reel/meme link
    */
   isSocialMediaLink(url) {
@@ -141,6 +153,83 @@ class ChatService {
     ];
     
     return socialPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
+   * Fetch Instagram post/reel data from Ensemble Data API
+   */
+  async fetchInstagramPostData(instagramUrl) {
+    try {
+      console.log('📸 Fetching Instagram post data from Ensemble Data API:', instagramUrl);
+      
+      const apiUrl = `https://api.ensembledata.com/instagram/post?url=${encodeURIComponent(instagramUrl)}`;
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': 'XxrDGV8x0zDWIg2Y'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Ensemble Data API error:', response.status, errorText);
+        throw new Error(`API request failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Instagram post data received from API');
+      
+      // Extract the data we need
+      const postData = {
+        caption: data.caption || null,
+        comments: data.comments || [],
+        user: {
+          username: data.user?.username || data.username || null,
+          profilePicture: data.user?.profile_picture || data.profile_picture || null,
+          followers: data.user?.followers || data.followers || null
+        },
+        images: [],
+        videos: [],
+        type: data.type || 'unknown' // 'image', 'video', 'carousel', etc.
+      };
+      
+      // Extract images (for posts) or video thumbnails (for reels)
+      if (data.images && Array.isArray(data.images)) {
+        postData.images = data.images.slice(0, 3); // Get first 2-3 images
+      } else if (data.image) {
+        postData.images = [data.image];
+      } else if (data.thumbnail) {
+        postData.images = [data.thumbnail];
+      }
+      
+      // Extract videos
+      if (data.videos && Array.isArray(data.videos)) {
+        postData.videos = data.videos.slice(0, 3);
+      } else if (data.video) {
+        postData.videos = [data.video];
+      }
+      
+      // Extract comments (ensure they're in a usable format)
+      if (Array.isArray(data.comments)) {
+        postData.comments = data.comments.map(comment => ({
+          text: comment.text || comment.comment || comment,
+          username: comment.username || comment.user?.username || 'unknown',
+          likes: comment.likes || 0
+        }));
+      }
+      
+      console.log('📸 Extracted post data:', {
+        hasCaption: !!postData.caption,
+        commentsCount: postData.comments.length,
+        imagesCount: postData.images.length,
+        username: postData.user.username
+      });
+      
+      return postData;
+    } catch (error) {
+      console.error('❌ Error fetching Instagram post data:', error);
+      return null;
+    }
   }
 
   /**
@@ -656,60 +745,136 @@ Be thorough and detailed. This description will be used to generate a response.`
         const urls = this.extractUrls(userMessage);
         console.log('🔗 URLs detected in message:', urls);
         
-        // Check if any URL is a social media link (Instagram Reel, meme, etc.)
-        const socialMediaUrl = urls.find(url => this.isSocialMediaLink(url));
+        // Check if any URL is an Instagram link (priority - use Ensemble Data API)
+        const instagramUrl = urls.find(url => this.isInstagramLink(url));
         
-        if (socialMediaUrl) {
-          // Handle social media posts/reels/memes specially
-          console.log('📹 Social media link detected, fetching metadata...');
-          const urlMetadata = await this.fetchUrlMetadata(socialMediaUrl);
+        if (instagramUrl) {
+          // Handle Instagram posts/reels/stories with Ensemble Data API
+          console.log('📸 Instagram link detected, fetching data from Ensemble Data API...');
+          const instagramData = await this.fetchInstagramPostData(instagramUrl);
           
-          if (urlMetadata) {
-            // Create a detailed description from metadata
-            let linkDescription = `The user shared a link from ${urlMetadata.siteName || 'social media'}. `;
+          if (instagramData) {
+            // Build comprehensive description from Instagram data
+            let linkDescription = `The user shared an Instagram ${instagramData.type === 'video' || instagramUrl.includes('/reel/') ? 'reel' : 'post'} from @${instagramData.user.username || 'unknown'}. `;
             
-            if (urlMetadata.title) {
-              linkDescription += `Title: "${urlMetadata.title}". `;
+            // Add caption
+            if (instagramData.caption) {
+              linkDescription += `Caption: "${instagramData.caption}". `;
             }
             
-            if (urlMetadata.description) {
-              linkDescription += `Description: "${urlMetadata.description}". `;
+            // Add user info
+            if (instagramData.user.followers) {
+              linkDescription += `User has ${instagramData.user.followers} followers. `;
             }
             
-            // If it's a video/reel, mention that
-            if (urlMetadata.videoUrl || socialMediaUrl.includes('/reel/') || socialMediaUrl.includes('/tv/')) {
-              linkDescription += `This is a video/reel. `;
+            // Add comments (especially funny ones)
+            if (instagramData.comments && instagramData.comments.length > 0) {
+              // Sort comments by likes to find the funniest/most popular ones
+              const sortedComments = [...instagramData.comments].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+              const topComments = sortedComments.slice(0, 3);
+              
+              linkDescription += `Comments (${instagramData.comments.length} total): `;
+              topComments.forEach((comment, index) => {
+                if (comment.text) {
+                  linkDescription += `"${comment.text}" (by @${comment.username}, ${comment.likes || 0} likes). `;
+                }
+              });
             }
             
-            // If we have a thumbnail, analyze it for visual context
-            if (urlMetadata.image) {
+            // Analyze images if available (for posts or video thumbnails)
+            if (instagramData.images && instagramData.images.length > 0) {
               try {
-                console.log('📸 Analyzing thumbnail from metadata...');
-                const thumbnailBase64 = await this.fetchImageAsBase64(urlMetadata.image);
-                if (thumbnailBase64) {
-                  const thumbnailDescription = await this.analyzeImageWithVision(thumbnailBase64, userMessage);
-                  linkDescription += `Visual content from thumbnail: ${thumbnailDescription}`;
+                console.log(`📸 Analyzing ${instagramData.images.length} image(s) from Instagram post...`);
+                const imageDescriptions = [];
+                
+                // Analyze up to 2-3 images
+                for (let i = 0; i < Math.min(instagramData.images.length, 3); i++) {
+                  const imageUrl = instagramData.images[i];
+                  const thumbnailBase64 = await this.fetchImageAsBase64(imageUrl);
+                  if (thumbnailBase64) {
+                    const imgDescription = await this.analyzeImageWithVision(thumbnailBase64, userMessage);
+                    imageDescriptions.push(imgDescription);
+                  }
+                }
+                
+                if (imageDescriptions.length > 0) {
+                  linkDescription += `Visual content: ${imageDescriptions.join(' | ')}`;
                 }
               } catch (error) {
-                console.log('⚠️ Could not analyze thumbnail, using metadata only:', error);
-                // Still use metadata even if thumbnail analysis fails
+                console.log('⚠️ Could not analyze images, using text data only:', error);
               }
             }
             
             imageDescription = linkDescription;
             hasImage = true; // Treat as having image context
-            console.log('✅ Social media link metadata processed');
+            console.log('✅ Instagram post data processed');
           } else {
-            console.log('⚠️ Could not fetch link metadata, trying to fetch as image...');
-            // Fallback: try to fetch as regular image
-            const fetchedImage = await this.fetchImageAsBase64(socialMediaUrl);
-            if (fetchedImage) {
-              finalImageBase64 = fetchedImage;
+            console.log('⚠️ Could not fetch Instagram data from API, falling back to metadata extraction...');
+            // Fallback: try regular metadata extraction
+            const urlMetadata = await this.fetchUrlMetadata(instagramUrl);
+            if (urlMetadata) {
+              let linkDescription = `The user shared an Instagram post. `;
+              if (urlMetadata.title) linkDescription += `Title: "${urlMetadata.title}". `;
+              if (urlMetadata.description) linkDescription += `Description: "${urlMetadata.description}". `;
+              imageDescription = linkDescription;
               hasImage = true;
-              console.log('✅ Successfully fetched image from URL');
             }
           }
         } else {
+          // Check if any URL is a social media link (non-Instagram)
+          const socialMediaUrl = urls.find(url => this.isSocialMediaLink(url));
+          
+          if (socialMediaUrl) {
+            // Handle other social media posts/reels/memes specially
+            console.log('📹 Social media link detected, fetching metadata...');
+            const urlMetadata = await this.fetchUrlMetadata(socialMediaUrl);
+            
+            if (urlMetadata) {
+              // Create a detailed description from metadata
+              let linkDescription = `The user shared a link from ${urlMetadata.siteName || 'social media'}. `;
+              
+              if (urlMetadata.title) {
+                linkDescription += `Title: "${urlMetadata.title}". `;
+              }
+              
+              if (urlMetadata.description) {
+                linkDescription += `Description: "${urlMetadata.description}". `;
+              }
+              
+              // If it's a video/reel, mention that
+              if (urlMetadata.videoUrl || socialMediaUrl.includes('/reel/') || socialMediaUrl.includes('/tv/')) {
+                linkDescription += `This is a video/reel. `;
+              }
+              
+              // If we have a thumbnail, analyze it for visual context
+              if (urlMetadata.image) {
+                try {
+                  console.log('📸 Analyzing thumbnail from metadata...');
+                  const thumbnailBase64 = await this.fetchImageAsBase64(urlMetadata.image);
+                  if (thumbnailBase64) {
+                    const thumbnailDescription = await this.analyzeImageWithVision(thumbnailBase64, userMessage);
+                    linkDescription += `Visual content from thumbnail: ${thumbnailDescription}`;
+                  }
+                } catch (error) {
+                  console.log('⚠️ Could not analyze thumbnail, using metadata only:', error);
+                  // Still use metadata even if thumbnail analysis fails
+                }
+              }
+              
+              imageDescription = linkDescription;
+              hasImage = true; // Treat as having image context
+              console.log('✅ Social media link metadata processed');
+            } else {
+              console.log('⚠️ Could not fetch link metadata, trying to fetch as image...');
+              // Fallback: try to fetch as regular image
+              const fetchedImage = await this.fetchImageAsBase64(socialMediaUrl);
+              if (fetchedImage) {
+                finalImageBase64 = fetchedImage;
+                hasImage = true;
+                console.log('✅ Successfully fetched image from URL');
+              }
+            }
+          } else {
           // Regular image URL handling (direct image links)
           for (const url of urls) {
             const fetchedImage = await this.fetchImageAsBase64(url);
@@ -858,8 +1023,38 @@ Be thorough and detailed. This description will be used to generate a response.`
       let simplePrompt;
       
       if (hasImageContext && imageDescription) {
-        // Two-step process: Vision analyzed image, now llama3:70b responds with a savage one-liner
-        simplePrompt = `You are Deite, a savage Gen-Z friend who drops fire one-liners. The user just shared an image/meme, and here's what it contains:${userContext}
+        // Check if this is Instagram data (has comments, user info, etc.)
+        const isInstagramData = imageDescription.includes('Instagram') && 
+                               (imageDescription.includes('Comments') || imageDescription.includes('@'));
+        
+        if (isInstagramData) {
+          // Special handling for Instagram posts with comments
+          simplePrompt = `You are Deite, a quirky Gen-Z friend who drops fire one-liners. The user just shared an Instagram post/reel, and here's what it contains:${userContext}
+
+📸 INSTAGRAM POST DATA:
+${imageDescription}
+
+${userMessage ? `\nUser's message: "${userMessage}"` : ''}
+
+CRITICAL RESPONSE RULES - INSTAGRAM QUIRKY ONE-LINER MODE:
+- Respond with ONLY ONE funny, quirky, Gen-Z style one-liner (1 sentence max)
+- The one-liner MUST be DIRECTLY RELATED to the specific Instagram post content above
+- Reference the CAPTION, COMMENTS, or USER INFO from the post
+- If there are FUNNY COMMENTS mentioned, you can QUOTE them in your response like: "The way @[username] said '[comment text]' and I'm deceased fr" or "Not @[username] commenting '[comment text]' and being absolutely right periodt" or "The way '[comment text]' is sending me no cap"
+- Use Gen-Z slang naturally: "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", "deadass", "bet", "ngl", "tbh", "fr fr", "that's valid", "mood", "same", "facts", "ngl that's wild", "okay but fr", "I'm deceased", "this is sending me", "the way I just-", "the way @[username] said", "not @[username]", etc.
+- Be QUIRKY and FUNNY - react to the caption, quote funny comments, or roast the content
+- If comments are mentioned, prioritize quoting the FUNNIEST ones in your response
+- DO NOT give generic reactions - your one-liner must reference the SPECIFIC CONTENT (caption/comments/user) from the Instagram post
+- DO NOT explain the joke, DO NOT analyze, DO NOT be therapeutic
+- Just drop the one-liner that directly relates to the Instagram post content and leave it - let it hit like a reaction meme
+- Match the energy: if it's chaotic, be chaotic; if it's relatable, relate hard
+- Think: "What would I comment on THIS specific Instagram post?" - that's your response
+
+${conversationContext}Human: ${userMessage || 'Check this out!'}
+Assistant:`;
+        } else {
+          // Regular image/meme handling
+          simplePrompt = `You are Deite, a savage Gen-Z friend who drops fire one-liners. The user just shared an image/meme, and here's what it contains:${userContext}
 
 📸 IMAGE ANALYSIS:
 ${imageDescription}
@@ -881,6 +1076,7 @@ CRITICAL RESPONSE RULES - SAVAGE ONE-LINER MODE:
 
 ${conversationContext}Human: ${userMessage || 'Check this out!'}
 Assistant:`;
+        }
       } else {
         // Regular message prompt - savage one-liner mode
         simplePrompt = `You are Deite, a savage Gen-Z friend who drops fire one-liners.${userContext}
