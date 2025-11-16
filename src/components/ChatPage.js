@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain, Send, ArrowLeft, User, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
+import { Brain, Send, ArrowLeft, User, AlertTriangle, Image as ImageIcon, X, Eye } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
 import reflectionService from '../services/reflectionService';
@@ -410,8 +410,25 @@ export default function ChatPage() {
     console.log('🎯 CHAT PAGE DEBUG: Created user message:', userMessage);
     console.log('📸 CHAT PAGE DEBUG: Has image:', !!selectedImage);
 
+    // Check if message contains Instagram reel link
+    const isInstagramReel = /instagram\.com\/(reel|p|tv)\//i.test(userMessageText);
+    
     // Add user message immediately
     const newMessages = [...messages, userMessage];
+    
+    // If it's an Instagram reel, add a loading message
+    if (isInstagramReel) {
+      const loadingMessage = {
+        id: 'instagram-loading-' + Date.now(),
+        text: '👀 Deite is enjoying the reel',
+        sender: 'ai',
+        timestamp: new Date(),
+        isProcessingReel: true, // Special flag for Instagram reel processing
+        isWhisperSession: isWhisperMode
+      };
+      newMessages.push(loadingMessage);
+    }
+    
     setMessages(newMessages);
     setInputMessage('');
     
@@ -460,6 +477,9 @@ export default function ChatPage() {
       console.log('🚀 CHAT PAGE DEBUG: Conversation history length:', messages.length);
       console.log('📸 CHAT PAGE DEBUG: Sending image file:', !!imageToSend);
       
+      // Remove Instagram loading message if it exists
+      let currentMessages = newMessages.filter(msg => !msg.isProcessingReel);
+      
       // Create AI message placeholder for streaming
       const aiMessage = {
         id: Date.now() + 1,
@@ -470,7 +490,7 @@ export default function ChatPage() {
         isWhisperSession: isWhisperMode // Ensure flag is set in state
       };
 
-      let currentMessages = [...newMessages, aiMessage];
+      currentMessages = [...currentMessages, aiMessage];
       setMessages(currentMessages);
 
       let fullResponse = '';
@@ -1227,6 +1247,8 @@ export default function ChatPage() {
               style={{
                 backgroundColor: message.sender === 'user'
                   ? "rgba(129, 201, 149, 0.08)"
+                  : message.isProcessingReel
+                  ? "rgba(42, 42, 45, 0.8)"
                   : "rgba(42, 42, 45, 0.6)",
                 boxShadow: message.sender === 'user'
                   ? "0 4px 16px rgba(0, 0, 0, 0.15)"
@@ -1244,14 +1266,23 @@ export default function ChatPage() {
                   style={{ maxHeight: '300px' }}
                 />
               )}
-              <p className="text-white text-sm leading-relaxed">
-                {message.text}
-                {message.isStreaming && (
-                  <span className="inline-block ml-1 w-2 h-4 bg-gray-400 animate-pulse" style={{
-                    animation: 'blink 1s infinite'
-                  }}>|</span>
-                )}
-              </p>
+              {message.isProcessingReel ? (
+                <div className="flex items-center space-x-2">
+                  <Eye className="w-5 h-5 text-yellow-400 animate-pulse" />
+                  <p className="text-white text-sm leading-relaxed">
+                    {message.text}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-white text-sm leading-relaxed">
+                  {message.text}
+                  {message.isStreaming && (
+                    <span className="inline-block ml-1 w-2 h-4 bg-gray-400 animate-pulse" style={{
+                      animation: 'blink 1s infinite'
+                    }}>|</span>
+                  )}
+                </p>
+              )}
               <p className="text-xs text-gray-400 mt-1">{formatTime(message.timestamp)}</p>
             </div>
           </div>
