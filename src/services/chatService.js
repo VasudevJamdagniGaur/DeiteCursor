@@ -35,11 +35,19 @@ class ChatService {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        // Remove data:image/...;base64, prefix if present
-        const base64 = reader.result.split(',')[1] || reader.result;
-        resolve(base64);
+        // Ollama expects just the base64 string without the data URL prefix
+        const result = reader.result;
+        if (result.includes(',')) {
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        } else {
+          resolve(result);
+        }
       };
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('❌ FileReader error:', error);
+        reject(error);
+      };
       reader.readAsDataURL(file);
     });
   }
@@ -442,6 +450,18 @@ class ChatService {
   async analyzeImageWithVision(imageBase64, userMessage = '') {
     try {
       console.log('👁️ VISION: Analyzing image with vision model...');
+      console.log('👁️ VISION: Image base64 length:', imageBase64?.length || 0);
+      console.log('👁️ VISION: Using model:', this.visionModelName);
+      
+      // Ensure base64 is clean (no data URL prefix)
+      let cleanBase64 = imageBase64;
+      if (imageBase64.includes(',')) {
+        cleanBase64 = imageBase64.split(',')[1];
+      }
+      
+      if (!cleanBase64 || cleanBase64.length < 100) {
+        throw new Error('Invalid or too small base64 image');
+      }
       
       const visionPrompt = `Analyze this image in COMPLETE DETAIL. Describe:
 - What you see (objects, people, text, scenes, colors, layout)
@@ -459,7 +479,7 @@ Be thorough and detailed. This description will be used to generate a response.`
       const requestBody = {
         model: this.visionModelName,
         prompt: visionPrompt,
-        images: [imageBase64],
+        images: [cleanBase64],
         stream: false,
         options: {
           temperature: 0.3, // Lower temp for more accurate descriptions
@@ -467,28 +487,58 @@ Be thorough and detailed. This description will be used to generate a response.`
         }
       };
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
+      console.log('👁️ VISION: Sending request to:', apiUrl);
+      console.log('👁️ VISION: Request body keys:', Object.keys(requestBody));
+
+      // Add timeout to vision model call (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      let response;
+      try {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Vision model request timed out after 30 seconds');
+        }
+        throw fetchError;
+      }
+
+      console.log('👁️ VISION: Response status:', response.status);
 
       if (!response.ok) {
-        throw new Error(`Vision model failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ VISION: Error response:', errorText);
+        throw new Error(`Vision model failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('👁️ VISION: Response keys:', Object.keys(data));
+      
       const imageDescription = data.response || data.text || data.output || '';
+      
+      if (!imageDescription || imageDescription.trim().length === 0) {
+        throw new Error('Empty description from vision model');
+      }
       
       console.log('✅ VISION: Image analysis complete');
       console.log('📝 VISION: Description length:', imageDescription.length);
+      console.log('📝 VISION: Description preview:', imageDescription.substring(0, 200));
       
       return imageDescription;
     } catch (error) {
       console.error('❌ VISION: Error analyzing image:', error);
-      return null;
+      console.error('❌ VISION: Error details:', error.message, error.stack);
+      throw error; // Re-throw to be handled by caller
     }
   }
 
@@ -530,12 +580,20 @@ Be thorough and detailed. This description will be used to generate a response.`
       let imageDescription = null;
       if (hasImage && finalImageBase64) {
         console.log('📸 Image detected - starting two-step process...');
-        imageDescription = await this.analyzeImageWithVision(finalImageBase64, userMessage);
-        
-        if (!imageDescription) {
-          console.log('⚠️ Vision analysis failed, falling back to regular processing');
-        } else {
-          console.log('✅ Image description received, will send to llama3:70b');
+        try {
+          imageDescription = await this.analyzeImageWithVision(finalImageBase64, userMessage);
+          
+          if (!imageDescription || imageDescription.trim().length === 0) {
+            console.log('⚠️ Vision analysis returned empty, falling back to regular processing');
+            imageDescription = null;
+          } else {
+            console.log('✅ Image description received, will send to llama3:70b');
+          }
+        } catch (visionError) {
+          console.error('❌ Vision analysis failed:', visionError);
+          console.log('⚠️ Falling back to regular processing without image context');
+          imageDescription = null;
+          // Continue with regular processing - don't throw error
         }
       }
       

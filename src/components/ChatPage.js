@@ -720,16 +720,22 @@ export default function ChatPage() {
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Error stack:', error.stack);
       
-      // Add error message
+      // Add error message with more details in console
       const errorMessage = {
         id: Date.now() + 1,
         text: "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
         sender: 'ai',
-        timestamp: new Date()
+        timestamp: new Date(),
+        isWhisperSession: isWhisperMode
       };
       
-      const finalMessages = [...newMessages, errorMessage];
+      // Remove the streaming message if it exists
+      const finalMessages = newMessages.filter(msg => !msg.isStreaming);
+      finalMessages.push(errorMessage);
+      
       setMessages(finalMessages);
       saveMessages(finalMessages);
       
