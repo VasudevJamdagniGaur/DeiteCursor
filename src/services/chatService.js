@@ -792,7 +792,14 @@ Be thorough and detailed. This description will be used to generate a response.`
           console.log('📸 Instagram link detected, fetching data from Ensemble Data API...');
           const instagramData = await this.fetchInstagramPostData(instagramUrl);
           
-          if (instagramData) {
+          // Check if we got valid data with caption or comments
+          const hasValidData = instagramData && (
+            (instagramData.caption && instagramData.caption.trim().length > 0) ||
+            (instagramData.comments && instagramData.comments.length > 0) ||
+            (instagramData.user && instagramData.user.username)
+          );
+          
+          if (hasValidData) {
             // Build comprehensive description from Instagram data
             const isReel = instagramData.type === 'video' || instagramUrl.includes('/reel/') || instagramUrl.includes('/tv/');
             const accountUsername = instagramData.user.username || 'unknown';
@@ -801,7 +808,7 @@ Be thorough and detailed. This description will be used to generate a response.`
             let linkDescription = `The user shared a MEME (an Instagram ${isReel ? 'reel' : 'post'}) from @${accountUsername}'s account. This is NOT the user's own content - they found and shared this meme from @${accountUsername}. `;
             
             // Add caption (CRITICAL - this is the main content of the meme)
-            if (instagramData.caption) {
+            if (instagramData.caption && instagramData.caption.trim().length > 0) {
               linkDescription += `MEME CAPTION: "${instagramData.caption}". `;
             } else {
               linkDescription += `(No caption available for this meme). `;
@@ -857,18 +864,13 @@ Be thorough and detailed. This description will be used to generate a response.`
             
             imageDescription = linkDescription;
             hasImage = true; // Treat as having image context
-            console.log('✅ Instagram post data processed');
+            console.log('✅ Instagram post data processed successfully');
           } else {
-            console.log('⚠️ Could not fetch Instagram data from API, falling back to metadata extraction...');
-            // Fallback: try regular metadata extraction
-            const urlMetadata = await this.fetchUrlMetadata(instagramUrl);
-            if (urlMetadata) {
-              let linkDescription = `The user shared an Instagram post. `;
-              if (urlMetadata.title) linkDescription += `Title: "${urlMetadata.title}". `;
-              if (urlMetadata.description) linkDescription += `Description: "${urlMetadata.description}". `;
-              imageDescription = linkDescription;
-              hasImage = true;
-            }
+            // API failed or returned no valid data - just respond with laughing emojis
+            console.log('⚠️ Could not access Instagram content from API - will respond with emojis only');
+            // Set a special flag to indicate we should just respond with emojis
+            imageDescription = 'EMOJI_ONLY_RESPONSE';
+            hasImage = true; // Still treat as having context so we use the special prompt
           }
         } else {
           // Check if any URL is a social media link (non-Instagram)
@@ -1074,13 +1076,25 @@ Be thorough and detailed. This description will be used to generate a response.`
       let simplePrompt;
       
       if (hasImageContext && imageDescription) {
-        // Check if this is Instagram data (has comments, user info, etc.)
-        const isInstagramData = imageDescription.includes('Instagram') && 
-                               (imageDescription.includes('Comments') || imageDescription.includes('@'));
-        
-        if (isInstagramData) {
-          // Special handling for Instagram posts with comments
-          simplePrompt = `You are Deite, a quirky Gen-Z friend who drops fire one-liners. The user just shared an Instagram post/reel, and here's what it contains:${userContext}
+        // Check if API failed and we should just respond with emojis
+        if (imageDescription === 'EMOJI_ONLY_RESPONSE') {
+          // Just respond with laughing emojis - no analysis needed
+          simplePrompt = `The user shared an Instagram link but the content could not be accessed. 
+
+RESPONSE: Just respond with laughing emojis like: 😂😂😂 or 💀💀💀 or 🤣🤣🤣
+
+That's it - just emojis, no text, no analysis, just pure emoji reaction.
+
+${conversationContext}Human: ${userMessage || 'Check this out!'}
+Assistant:`;
+        } else {
+          // Check if this is Instagram data (has comments, user info, etc.)
+          const isInstagramData = imageDescription.includes('Instagram') && 
+                                 (imageDescription.includes('Comments') || imageDescription.includes('@'));
+          
+          if (isInstagramData) {
+            // Special handling for Instagram posts with comments
+            simplePrompt = `You are Deite, a quirky Gen-Z friend who drops fire one-liners. The user just shared an Instagram post/reel, and here's what it contains:${userContext}
 
 📸 INSTAGRAM POST DATA:
 ${imageDescription}
@@ -1135,6 +1149,7 @@ CRITICAL RESPONSE RULES - SAVAGE ONE-LINER MODE:
 
 ${conversationContext}Human: ${userMessage || 'Check this out!'}
 Assistant:`;
+          }
         }
       } else {
         // Regular message prompt - savage one-liner mode
