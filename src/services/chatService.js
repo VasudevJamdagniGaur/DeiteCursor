@@ -53,6 +53,97 @@ class ChatService {
   }
 
   /**
+   * Fetch metadata from a URL (for Instagram Reels, memes, etc.)
+   * Extracts title, description, and image from Open Graph tags
+   */
+  async fetchUrlMetadata(url) {
+    try {
+      console.log('🔗 Fetching metadata from URL:', url);
+      
+      // Use a CORS proxy to fetch the page
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch page');
+      }
+      
+      const data = await response.json();
+      const htmlContent = data.contents;
+      
+      // Extract metadata from Open Graph tags
+      const metadata = {
+        title: null,
+        description: null,
+        image: null,
+        videoUrl: null,
+        siteName: null
+      };
+      
+      // Extract title (prefer og:title, fallback to <title>)
+      const ogTitleMatch = htmlContent.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
+      const titleMatch = htmlContent.match(/<title>([^<]+)<\/title>/i);
+      if (ogTitleMatch) {
+        metadata.title = ogTitleMatch[1];
+      } else if (titleMatch) {
+        metadata.title = titleMatch[1];
+      }
+      
+      // Extract description
+      const descMatch = htmlContent.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i) ||
+                       htmlContent.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
+      if (descMatch) {
+        metadata.description = descMatch[1];
+      }
+      
+      // Extract video URL (for reels/videos)
+      const videoMatch = htmlContent.match(/<meta\s+property="og:video"\s+content="([^"]+)"/i) ||
+                        htmlContent.match(/<meta\s+property="og:video:url"\s+content="([^"]+)"/i);
+      if (videoMatch) {
+        metadata.videoUrl = videoMatch[1];
+      }
+      
+      // Extract thumbnail/image
+      const imageMatch = htmlContent.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+      if (imageMatch) {
+        metadata.image = imageMatch[1];
+      }
+      
+      // Extract site name
+      const siteMatch = htmlContent.match(/<meta\s+property="og:site_name"\s+content="([^"]+)"/i);
+      if (siteMatch) {
+        metadata.siteName = siteMatch[1];
+      }
+      
+      console.log('🔗 Metadata extracted:', metadata);
+      return metadata;
+    } catch (error) {
+      console.error('❌ Error fetching URL metadata:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if URL is a social media post/reel/meme link
+   */
+  isSocialMediaLink(url) {
+    const socialPatterns = [
+      /instagram\.com\/(reel|p|tv)\//i,
+      /twitter\.com\//i,
+      /x\.com\//i,
+      /tiktok\.com\//i,
+      /reddit\.com\//i,
+      /youtube\.com\//i,
+      /youtu\.be\//i,
+      /facebook\.com\//i,
+      /imgur\.com\//i,
+      /9gag\.com\//i
+    ];
+    
+    return socialPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
    * Fetch image from URL and convert to base64
    */
   async fetchImageAsBase64(imageUrl) {
@@ -550,6 +641,7 @@ Be thorough and detailed. This description will be used to generate a response.`
       // Check if we have an image (file or base64) or URL
       let hasImage = false;
       let finalImageBase64 = imageBase64;
+      let imageDescription = null; // Declare early so it can be set for social media links
       
       // Convert image file to base64 if provided
       if (imageFile) {
@@ -560,25 +652,79 @@ Be thorough and detailed. This description will be used to generate a response.`
         console.log('📸 Image base64 provided');
         hasImage = true;
       } else if (this.hasUrl(userMessage)) {
-        // Check if URL points to an image
+        // Check if URL points to an image or social media post
         const urls = this.extractUrls(userMessage);
         console.log('🔗 URLs detected in message:', urls);
         
-        // Try to fetch image from URLs
-        for (const url of urls) {
-          const fetchedImage = await this.fetchImageAsBase64(url);
-          if (fetchedImage) {
-            finalImageBase64 = fetchedImage;
-            hasImage = true;
-            console.log('✅ Successfully fetched image from URL');
-            break;
+        // Check if any URL is a social media link (Instagram Reel, meme, etc.)
+        const socialMediaUrl = urls.find(url => this.isSocialMediaLink(url));
+        
+        if (socialMediaUrl) {
+          // Handle social media posts/reels/memes specially
+          console.log('📹 Social media link detected, fetching metadata...');
+          const urlMetadata = await this.fetchUrlMetadata(socialMediaUrl);
+          
+          if (urlMetadata) {
+            // Create a detailed description from metadata
+            let linkDescription = `The user shared a link from ${urlMetadata.siteName || 'social media'}. `;
+            
+            if (urlMetadata.title) {
+              linkDescription += `Title: "${urlMetadata.title}". `;
+            }
+            
+            if (urlMetadata.description) {
+              linkDescription += `Description: "${urlMetadata.description}". `;
+            }
+            
+            // If it's a video/reel, mention that
+            if (urlMetadata.videoUrl || socialMediaUrl.includes('/reel/') || socialMediaUrl.includes('/tv/')) {
+              linkDescription += `This is a video/reel. `;
+            }
+            
+            // If we have a thumbnail, analyze it for visual context
+            if (urlMetadata.image) {
+              try {
+                console.log('📸 Analyzing thumbnail from metadata...');
+                const thumbnailBase64 = await this.fetchImageAsBase64(urlMetadata.image);
+                if (thumbnailBase64) {
+                  const thumbnailDescription = await this.analyzeImageWithVision(thumbnailBase64, userMessage);
+                  linkDescription += `Visual content from thumbnail: ${thumbnailDescription}`;
+                }
+              } catch (error) {
+                console.log('⚠️ Could not analyze thumbnail, using metadata only:', error);
+                // Still use metadata even if thumbnail analysis fails
+              }
+            }
+            
+            imageDescription = linkDescription;
+            hasImage = true; // Treat as having image context
+            console.log('✅ Social media link metadata processed');
+          } else {
+            console.log('⚠️ Could not fetch link metadata, trying to fetch as image...');
+            // Fallback: try to fetch as regular image
+            const fetchedImage = await this.fetchImageAsBase64(socialMediaUrl);
+            if (fetchedImage) {
+              finalImageBase64 = fetchedImage;
+              hasImage = true;
+              console.log('✅ Successfully fetched image from URL');
+            }
+          }
+        } else {
+          // Regular image URL handling (direct image links)
+          for (const url of urls) {
+            const fetchedImage = await this.fetchImageAsBase64(url);
+            if (fetchedImage) {
+              finalImageBase64 = fetchedImage;
+              hasImage = true;
+              console.log('✅ Successfully fetched image from URL');
+              break;
+            }
           }
         }
       }
       
-      // If we have an image, first analyze it with vision model
-      let imageDescription = null;
-      if (hasImage && finalImageBase64) {
+      // If we have an image but no description yet (regular images, not social media links), analyze it with vision model
+      if (hasImage && finalImageBase64 && !imageDescription) {
         console.log('📸 Image detected - starting two-step process...');
         try {
           imageDescription = await this.analyzeImageWithVision(finalImageBase64, userMessage);
@@ -595,6 +741,11 @@ Be thorough and detailed. This description will be used to generate a response.`
           imageDescription = null;
           // Continue with regular processing - don't throw error
         }
+      }
+      
+      // If we already have imageDescription from social media metadata, use it
+      if (imageDescription) {
+        console.log('📸 Using image description from metadata/vision analysis');
       }
       
       // Always use llama3:70b for final response
