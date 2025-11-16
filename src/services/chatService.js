@@ -178,19 +178,20 @@ class ChatService {
       
       const data = await response.json();
       console.log('✅ Instagram post data received from API');
+      console.log('📸 Full API response structure:', JSON.stringify(data, null, 2).substring(0, 1000)); // Log first 1000 chars
       
-      // Extract the data we need
+      // Extract the data we need - handle different possible response structures
       const postData = {
-        caption: data.caption || null,
-        comments: data.comments || [],
+        caption: data.caption || data.description || data.text || null,
+        comments: [],
         user: {
-          username: data.user?.username || data.username || null,
-          profilePicture: data.user?.profile_picture || data.profile_picture || null,
-          followers: data.user?.followers || data.followers || null
+          username: data.user?.username || data.username || data.author?.username || data.owner?.username || null,
+          profilePicture: data.user?.profile_picture || data.user?.profile_pic_url || data.profile_picture || data.profile_pic_url || null,
+          followers: data.user?.followers || data.followers || data.user?.follower_count || null
         },
         images: [],
         videos: [],
-        type: data.type || 'unknown' // 'image', 'video', 'carousel', etc.
+        type: data.type || data.media_type || 'unknown' // 'image', 'video', 'carousel', etc.
       };
       
       // Extract images (for posts) or video thumbnails (for reels)
@@ -200,6 +201,16 @@ class ChatService {
         postData.images = [data.image];
       } else if (data.thumbnail) {
         postData.images = [data.thumbnail];
+      } else if (data.display_url) {
+        postData.images = [data.display_url];
+      } else if (data.media && Array.isArray(data.media)) {
+        // Handle carousel posts
+        const mediaUrls = data.media
+          .filter(item => item.type === 'image' || item.type === 'photo')
+          .map(item => item.url || item.display_url || item.thumbnail_url)
+          .filter(Boolean)
+          .slice(0, 3);
+        postData.images = mediaUrls;
       }
       
       // Extract videos
@@ -207,27 +218,55 @@ class ChatService {
         postData.videos = data.videos.slice(0, 3);
       } else if (data.video) {
         postData.videos = [data.video];
+      } else if (data.video_url) {
+        postData.videos = [data.video_url];
+      } else if (data.media && Array.isArray(data.media)) {
+        // Handle carousel posts with videos
+        const videoUrls = data.media
+          .filter(item => item.type === 'video')
+          .map(item => item.url || item.video_url)
+          .filter(Boolean)
+          .slice(0, 3);
+        postData.videos = videoUrls;
       }
       
-      // Extract comments (ensure they're in a usable format)
+      // Extract comments (handle different possible structures)
       if (Array.isArray(data.comments)) {
-        postData.comments = data.comments.map(comment => ({
-          text: comment.text || comment.comment || comment,
-          username: comment.username || comment.user?.username || 'unknown',
-          likes: comment.likes || 0
+        postData.comments = data.comments.map(comment => {
+          // Handle different comment structures
+          if (typeof comment === 'string') {
+            return { text: comment, username: 'unknown', likes: 0 };
+          }
+          return {
+            text: comment.text || comment.comment || comment.body || comment.content || String(comment),
+            username: comment.username || comment.user?.username || comment.author?.username || comment.owner?.username || 'unknown',
+            likes: comment.likes || comment.like_count || comment.likes_count || 0
+          };
+        });
+      } else if (data.comments && typeof data.comments === 'object') {
+        // If comments is an object with a data array
+        const commentsArray = data.comments.data || data.comments.comments || [];
+        postData.comments = commentsArray.map(comment => ({
+          text: comment.text || comment.comment || comment.body || comment.content || String(comment),
+          username: comment.username || comment.user?.username || comment.author?.username || 'unknown',
+          likes: comment.likes || comment.like_count || 0
         }));
       }
       
       console.log('📸 Extracted post data:', {
         hasCaption: !!postData.caption,
+        captionPreview: postData.caption ? postData.caption.substring(0, 100) : 'none',
         commentsCount: postData.comments.length,
+        commentsPreview: postData.comments.slice(0, 2).map(c => c.text?.substring(0, 50)),
         imagesCount: postData.images.length,
-        username: postData.user.username
+        username: postData.user.username,
+        type: postData.type
       });
       
       return postData;
     } catch (error) {
       console.error('❌ Error fetching Instagram post data:', error);
+      console.error('❌ Error details:', error.message, error.stack);
       return null;
     }
   }
@@ -755,30 +794,37 @@ Be thorough and detailed. This description will be used to generate a response.`
           
           if (instagramData) {
             // Build comprehensive description from Instagram data
-            let linkDescription = `The user shared an Instagram ${instagramData.type === 'video' || instagramUrl.includes('/reel/') ? 'reel' : 'post'} from @${instagramData.user.username || 'unknown'}. `;
+            const isReel = instagramData.type === 'video' || instagramUrl.includes('/reel/') || instagramUrl.includes('/tv/');
+            let linkDescription = `The user shared an Instagram ${isReel ? 'reel' : 'post'} from @${instagramData.user.username || 'unknown'}. `;
             
-            // Add caption
+            // Add caption (CRITICAL - this is the main content)
             if (instagramData.caption) {
-              linkDescription += `Caption: "${instagramData.caption}". `;
+              linkDescription += `CAPTION: "${instagramData.caption}". `;
+            } else {
+              linkDescription += `(No caption available). `;
             }
             
-            // Add user info
+            // Add user info (less important but context)
             if (instagramData.user.followers) {
-              linkDescription += `User has ${instagramData.user.followers} followers. `;
+              linkDescription += `User @${instagramData.user.username} has ${instagramData.user.followers} followers. `;
             }
             
-            // Add comments (especially funny ones)
+            // Add comments (especially funny ones) - prioritize these for humor
             if (instagramData.comments && instagramData.comments.length > 0) {
               // Sort comments by likes to find the funniest/most popular ones
-              const sortedComments = [...instagramData.comments].sort((a, b) => (b.likes || 0) - (a.likes || 0));
-              const topComments = sortedComments.slice(0, 3);
+              const sortedComments = [...instagramData.comments]
+                .filter(c => c.text && c.text.trim().length > 0)
+                .sort((a, b) => (b.likes || 0) - (a.likes || 0));
+              const topComments = sortedComments.slice(0, 5); // Get top 5 for better selection
               
-              linkDescription += `Comments (${instagramData.comments.length} total): `;
+              linkDescription += `TOP COMMENTS (${instagramData.comments.length} total): `;
               topComments.forEach((comment, index) => {
                 if (comment.text) {
-                  linkDescription += `"${comment.text}" (by @${comment.username}, ${comment.likes || 0} likes). `;
+                  linkDescription += `Comment ${index + 1}: "@${comment.username}" said "${comment.text}" (${comment.likes || 0} likes). `;
                 }
               });
+            } else {
+              linkDescription += `(No comments available). `;
             }
             
             // Analyze images if available (for posts or video thumbnails)
@@ -1039,17 +1085,21 @@ ${userMessage ? `\nUser's message: "${userMessage}"` : ''}
 
 CRITICAL RESPONSE RULES - INSTAGRAM QUIRKY ONE-LINER MODE:
 - Respond with ONLY ONE funny, quirky, Gen-Z style one-liner (1 sentence max)
-- The one-liner MUST be DIRECTLY RELATED to the specific Instagram post content above
-- Reference the CAPTION, COMMENTS, or USER INFO from the post
+- READ THE CAPTION CAREFULLY - that's the MAIN CONTENT of the post
+- The one-liner MUST be DIRECTLY RELATED to what the CAPTION says - if the caption mentions "dancing", "comedy", "salony", "Arabic Kuthu", etc., your response MUST reference those EXACT things
+- DO NOT make up content - ONLY use what's in the CAPTION and COMMENTS provided above
+- If the CAPTION says something specific (like "dancing to Arabic Kuthu" or "comedy reel" or "salony"), your response MUST react to that SPECIFIC content
+- Reference the CAPTION FIRST, then COMMENTS if they're funny
 - If there are FUNNY COMMENTS mentioned, you can QUOTE them in your response like: "The way @[username] said '[comment text]' and I'm deceased fr" or "Not @[username] commenting '[comment text]' and being absolutely right periodt" or "The way '[comment text]' is sending me no cap"
 - Use Gen-Z slang naturally: "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", "deadass", "bet", "ngl", "tbh", "fr fr", "that's valid", "mood", "same", "facts", "ngl that's wild", "okay but fr", "I'm deceased", "this is sending me", "the way I just-", "the way @[username] said", "not @[username]", etc.
-- Be QUIRKY and FUNNY - react to the caption, quote funny comments, or roast the content
+- Be QUIRKY and FUNNY - react to the SPECIFIC CAPTION CONTENT, quote funny comments, or roast what's mentioned in the caption
 - If comments are mentioned, prioritize quoting the FUNNIEST ones in your response
-- DO NOT give generic reactions - your one-liner must reference the SPECIFIC CONTENT (caption/comments/user) from the Instagram post
+- DO NOT give generic reactions - your one-liner must reference the EXACT CONTENT from the CAPTION
+- DO NOT make up jokes or content that's not in the caption/comments
 - DO NOT explain the joke, DO NOT analyze, DO NOT be therapeutic
-- Just drop the one-liner that directly relates to the Instagram post content and leave it - let it hit like a reaction meme
+- Just drop the one-liner that directly relates to the SPECIFIC CAPTION CONTENT and leave it - let it hit like a reaction meme
 - Match the energy: if it's chaotic, be chaotic; if it's relatable, relate hard
-- Think: "What would I comment on THIS specific Instagram post?" - that's your response
+- Think: "What would I comment on THIS specific Instagram post based on the CAPTION?" - that's your response
 
 ${conversationContext}Human: ${userMessage || 'Check this out!'}
 Assistant:`;
