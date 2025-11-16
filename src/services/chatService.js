@@ -6,9 +6,103 @@ class ChatService {
   constructor() {
     this.baseURL = 'https://uklqo1rhs5bebp-11434.proxy.runpod.net/';
     this.modelName = 'llama3:70b';
+    this.visionModelName = 'llama3.2-vision:11b';
     // Optional: Add your Serper API key here for better results
     // Get free API key at: https://serper.dev (2,500 free searches/month)
     this.serperApiKey = null; // Set this if you want to use Serper API
+  }
+
+  /**
+   * Detect if message contains URLs/links
+   */
+  hasUrl(message) {
+    const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/i;
+    return urlPattern.test(message);
+  }
+
+  /**
+   * Extract URLs from message
+   */
+  extractUrls(message) {
+    const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s]*)/gi;
+    return message.match(urlPattern) || [];
+  }
+
+  /**
+   * Convert image file to base64
+   */
+  async imageToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Remove data:image/...;base64, prefix if present
+        const base64 = reader.result.split(',')[1] || reader.result;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Fetch image from URL and convert to base64
+   */
+  async fetchImageAsBase64(imageUrl) {
+    try {
+      console.log('📸 Fetching image from URL:', imageUrl);
+      
+      // Use a CORS proxy to fetch images
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(imageUrl)}`;
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch image');
+      }
+      
+      const data = await response.json();
+      const htmlContent = data.contents;
+      
+      // Try to extract image URL from HTML (for Instagram, etc.)
+      // This is a simplified approach - you might need more sophisticated parsing
+      const imgMatch = htmlContent.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i) ||
+                      htmlContent.match(/<img[^>]+src="([^"]+)"/i);
+      
+      if (imgMatch && imgMatch[1]) {
+        const actualImageUrl = imgMatch[1];
+        // Fetch the actual image
+        const imageResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(actualImageUrl)}`);
+        const imageData = await imageResponse.json();
+        
+        // Convert to base64
+        const base64Response = await fetch(actualImageUrl);
+        const blob = await base64Response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+      
+      // If direct image URL, fetch it
+      const imageResponse = await fetch(imageUrl);
+      const blob = await imageResponse.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('❌ Error fetching image:', error);
+      return null;
+    }
   }
 
   /**
@@ -342,17 +436,52 @@ class ChatService {
     }
   }
 
-  async sendMessage(userMessage, conversationHistory = [], onToken = null) {
+  async sendMessage(userMessage, conversationHistory = [], onToken = null, imageFile = null, imageBase64 = null) {
     console.log('🚀 CHAT DEBUG: Starting sendMessage with:', userMessage);
     console.log('🚀 CHAT DEBUG: Using URL:', this.baseURL);
-    console.log('🚀 CHAT DEBUG: Using model:', this.modelName);
     
     try {
+      // Check if we have an image (file or base64) or URL
+      let hasImage = false;
+      let finalImageBase64 = imageBase64;
+      
+      // Convert image file to base64 if provided
+      if (imageFile) {
+        console.log('📸 Image file provided, converting to base64...');
+        finalImageBase64 = await this.imageToBase64(imageFile);
+        hasImage = true;
+      } else if (imageBase64) {
+        console.log('📸 Image base64 provided');
+        hasImage = true;
+      } else if (this.hasUrl(userMessage)) {
+        // Check if URL points to an image
+        const urls = this.extractUrls(userMessage);
+        console.log('🔗 URLs detected in message:', urls);
+        
+        // Try to fetch image from URLs
+        for (const url of urls) {
+          const fetchedImage = await this.fetchImageAsBase64(url);
+          if (fetchedImage) {
+            finalImageBase64 = fetchedImage;
+            hasImage = true;
+            console.log('✅ Successfully fetched image from URL');
+            break;
+          }
+        }
+      }
+      
+      // Determine which model to use
+      const useVisionModel = hasImage && finalImageBase64;
+      const modelToUse = useVisionModel ? this.visionModelName : this.modelName;
+      
+      console.log('🚀 CHAT DEBUG: Using model:', modelToUse);
+      console.log('🚀 CHAT DEBUG: Has image:', hasImage);
+      
       // Get user profile context
       const userProfile = this.getUserProfileContext();
       
-      // Check if this is an entertainment topic
-      const isEntertainment = this.isEntertainmentTopic(userMessage);
+      // Check if this is an entertainment topic (only for non-vision messages)
+      const isEntertainment = !useVisionModel && this.isEntertainmentTopic(userMessage);
       let webSearchResults = null;
       
       // Search the web for entertainment topics
@@ -447,8 +576,31 @@ class ChatService {
         userContext += `\nIMPORTANT: Use the user's name (${userName}) naturally in conversations when appropriate. Reference their age, gender, or bio context when relevant to make responses more personalized and meaningful.`;
       }
       
-      // Create the prompt
-      const simplePrompt = `You are Deite, a warm and emotionally intelligent AI companion. Keep your responses empathetic but concise (1-3 sentences).${userContext}
+      // Create the prompt based on model type
+      let simplePrompt;
+      
+      if (useVisionModel) {
+        // Vision model prompt with Gen-Z slang
+        simplePrompt = `You are Deite, a fun and relatable AI friend who loves analyzing images, memes, and visual content.${userContext}
+
+IMPORTANT: You're analyzing an image that the user shared. Look at it carefully and respond naturally.
+
+RESPONSE STYLE:
+- Use Gen-Z slang naturally and authentically (like "no cap", "fr", "slay", "vibe", "periodt", "bestie", "lowkey", "highkey", "it's giving", "not me", "say less", "that's fire", "go off", "deadass", "bet", "ngl", "tbh", "fr fr", "that's valid", "mood", "same", "facts", etc.)
+- Mix slang with regular language naturally - don't overdo it
+- Be enthusiastic and engaging when reacting to memes/images
+- Keep it casual and fun (2-4 sentences max)
+- If it's a meme, react to it like a friend would
+- If it's an Instagram reel/post, comment on what you see
+- If it's a photo, describe what stands out and react authentically
+- Stay authentic and don't force the slang - use it when it fits naturally
+- Match the energy of the image - if it's funny, be funny; if it's serious, be more thoughtful
+
+${conversationContext}Human: ${userMessage}
+Assistant:`;
+      } else {
+        // Regular emotional conversation prompt
+        simplePrompt = `You are Deite, a warm and emotionally intelligent AI companion. Keep your responses empathetic but concise (1-3 sentences).${userContext}
 
 IMPORTANT CONTEXT: The user is from India and prefers Indian entertainment context. When discussing entertainment topics, prioritize:
 - Indian celebrities, Bollywood, Tollywood, Kollywood actors/actresses
@@ -476,24 +628,31 @@ SPECIAL BEHAVIOR: When the user talks about shows, TV series, movies, entertainm
 ${searchContext}
 ${conversationContext}Human: ${userMessage}
 Assistant:`;
+      }
 
-      // Go directly to llama3:70b - skip model check
+      // Prepare API request
       const apiUrl = `${this.baseURL}api/generate`;
-      const modelToUse = this.modelName; // llama3:70b
       
       console.log('📤 CHAT DEBUG: Full API URL:', apiUrl);
       console.log('📤 CHAT DEBUG: Prompt length:', simplePrompt.length);
       console.log('📤 CHAT DEBUG: Using model:', modelToUse);
+      console.log('📤 CHAT DEBUG: Has image for vision:', useVisionModel);
       
       const requestBody = {
         model: modelToUse,
         prompt: simplePrompt,
         stream: !!onToken, // Enable streaming if callback provided
         options: {
-          temperature: 0.7,
-          num_predict: responseLength // Dynamic response length based on topic type
+          temperature: useVisionModel ? 0.8 : 0.7, // Slightly higher temp for vision model
+          num_predict: useVisionModel ? 300 : responseLength // Longer responses for vision
         }
       };
+      
+      // Add image to request if using vision model
+      if (useVisionModel && finalImageBase64) {
+        requestBody.images = [finalImageBase64];
+        console.log('📸 Added image to request (base64 length:', finalImageBase64.length, ')');
+      }
       
       console.log('📤 CHAT DEBUG: Sending request to:', apiUrl);
       

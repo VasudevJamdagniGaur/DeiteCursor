@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain, Send, ArrowLeft, User, AlertTriangle } from "lucide-react";
+import { Brain, Send, ArrowLeft, User, AlertTriangle, Image as ImageIcon, X } from "lucide-react";
 import { useTheme } from '../contexts/ThemeContext';
 import chatService from '../services/chatService';
 import reflectionService from '../services/reflectionService';
@@ -31,9 +31,12 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const handleBackRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -285,12 +288,12 @@ export default function ChatPage() {
       }
     }
     
-    if (!inputMessage.trim() || isLoading) {
-      console.log('🎯 CHAT PAGE DEBUG: Returning early - empty message or loading');
+    if ((!inputMessage.trim() && !selectedImage) || isLoading) {
+      console.log('🎯 CHAT PAGE DEBUG: Returning early - empty message/image or loading');
       return;
     }
 
-    const userMessageText = inputMessage.trim();
+    const userMessageText = inputMessage.trim() || 'Check this out!';
     
     // Check for "day reflect" command
     const isDayReflectCommand = /^(day reflect|\/day reflect|dayreflect)$/i.test(userMessageText);
@@ -390,15 +393,23 @@ export default function ChatPage() {
       text: userMessageText,
       sender: 'user',
       timestamp: new Date(),
-      isWhisperSession: isWhisperMode // Ensure flag is set in state
+      isWhisperSession: isWhisperMode, // Ensure flag is set in state
+      image: selectedImage ? imagePreview : null // Include image preview in message
     };
 
     console.log('🎯 CHAT PAGE DEBUG: Created user message:', userMessage);
+    console.log('📸 CHAT PAGE DEBUG: Has image:', !!selectedImage);
 
     // Add user message immediately
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputMessage('');
+    
+    // Clear image selection
+    const imageToSend = selectedImage;
+    setSelectedImage(null);
+    setImagePreview(null);
+    
     setIsLoading(true);
     window.lastLoadingTime = Date.now(); // Track when loading started
     
@@ -424,6 +435,7 @@ export default function ChatPage() {
       console.log('🚀 CHAT PAGE DEBUG: Sending message to AI...');
       console.log('🚀 CHAT PAGE DEBUG: Message text:', userMessageText);
       console.log('🚀 CHAT PAGE DEBUG: Conversation history length:', messages.length);
+      console.log('📸 CHAT PAGE DEBUG: Sending image file:', !!imageToSend);
       
       // Create AI message placeholder for streaming
       const aiMessage = {
@@ -491,7 +503,7 @@ export default function ChatPage() {
       };
       
       // Call the chat service with streaming enabled
-      const aiResponse = await chatService.sendMessage(userMessageText, messages, onToken);
+      const aiResponse = await chatService.sendMessage(userMessageText, messages, onToken, imageToSend, null);
       
       console.log('✅ CHAT PAGE DEBUG: Received final AI response:', aiResponse);
       
@@ -1120,6 +1132,14 @@ export default function ChatPage() {
                   : "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
+              {message.image && (
+                <img 
+                  src={message.image} 
+                  alt="Shared" 
+                  className="max-w-full rounded-lg mb-2 object-cover"
+                  style={{ maxHeight: '300px' }}
+                />
+              )}
               <p className="text-white text-sm leading-relaxed">
                 {message.text}
                 {message.isStreaming && (
@@ -1140,7 +1160,69 @@ export default function ChatPage() {
 
       {/* Input */}
       <div className="relative z-10 p-4 border-t border-gray-700/30">
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="mb-3 relative inline-block">
+            <div className="relative">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+              />
+              <button
+                onClick={() => {
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                }}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+        )}
+        
         <form onSubmit={handleSendMessage} className="flex space-x-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                  alert('Image size should be less than 10MB');
+                  return;
+                }
+                setSelectedImage(file);
+                const reader = new FileReader();
+                reader.onload = () => {
+                  setImagePreview(reader.result);
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+            className="hidden"
+          />
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+            style={{
+              backgroundColor: "rgba(42, 42, 45, 0.6)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+            }}
+          >
+            <ImageIcon 
+              className="w-5 h-5" 
+              style={{ color: "#8AB4F8" }} 
+              strokeWidth={1.5} 
+            />
+          </button>
+          
           <input
             ref={inputRef}
             type="text"
@@ -1157,10 +1239,10 @@ export default function ChatPage() {
           />
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={(!inputMessage.trim() && !selectedImage) || isLoading}
             className="w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
             style={{
-              background: inputMessage.trim() && !isLoading
+              background: (inputMessage.trim() || selectedImage) && !isLoading
                 ? "rgba(42, 42, 45, 0.8)"
                 : "rgba(42, 42, 45, 0.4)",
               boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
@@ -1169,7 +1251,7 @@ export default function ChatPage() {
           >
             <Send 
               className="w-5 h-5" 
-              style={{ color: inputMessage.trim() && !isLoading ? "#FFFFFF" : "#8AB4F8" }} 
+              style={{ color: (inputMessage.trim() || selectedImage) && !isLoading ? "#FFFFFF" : "#8AB4F8" }} 
               strokeWidth={1.5} 
             />
           </button>
