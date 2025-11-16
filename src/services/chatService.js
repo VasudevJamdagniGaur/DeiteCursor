@@ -875,14 +875,15 @@ Be thorough and detailed. This description will be used to generate a response.`
               }
             }
           } else {
-          // Regular image URL handling (direct image links)
-          for (const url of urls) {
-            const fetchedImage = await this.fetchImageAsBase64(url);
-            if (fetchedImage) {
-              finalImageBase64 = fetchedImage;
-              hasImage = true;
-              console.log('✅ Successfully fetched image from URL');
-              break;
+            // Regular image URL handling (direct image links)
+            for (const url of urls) {
+              const fetchedImage = await this.fetchImageAsBase64(url);
+              if (fetchedImage) {
+                finalImageBase64 = fetchedImage;
+                hasImage = true;
+                console.log('✅ Successfully fetched image from URL');
+                break;
+              }
             }
           }
         }
