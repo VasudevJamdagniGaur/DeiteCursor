@@ -12,6 +12,7 @@ import DashboardPage from './components/DashboardPage';
 import ChatPage from './components/ChatPage';
 import EmotionalWellbeing from './components/EmotionalWellbeing';
 import ProfilePage from './components/ProfilePage';
+import SplashScreen from './components/SplashScreen';
 
 // Lazy load Capacitor App plugin for deep link handling
 const getAppPlugin = async () => {
@@ -133,7 +134,7 @@ function AppContent() {
       }}
     >
       <Routes location={displayLocation}>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<SplashScreen />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/signup" element={<SignupPage />} />
