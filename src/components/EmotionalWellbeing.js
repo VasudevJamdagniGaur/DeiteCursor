@@ -2773,6 +2773,8 @@ Return in this JSON format:
   const renderMoodSurvey = () => (
     <div className="space-y-4">
 
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-7">
           {/* 1. Mood Chart - Line Chart - Mobile Optimized */}
           <div
             className={`rounded-xl p-4 backdrop-blur-lg transition-all duration-300 ${
@@ -2974,7 +2976,9 @@ Return in this JSON format:
               </div>
             </div>
           </div>
+        </div>
 
+        <div className="lg:col-span-5 flex flex-col">
           {/* 2. Emotional Balance - Line Chart - Mobile Optimized */}
             <div
               className={`rounded-xl p-4 backdrop-blur-lg transition-all duration-300 ${
@@ -2988,7 +2992,7 @@ Return in this JSON format:
                 boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
               }}
             >
-              <div className="flex flex-col space-y-4 mb-4">
+              <div className="flex flex-col space-y-4 mb-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:gap-4">
                 <div className="flex items-center space-x-3">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -3152,6 +3156,8 @@ Return in this JSON format:
                 </div>
               </div>
             </div>
+        </div>
+      </div>
 
           {/* 3. Highlights */}
           <div
