@@ -3851,7 +3851,7 @@ Return in this JSON format:
 
         </div>
 
-        <div className="flex items-center space-x-6 flex-1 justify-center mx-4">
+        <div className="flex items-center space-x-3 flex-1 justify-center mx-4">
           <div
             className={`w-10 h-10 rounded-full flex items-center justify-center ${
               isDarkMode ? 'backdrop-blur-md' : 'bg-white'
@@ -3866,31 +3866,34 @@ Return in this JSON format:
           >
             <Heart className="w-5 h-5" style={{ color: isDarkMode ? "#FDD663" : "#87A96B" }} strokeWidth={1.5} />
           </div>
-          <div className="text-center px-2">
-            <h1 className={`text-xl font-semibold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              Emotional Wellbeing
-            </h1>
+          <div className="flex items-center space-x-3">
+            <div className="text-center px-2">
+              <h1 className={`text-xl font-semibold whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                Emotional Wellbeing
+              </h1>
+            </div>
+            <button
+              onClick={handleAIUpdate}
+              disabled={isUpdating}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation ${
+                isUpdating
+                  ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
+                  : 'text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+              }`}
+              style={isDarkMode ? {
+                backgroundColor: isUpdating ? "" : "rgba(42, 42, 45, 0.8)",
+                border: isUpdating ? "" : "1px solid rgba(255, 255, 255, 0.08)",
+              } : {
+                backgroundColor: isUpdating ? "" : "rgba(134, 169, 107, 0.95)",
+              }}
+            >
+              <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
+              <span className="text-sm font-medium hidden xs:block">
+                {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'Refresh'}
+              </span>
+            </button>
           </div>
         </div>
-
-        <button
-          onClick={handleAIUpdate}
-          disabled={isUpdating}
-          className={`flex items-center space-x-2 px-3 py-2 rounded-xl transition-all duration-200 touch-manipulation ${
-            isUpdating
-              ? 'bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
-              : 'text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-          }`}
-          style={isDarkMode ? {
-            backgroundColor: isUpdating ? "" : "rgba(42, 42, 45, 0.8)",
-            border: isUpdating ? "" : "1px solid rgba(255, 255, 255, 0.08)",
-          } : {}}
-        >
-          <RefreshCw className={`w-4 h-4 ${(isUpdating || isLoadingFresh) ? 'animate-spin' : ''}`} />
-          <span className="text-sm font-medium hidden xs:block">
-            {isUpdating ? 'Updating...' : isLoadingFresh ? 'Refreshing...' : 'Refresh'}
-          </span>
-        </button>
 
       </div>
 
