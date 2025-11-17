@@ -139,6 +139,7 @@ export default function EmotionalWellbeing() {
   const [lastCacheUpdate, setLastCacheUpdate] = useState(null);
   const [chartKey, setChartKey] = useState(0); // Force chart re-render
   const preCacheCompletedRef = useRef(false); // Track if pre-caching has been completed
+  const periodRequestIdRef = useRef(0); // Track in-flight period requests
 
   // Expose force update function to global scope
   useEffect(() => {
@@ -224,6 +225,15 @@ export default function EmotionalWellbeing() {
       return null;
     }
   };
+
+  const startNewPeriodRequest = (period) => {
+    const label = period === 365 ? 'lifetime' : `${period} days`;
+    periodRequestIdRef.current += 1;
+    console.log(`🆕 Started period request #${periodRequestIdRef.current} for ${label}`);
+    return periodRequestIdRef.current;
+  };
+
+  const isLatestPeriodRequest = (requestId) => requestId === periodRequestIdRef.current;
 
   // Data loading functions
   const loadCachedEmotionalData = useCallback((userId, period) => {
@@ -336,19 +346,24 @@ export default function EmotionalWellbeing() {
   }, [selectedPeriod, balancePeriod, patternPeriod, highlightsPeriod, loadCachedEmotionalData, loadCachedBalanceData, loadCachedPatternData, loadCachedHighlightsData]);
 
   // Fresh data loading functions (background) - Define individual functions first
-  const loadFreshEmotionalData = async () => {
+  const loadFreshEmotionalData = async (period = selectedPeriod, requestId = startNewPeriodRequest(period)) => {
     const user = getCurrentUser();
     if (!user) return;
 
-    const freshData = await loadRealEmotionalDataInternal();
-    if (freshData) {
-      const cacheKey = getCacheKey('emotional', selectedPeriod, user.uid);
-      saveToCache(cacheKey, {
-        weeklyMoodData: freshData.weeklyMoodData,
-        emotionalData: freshData.emotionalData,
-        timestamp: new Date().toISOString()
-      });
+    const freshData = await loadRealEmotionalDataInternal(period, requestId);
+    if (!freshData) return;
+
+    if (!isLatestPeriodRequest(requestId)) {
+      console.log(`⚠️ Stale emotional data for ${period === 365 ? 'lifetime' : period + ' days'} - skipping cache save`);
+      return;
     }
+
+    const cacheKey = getCacheKey('emotional', period, user.uid);
+    saveToCache(cacheKey, {
+      weeklyMoodData: freshData.weeklyMoodData,
+      emotionalData: freshData.emotionalData,
+      timestamp: new Date().toISOString()
+    });
   };
 
   const loadFreshBalanceData = async (period = balancePeriod) => {
@@ -671,6 +686,7 @@ export default function EmotionalWellbeing() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
+      const requestId = startNewPeriodRequest(selectedPeriod);
       console.log('🔄 MOOD CHART: Period changed to', selectedPeriod);
       // Try to load from cache first - ONLY for selectedPeriod
       const hasCache = loadCachedEmotionalData(user.uid, selectedPeriod);
@@ -678,7 +694,7 @@ export default function EmotionalWellbeing() {
       // Only load fresh data if cache doesn't exist
       if (!hasCache) {
         console.log('⚡ No cache for period', selectedPeriod, '- loading fresh data');
-        loadFreshEmotionalData();
+        loadFreshEmotionalData(selectedPeriod, requestId);
       } else {
         console.log('⚡ Using cached data for period', selectedPeriod, '- instant switch!');
         // DON'T refresh in background - keep it cached
@@ -883,20 +899,22 @@ export default function EmotionalWellbeing() {
     }
   };
 
-  const loadRealEmotionalDataInternal = async () => {
-    console.log(`📊 UNIFIED: Loading AI emotional data for ${selectedPeriod === 365 ? 'lifetime' : selectedPeriod + ' days'} from NEW Firebase structure...`);
+  const loadRealEmotionalDataInternal = async (period = selectedPeriod, requestId = periodRequestIdRef.current) => {
+    console.log(`📊 UNIFIED: Loading AI emotional data for ${period === 365 ? 'lifetime' : period + ' days'} from NEW Firebase structure...`);
     
     const user = getCurrentUser();
     if (!user) {
       console.log('📊 UNIFIED: No user logged in, showing empty state');
-      showEmptyState(selectedPeriod);
-      return;
+      if (isLatestPeriodRequest(requestId)) {
+        showEmptyState(period);
+      }
+      return null;
     }
 
     try {
       // Get AI-generated mood data from new Firebase structure
       let result;
-      if (selectedPeriod === 365) {
+      if (period === 365) {
         // For lifetime, get ALL available mood data from the first chat to today
         console.log('📊 LIFETIME: Fetching ALL available mood chart data from first chat...');
         result = await firestoreService.getAllMoodChartDataNew(user.uid);
@@ -912,7 +930,7 @@ export default function EmotionalWellbeing() {
           }
         }
       } else {
-        result = await firestoreService.getMoodChartDataNew(user.uid, selectedPeriod);
+        result = await firestoreService.getMoodChartDataNew(user.uid, period);
       }
       console.log('📊 UNIFIED: Mood chart data result:', result);
 
@@ -970,6 +988,11 @@ export default function EmotionalWellbeing() {
           console.log('🔄 CHART: Last day data:', newMoodData[newMoodData.length - 1]);
           console.log('🔄 CHART: Oct 8 data:', newMoodData.find(d => d.day && d.day.includes('Oct 8')));
           
+          if (!isLatestPeriodRequest(requestId)) {
+            console.log('⚠️ UNIFIED: Stale request detected, skipping state update.');
+            return null;
+          }
+
           setWeeklyMoodData(newMoodData);
           setEmotionalData(newMoodData);
           
@@ -993,15 +1016,21 @@ export default function EmotionalWellbeing() {
           };
         } else {
           console.log('📊 UNIFIED: No real AI scores found, showing empty state');
-          showEmptyState(selectedPeriod);
+          if (isLatestPeriodRequest(requestId)) {
+            showEmptyState(period);
+          }
         }
       } else {
         console.log('📊 UNIFIED: No AI mood data found, showing empty state');
-        showEmptyState(selectedPeriod);
+        if (isLatestPeriodRequest(requestId)) {
+          showEmptyState(period);
+        }
       }
     } catch (error) {
       console.error('❌ UNIFIED: Error loading AI mood data:', error);
-      showEmptyState(selectedPeriod);
+      if (isLatestPeriodRequest(requestId)) {
+        showEmptyState(period);
+      }
     }
     
     return null;
