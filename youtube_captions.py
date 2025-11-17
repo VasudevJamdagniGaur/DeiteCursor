@@ -92,13 +92,28 @@ def get_transcript(video_id: str, languages: Optional[list] = None) -> str:
         raise Exception(f"An error occurred: {str(e)}")
 
 
+def request_video_input() -> str:
+    """
+    Ask the user for a YouTube URL/ID when nothing is provided via CLI.
+    
+    Returns:
+        A non-empty URL or video ID string.
+    """
+    while True:
+        user_value = input("\n🔗 Enter a YouTube URL or video ID: ").strip()
+        if user_value:
+            return user_value
+        print("Input cannot be empty. Please try again.")
+
+
 def main():
     """Main function to run the YouTube captions extractor."""
-    # Default video URL/ID - can be changed here or passed as command-line argument
+    # Accept URL/ID either via CLI argument or interactive prompt.
     if len(sys.argv) > 1:
         video_input = sys.argv[1]
     else:
-        video_input = "https://www.youtube.com/watch?v=VIDEO_ID"
+        print("No video link supplied on the command line.")
+        video_input = request_video_input()
     
     # Extract video ID
     video_id = extract_video_id(video_input)
