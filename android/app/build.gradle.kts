@@ -16,8 +16,8 @@ android {
         applicationId = "therapist.deite.app"
         minSdk = rootProject.ext["minSdkVersion"] as Int
         targetSdk = rootProject.ext["targetSdkVersion"] as Int
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         aaptOptions {
