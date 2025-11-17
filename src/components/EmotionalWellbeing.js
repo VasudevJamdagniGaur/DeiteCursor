@@ -370,7 +370,7 @@ export default function EmotionalWellbeing() {
     const user = getCurrentUser();
     if (!user) return;
 
-    const freshData = await loadBalanceDataInternal(period);
+    const freshData = await loadBalanceDataInternal(period, { updateState: true });
     if (freshData) {
       const cacheKey = getCacheKey('balance', period, user.uid);
       saveToCache(cacheKey, {
@@ -378,6 +378,41 @@ export default function EmotionalWellbeing() {
         topEmotions: freshData.topEmotions,
         timestamp: new Date().toISOString()
       });
+    }
+  };
+
+  const prefetchAllBalancePeriods = async (forceRefresh = false, skipPeriod = null) => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    const periods = [7, 30, 365];
+
+    for (const period of periods) {
+      if (skipPeriod === period) {
+        continue;
+      }
+
+      const cacheKey = getCacheKey('balance', period, user.uid);
+      const cached = loadFromCache(cacheKey, 30);
+
+      if (!forceRefresh && cached) {
+        console.log(`⚡ Balance cache already available for ${period === 365 ? 'lifetime' : period + ' days'}`);
+        continue;
+      }
+
+      try {
+        const balanceData = await loadBalanceDataInternal(period, { updateState: false });
+        if (balanceData) {
+          saveToCache(cacheKey, {
+            moodBalance: balanceData.moodBalance,
+            topEmotions: balanceData.topEmotions,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`✅ Pre-cached balance data for ${period === 365 ? 'lifetime' : period + ' days'}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error pre-caching balance data for ${period === 365 ? 'lifetime' : period + ' days'}`, error);
+      }
     }
   };
 
@@ -496,6 +531,7 @@ export default function EmotionalWellbeing() {
       }
       
       await Promise.all(promises);
+      await prefetchAllBalancePeriods(true, balancePeriod);
     } catch (error) {
       console.error('❌ Error loading fresh data:', error);
     } finally {
@@ -828,8 +864,11 @@ export default function EmotionalWellbeing() {
       } else {
         console.log('⚡ Lifetime already cached');
       }
+
+      prefetchAllBalancePeriods()
+        .catch(error => console.error('❌ Error pre-caching balance periods:', error));
     }
-  }, [isInitializing]); // Run when initialization completes
+  }, [isInitializing]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -1036,7 +1075,8 @@ export default function EmotionalWellbeing() {
     return null;
   };
 
-  const loadBalanceDataInternal = async (period = balancePeriod) => {
+  const loadBalanceDataInternal = async (period = balancePeriod, options = {}) => {
+    const { updateState = true } = options;
     console.log(`⚖️ Loading balance data for ${period === 365 ? 'lifetime' : period + ' days'}...`);
     
     const user = getCurrentUser();
@@ -1110,15 +1150,19 @@ export default function EmotionalWellbeing() {
       }
       
       // Set state and return data for caching
-      setMoodBalance(balanceData.moodBalance);
-      setTopEmotions(balanceData.topEmotions);
+      if (updateState) {
+        setMoodBalance(balanceData.moodBalance);
+        setTopEmotions(balanceData.topEmotions);
+      }
       
       return balanceData;
     } catch (error) {
       console.error('❌ Error loading balance data:', error);
       const emptyBalanceData = processBalanceDataInternal([], period);
-      setMoodBalance(emptyBalanceData.moodBalance);
-      setTopEmotions(emptyBalanceData.topEmotions);
+      if (updateState) {
+        setMoodBalance(emptyBalanceData.moodBalance);
+        setTopEmotions(emptyBalanceData.topEmotions);
+      }
       return emptyBalanceData;
     }
   };
