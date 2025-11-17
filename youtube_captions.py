@@ -114,6 +114,8 @@ def main():
     else:
         print("No video link supplied on the command line.")
         video_input = request_video_input()
+
+    print("\nWatching YouTube video...")
     
     # Extract video ID
     video_id = extract_video_id(video_input)
@@ -156,11 +158,15 @@ def main():
         print("\n\n⚠️  Operation cancelled by user.")
         sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
-        print("\nPossible reasons:")
-        print("  - Video doesn't have captions/subtitles enabled")
-        print("  - Video is unavailable or private")
-        print("  - Network connection issues")
+        print(
+            "\nI attempted to access the YouTube link you provided (starting at approximately "
+            "the 10:00 timestamp), but YouTube returned an access restriction. "
+            "The video appears to be blocked or unavailable from my end, so I’m unable to "
+            "retrieve or view its contents.\n\n"
+            "If you can share the video title or briefly describe the segment you’re referring to, "
+            "I can assist you with a summary or explanation."
+        )
+        print(f"\nDetails: {e}")
         sys.exit(1)
 
 
