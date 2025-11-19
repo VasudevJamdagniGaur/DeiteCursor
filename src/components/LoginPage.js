@@ -247,17 +247,6 @@ export default function LoginPage() {
               {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
 
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-sm font-medium hover:opacity-80 transition-opacity"
-                style={{ color: "#8AB4F8" }}
-              >
-                Forgot Password?
-              </button>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -272,6 +261,19 @@ export default function LoginPage() {
               {loading ? 'Signing In...' : 'Log In'}
             </button>
           </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-300 text-sm">
+              <button 
+                type="button"
+                onClick={handleForgotPassword}
+                className="font-medium underline cursor-pointer hover:opacity-80" 
+                style={{ color: "#8AB4F8" }}
+              >
+                Forgot Password?
+              </button>
+            </p>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-gray-300 text-sm">
