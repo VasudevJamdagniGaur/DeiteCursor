@@ -9,7 +9,8 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signInWithCredential,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  fetchSignInMethodsForEmail
 } from "firebase/auth";
 import { auth } from "../firebase/config";
 import { Capacitor } from '@capacitor/core';
@@ -115,6 +116,24 @@ export const signUpUser = async (email, password, displayName) => {
     console.error("Error signing up:", error);
     return {
       success: false,
+      error: error.message
+    };
+  }
+};
+
+// Check if email account exists
+export const checkEmailExists = async (email) => {
+  try {
+    const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+    return {
+      exists: signInMethods.length > 0,
+      methods: signInMethods
+    };
+  } catch (error) {
+    console.error("Error checking email:", error);
+    // If there's an error, assume account doesn't exist
+    return {
+      exists: false,
       error: error.message
     };
   }
