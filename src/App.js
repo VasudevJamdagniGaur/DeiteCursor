@@ -8,6 +8,7 @@ import WelcomePage from './components/WelcomePage';
 import SignupPage from './components/SignupPage';
 import EmailSignupPage from './components/EmailSignupPage';
 import LoginPage from './components/LoginPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
 import DashboardPage from './components/DashboardPage';
 import ChatPage from './components/ChatPage';
 import EmotionalWellbeing from './components/EmotionalWellbeing';
@@ -140,6 +141,7 @@ function AppContent() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/signup/email" element={<EmailSignupPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/wellbeing" element={<EmotionalWellbeing />} />

@@ -8,7 +8,8 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  signInWithCredential
+  signInWithCredential,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { auth } from "../firebase/config";
 import { Capacitor } from '@capacitor/core';
@@ -138,6 +139,34 @@ export const signInUser = async (email, password) => {
     return {
       success: false,
       error: error.message
+    };
+  }
+};
+
+// Send password reset email
+export const sendPasswordReset = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return {
+      success: true,
+      message: 'Password reset email sent! Please check your inbox.'
+    };
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    let errorMessage = 'Failed to send password reset email. Please try again.';
+    
+    // Provide user-friendly error messages
+    if (error.code === 'auth/user-not-found') {
+      errorMessage = 'No account found with this email address.';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address.';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many requests. Please try again later.';
+    }
+    
+    return {
+      success: false,
+      error: errorMessage
     };
   }
 };

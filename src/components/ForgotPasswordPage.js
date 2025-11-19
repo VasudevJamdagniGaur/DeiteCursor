@@ -1,88 +1,51 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { Brain, Heart, Star, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { signInUser } from '../services/authService';
+import { Brain, Heart, Star, Mail, ArrowLeft } from "lucide-react";
+import { sendPasswordReset } from '../services/authService';
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [errors, setErrors] = useState({});
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    }
-
-    return newErrors;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validateForm();
+    setError('');
+    setSuccess(false);
+
+    // Validate email
+    if (!email) {
+      setError('Email is required');
+      return;
+    }
     
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Email is invalid');
       return;
     }
 
     setLoading(true);
-    setErrors({});
 
     try {
-      const result = await signInUser(formData.email, formData.password);
+      const result = await sendPasswordReset(email);
       
       if (result.success) {
-        console.log('User signed in successfully:', result.user);
-        navigate('/dashboard');
+        setSuccess(true);
       } else {
-        setErrors({ general: result.error });
+        setError(result.error);
       }
     } catch (err) {
-      setErrors({ general: 'An unexpected error occurred. Please try again.' });
-      console.error('Login error:', err);
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Password reset error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignupRedirect = () => {
-    navigate('/signup');
-  };
-
-  const handleForgotPassword = () => {
-    navigate('/forgot-password');
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handleBackToLogin = () => {
+    navigate('/login');
   };
 
   return (
@@ -185,110 +148,85 @@ export default function LoginPage() {
             border: "1px solid rgba(255, 255, 255, 0.08)",
           }}
         >
-          <h1 className="text-2xl font-bold text-white mb-6">Log In</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">Reset Password</h1>
+          <p className="text-gray-400 text-sm mb-6">
+            Enter your email address and we'll send you a link to reset your password.
+          </p>
 
-          {errors.general && (
+          {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {errors.general}
+              {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Mail
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: "#8AB4F8" }}
-              />
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Email Address"
-                className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 text-white placeholder-gray-400 backdrop-blur-md"
-              style={{
-                backgroundColor: "rgba(42, 42, 45, 0.6)",
-                border: `1px solid ${errors.email ? '#ff6b6b' : 'rgba(255, 255, 255, 0.08)'}`,
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-              }}
-              />
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
-            </div>
-
-            <div className="relative">
-              <Lock
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: "#FDD663" }}
-              />
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Password"
-                className="w-full pl-12 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 text-white placeholder-gray-400 backdrop-blur-md"
-              style={{
-                backgroundColor: "rgba(42, 42, 45, 0.6)",
-                border: `1px solid ${errors.password ? '#ff6b6b' : 'rgba(255, 255, 255, 0.08)'}`,
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-              }}
-              />
+          {success ? (
+            <div className="space-y-4">
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                Password reset email sent! Please check your inbox and follow the instructions.
+              </div>
               <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 focus:outline-none hover:opacity-80 transition-opacity"
+                onClick={handleBackToLogin}
+                className="w-full py-3 font-semibold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 backdrop-blur-lg"
+                style={{
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                  color: "#FFFFFF",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
               >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" style={{ color: "#8AB4F8" }} />
-                ) : (
-                  <Eye className="w-5 h-5" style={{ color: "#8AB4F8" }} />
-                )}
-              </button>
-              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
-            </div>
-
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-sm font-medium hover:opacity-80 transition-opacity"
-                style={{ color: "#8AB4F8" }}
-              >
-                Forgot Password?
+                Back to Login
               </button>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="relative">
+                <Mail
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                  style={{ color: "#8AB4F8" }}
+                />
+                <input
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email Address"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 text-white placeholder-gray-400 backdrop-blur-md"
+                  style={{
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: `1px solid ${error ? '#ff6b6b' : 'rgba(255, 255, 255, 0.08)'}`,
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                  }}
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 font-semibold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 mt-6 backdrop-blur-lg relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              style={{
-                backgroundColor: "rgba(42, 42, 45, 0.8)",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-                color: "#FFFFFF",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              {loading ? 'Signing In...' : 'Log In'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 font-semibold rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 mt-6 backdrop-blur-lg relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                style={{
+                  backgroundColor: "rgba(42, 42, 45, 0.8)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                  color: "#FFFFFF",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+              >
+                {loading ? 'Sending...' : 'Send Reset Link'}
+              </button>
+            </form>
+          )}
 
           <div className="mt-6 text-center">
-            <p className="text-gray-300 text-sm">
-              Don't have an account?{" "}
-              <button 
-                onClick={handleSignupRedirect}
-                className="font-medium underline cursor-pointer hover:opacity-80" 
-                style={{ color: "#8AB4F8" }}
-              >
-                Sign Up
-              </button>
-            </p>
+            <button
+              onClick={handleBackToLogin}
+              className="text-gray-300 text-sm hover:opacity-80 transition-opacity flex items-center justify-center gap-2 mx-auto"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
 
