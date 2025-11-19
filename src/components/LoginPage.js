@@ -63,7 +63,19 @@ export default function LoginPage() {
         console.log('User signed in successfully:', result.user);
         navigate('/dashboard');
       } else {
-        setErrors({ general: result.error });
+        // Check for invalid credentials and show password error
+        if (result.error && (
+          result.error.includes('auth/invalid-credential') || 
+          result.error.includes('auth/wrong-password') ||
+          result.error.includes('invalid-credential') ||
+          result.error.includes('wrong-password')
+        )) {
+          setErrors({ password: 'You have entered a wrong password' });
+        } else if (result.error && result.error.includes('auth/user-not-found')) {
+          setErrors({ email: 'No account found with this email address' });
+        } else {
+          setErrors({ general: result.error });
+        }
       }
     } catch (err) {
       setErrors({ general: 'An unexpected error occurred. Please try again.' });
@@ -187,7 +199,7 @@ export default function LoginPage() {
         >
           <h1 className="text-2xl font-bold text-white mb-6">Log In</h1>
 
-          {errors.general && (
+          {errors.general && !errors.password && !errors.email && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {errors.general}
             </div>
