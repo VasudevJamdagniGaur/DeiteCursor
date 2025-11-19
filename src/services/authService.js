@@ -138,7 +138,8 @@ export const signInUser = async (email, password) => {
     console.error("Error signing in:", error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
+      errorCode: error.code // Include error code for better error handling
     };
   }
 };

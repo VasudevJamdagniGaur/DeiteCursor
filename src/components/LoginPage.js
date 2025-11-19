@@ -63,16 +63,21 @@ export default function LoginPage() {
         console.log('User signed in successfully:', result.user);
         navigate('/dashboard');
       } else {
-        // Check for invalid credentials and show password error
-        if (result.error && (
-          result.error.includes('auth/invalid-credential') || 
-          result.error.includes('auth/wrong-password') ||
-          result.error.includes('invalid-credential') ||
-          result.error.includes('wrong-password')
-        )) {
-          setErrors({ password: 'You have entered a wrong password' });
-        } else if (result.error && result.error.includes('auth/user-not-found')) {
+        // First check if account exists - prioritize checking account existence
+        if (result.errorCode === 'auth/user-not-found' || 
+            (result.error && result.error.includes('auth/user-not-found'))) {
           setErrors({ email: 'No account found with this email address' });
+        } 
+        // If account exists but password is wrong
+        else if (result.errorCode === 'auth/invalid-credential' || 
+                 result.errorCode === 'auth/wrong-password' ||
+                 (result.error && (
+                   result.error.includes('auth/invalid-credential') || 
+                   result.error.includes('auth/wrong-password') ||
+                   result.error.includes('invalid-credential') ||
+                   result.error.includes('wrong-password')
+                 ))) {
+          setErrors({ password: 'You have entered a wrong password' });
         } else {
           setErrors({ general: result.error });
         }
