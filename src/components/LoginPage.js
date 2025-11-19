@@ -268,7 +268,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleForgotPassword}
                 className="font-medium underline cursor-pointer hover:opacity-80" 
-                style={{ color: "#8AB4F8" }}
+                style={{ color: "rgba(255, 255, 255, 0.6)" }}
               >
                 Forgot Password?
               </button>
