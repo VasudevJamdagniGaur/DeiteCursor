@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { getCurrentUser, signOutUser } from '../services/authService';
 import firestoreService from '../services/firestoreService';
+import Cropper from 'react-easy-crop';
 import {
   ArrowLeft,
   User,
@@ -36,6 +37,10 @@ export default function ProfilePage() {
   const [profilePicture, setProfilePicture] = useState(null);
   const [pendingPicture, setPendingPicture] = useState(null);
   const [showPicturePreview, setShowPicturePreview] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [bioLastUpdated, setBioLastUpdated] = useState(null);
   const [isBioUpdating, setIsBioUpdating] = useState(false);
   const [editData, setEditData] = useState({
@@ -170,7 +175,11 @@ export default function ProfilePage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPendingPicture(reader.result);
-        setShowPicturePreview(true);
+        setShowCropModal(true);
+        setShowPicturePreview(false);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
       };
       reader.readAsDataURL(file);
     }
@@ -333,6 +342,26 @@ const MOOD_KEYWORDS = {
     setShowPicturePreview(false);
   };
 
+  const onCropComplete = (_, areaPixels) => {
+    setCroppedAreaPixels(areaPixels);
+  };
+
+  const handleApplyCrop = async () => {
+    if (!croppedAreaPixels || !pendingPicture) return;
+    const croppedImage = await getCroppedImg(pendingPicture, croppedAreaPixels);
+    setPendingPicture(croppedImage);
+    setShowCropModal(false);
+    setShowPicturePreview(true);
+  };
+
+  const handleCancelCrop = () => {
+    setShowCropModal(false);
+    setPendingPicture(null);
+    setCroppedAreaPixels(null);
+    setZoom(1);
+    setCrop({ x: 0, y: 0 });
+  };
+
 const analyzeUserChatHistory = async (uid) => {
   try {
     const daysResult = await firestoreService.getAllChatDays(uid);
@@ -406,6 +435,38 @@ const buildListSentence = (items) => {
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
   const start = items.slice(0, -1).join(', ');
   return `${start}, and ${items[items.length - 1]}`;
+};
+
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
+    image.src = url;
+  });
+
+const getCroppedImg = async (imageSrc, pixelCrop) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return canvas.toDataURL('image/png');
 };
 
   const handleSignOut = async () => {
@@ -931,6 +992,71 @@ const buildListSentence = (items) => {
         </div>
       </div>
     </div>
+
+    {showCropModal && pendingPicture && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-black/70"
+          onClick={handleCancelCrop}
+        />
+        <div
+          className="relative z-10 w-full max-w-xl rounded-3xl p-6 space-y-6"
+          style={{
+            backgroundColor: "rgba(18, 18, 18, 0.95)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)",
+          }}
+        >
+          <h3 className="text-xl font-semibold text-white text-center">Adjust your photo</h3>
+          <p className="text-center text-gray-400 text-sm">
+            Drag the image or pinch/scroll to zoom. Everything inside the circle will appear on your profile.
+          </p>
+          <div className="relative w-full h-72 bg-black rounded-2xl overflow-hidden">
+            <Cropper
+              image={pendingPicture}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              showGrid={false}
+              cropShape="round"
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-400 w-16">Zoom</span>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="flex-1 accent-[#8AB4F8]"
+            />
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={handleCancelCrop}
+              className="flex-1 py-3 rounded-2xl font-semibold text-white border border-gray-600 hover:bg-gray-700/40 transition-all duration-200"
+            >
+              Retake
+            </button>
+            <button
+              onClick={handleApplyCrop}
+              className="flex-1 py-3 rounded-2xl font-semibold text-black"
+              style={{
+                backgroundColor: "#8AB4F8",
+                boxShadow: "0 10px 20px rgba(138, 180, 248, 0.35)",
+              }}
+            >
+              Crop & Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {showPicturePreview && pendingPicture && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
