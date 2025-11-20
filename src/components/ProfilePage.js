@@ -456,20 +456,12 @@ export default function ProfilePage() {
 
               <div className="mt-6">
                 <label className="block mb-2 font-medium text-gray-300">About Me</label>
-                <div
-                  className="p-4 rounded-xl"
-                  style={{
-                    backgroundColor: "rgba(42, 42, 45, 0.6)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                  }}
-                >
-                  <p className="text-white">
-                    {editData.bio || 'No bio added yet'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    This section is captured during onboarding and can be updated through support if needed.
-                  </p>
-                </div>
+                <p className="text-white">
+                  {editData.bio || 'No bio added yet'}
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  This section is captured during onboarding and can be updated through support if needed.
+                </p>
               </div>
 
               <div className="flex gap-3 mt-6">
@@ -493,7 +485,34 @@ export default function ProfilePage() {
                   Cancel
                 </button>
               </div>
-            </>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Static About Me Section */}
+        <div
+          className="backdrop-blur-lg border-2 rounded-2xl p-6"
+          style={{
+            backgroundColor: "rgba(42, 42, 45, 0.6)",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          }}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Mail className="w-5 h-5 text-purple-400" />
+            <span className="font-medium text-gray-300">About Me</span>
+          </div>
+          <p className="text-white mb-2">
+            {editData.bio || 'No bio added yet'}
+          </p>
+          <p className="text-xs text-gray-400">
+            This section is captured during onboarding and can be updated through support if needed.
+          </p>
+        </div>
+
+        {/* Actions Card */}
+        <div
           )}
         </div>
 
