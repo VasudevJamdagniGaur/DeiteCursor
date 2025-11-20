@@ -510,12 +510,6 @@ export default function ProfilePage() {
             This section is captured during onboarding and can be updated through support if needed.
           </p>
         </div>
-
-        {/* Actions Card */}
-        <div
-          )}
-        </div>
-
         {/* Actions Card */}
         <div
           className="backdrop-blur-lg border rounded-2xl p-6 space-y-4"
