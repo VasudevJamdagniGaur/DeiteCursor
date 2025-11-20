@@ -226,13 +226,11 @@ const EmailSignupPage = () => {
 
           <button
             type="submit"
-            disabled={isSubmitting}
             className="mobile-button w-full rounded-2xl font-semibold transition-all duration-300 active:scale-[0.98]"
             style={{ 
               background: 'rgba(255, 255, 255, 0.1)',
               color: 'rgba(255, 255, 255, 0.9)',
               padding: '14px 16px',
-              opacity: isSubmitting ? 0.7 : 1,
               border: '1px solid rgba(255, 255, 255, 0.2)',
               backdropFilter: 'blur(10px)',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
