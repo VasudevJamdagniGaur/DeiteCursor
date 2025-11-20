@@ -546,19 +546,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   const handleYearScroll = (e) => {
     const scrollTop = e.target.scrollTop;
     setYearScrollPosition(scrollTop);
-    
-    const itemHeight = 50;
-    const years = getYearRange();
-    const centerIndex = Math.round(scrollTop / itemHeight);
-    if (centerIndex >= 0 && centerIndex < years.length) {
-      const centeredYear = years[centerIndex];
-      clearTimeout(window.yearScrollTimeout);
-      window.yearScrollTimeout = setTimeout(() => {
-        if (centeredYear !== selectedYear) {
-          handleYearSelect(centeredYear);
-        }
-      }, 150);
-    }
+    // Removed auto-selection - user must click to select
   };
 
   const getYearItemOpacity = (index) => {
@@ -584,17 +572,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   const handleMonthScroll = (e) => {
     const scrollTop = e.target.scrollTop;
     setMonthScrollPosition(scrollTop);
-    
-    const itemHeight = 50;
-    const centerIndex = Math.round(scrollTop / itemHeight);
-    if (centerIndex >= 0 && centerIndex < monthNames.length) {
-      clearTimeout(window.monthScrollTimeout);
-      window.monthScrollTimeout = setTimeout(() => {
-        if (centerIndex !== currentMonth.getMonth()) {
-          handleMonthSelect(centerIndex);
-        }
-      }, 150);
-    }
+    // Removed auto-selection - user must click to select
   };
 
   const getMonthItemOpacity = (index) => {
@@ -695,15 +673,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
                   <div
                     key={year}
                     onClick={() => {
-                      if (yearScrollContainerRef.current) {
-                        const scrollTo = index * itemHeight;
-                        yearScrollContainerRef.current.scrollTo({
-                          top: scrollTo,
-                          behavior: 'smooth'
-                        });
-                        setYearScrollPosition(scrollTo);
-                        setTimeout(() => handleYearSelect(year), 300);
-                      }
+                      handleYearSelect(year);
                     }}
                     className="flex items-center justify-center cursor-pointer transition-all duration-150"
                     style={{
@@ -806,15 +776,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
                   <div
                     key={index}
                     onClick={() => {
-                      if (monthScrollContainerRef.current) {
-                        const scrollTo = index * itemHeight;
-                        monthScrollContainerRef.current.scrollTo({
-                          top: scrollTo,
-                          behavior: 'smooth'
-                        });
-                        setMonthScrollPosition(scrollTo);
-                        setTimeout(() => handleMonthSelect(index), 300);
-                      }
+                      handleMonthSelect(index);
                     }}
                     className="flex items-center justify-center cursor-pointer transition-all duration-150"
                     style={{
