@@ -389,12 +389,16 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
 
   // Initialize selected year
   useEffect(() => {
+    const today = new Date();
+    const maxYear = today.getFullYear() - 13;
+    const minYear = today.getFullYear() - 120;
+    
     if (selectedDate) {
-      setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-      setSelectedYear(selectedDate.getFullYear());
+      const year = Math.min(Math.max(selectedDate.getFullYear(), minYear), maxYear);
+      setCurrentMonth(new Date(year, selectedDate.getMonth(), 1));
+      setSelectedYear(year);
     } else {
-      const today = new Date();
-      setSelectedYear(today.getFullYear());
+      setSelectedYear(null);
     }
   }, [selectedDate]);
 
@@ -402,18 +406,11 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   useEffect(() => {
     if (
       viewMode === 'year' &&
-      yearScrollContainerRef.current &&
-      selectedYear
+      yearScrollContainerRef.current
     ) {
-      const getYearRange = () => {
-        const years = [];
-        for (let year = 1905; year <= new Date().getFullYear() - 13; year++) {
-          years.push(year);
-        }
-        return years;
-      };
       const years = getYearRange();
-      const currentYearIndex = years.findIndex(y => y === selectedYear);
+      const targetYear = selectedYear ?? years[years.length - 1];
+      const currentYearIndex = years.findIndex(y => y === targetYear);
       if (currentYearIndex >= 0) {
         const itemHeight = 50;
         const scrollTo = currentYearIndex * itemHeight;
@@ -527,8 +524,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     const maxYear = today.getFullYear() - 13; // At least 13 years old
     const minYear = today.getFullYear() - 120; // Max 120 years old
     const years = [];
-    // Reverse order: older years first (scroll down = newer years, scroll up = older years)
-    for (let year = minYear; year <= maxYear; year++) {
+    // Newest year first (scroll up to go to lower years)
+    for (let year = maxYear; year >= minYear; year--) {
       years.push(year);
     }
     return years;
