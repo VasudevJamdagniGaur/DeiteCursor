@@ -321,7 +321,7 @@ const ProfileDetailsPage = () => {
                   fontSize: '16px',
                   minHeight: '100px'
                 }}
-                placeholder="Tell us what you do, what your parents do and all"
+                placeholder="How are you feeling these days?"
                 rows="4"
               />
             </div>
