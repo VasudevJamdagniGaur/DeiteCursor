@@ -407,7 +407,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     ) {
       const getYearRange = () => {
         const years = [];
-        for (let year = 1905; year <= new Date().getFullYear() - 13; year++) {
+        for (let year = new Date().getFullYear() - 13; year >= 1905; year--) {
           years.push(year);
         }
         return years;
