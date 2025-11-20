@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { getCurrentUser, signOutUser } from '../services/authService';
+import firestoreService from '../services/firestoreService';
 import {
   ArrowLeft,
   User,
@@ -70,20 +71,29 @@ export default function ProfilePage() {
   }, [navigate]);
 
   useEffect(() => {
-    if (user) {
-      ensureDailyBioSummary();
-    }
+    if (!user) return;
+    const run = async () => {
+      await ensureDailyBioSummary();
+    };
+    run();
   }, [user]);
 
   useEffect(() => {
     if (!user) return;
-    const now = new Date();
-    const nextWindow = getNext2AM();
-    const delay = nextWindow.getTime() - now.getTime();
-    const timer = setTimeout(() => {
-      const summary = generateAutoBioSummary();
-      persistBioSummary(summary);
-    }, delay);
+    let timer;
+    const schedule = () => {
+      const now = new Date();
+      const nextWindow = getNext2AM();
+      const delay = Math.max(nextWindow.getTime() - now.getTime(), 0);
+      timer = setTimeout(async () => {
+        const summary = await generateAutoBioSummary();
+        if (summary) {
+          persistBioSummary(summary);
+        }
+        schedule();
+      }, delay);
+    };
+    schedule();
     return () => clearTimeout(timer);
   }, [user, editData.age, editData.gender]);
 
@@ -190,15 +200,66 @@ export default function ProfilePage() {
     return base;
   };
 
+const TOPIC_CATEGORIES = [
+  { name: 'work or studies', keywords: ['work', 'office', 'project', 'deadline', 'study', 'exam', 'college', 'school'] },
+  { name: 'relationships', keywords: ['friend', 'family', 'mom', 'dad', 'partner', 'relationship', 'love', 'together'] },
+  { name: 'wellbeing', keywords: ['health', 'anxiety', 'stress', 'therapy', 'sleep', 'rest', 'mind', 'wellbeing'] },
+  { name: 'self-growth', keywords: ['goal', 'growth', 'improve', 'habit', 'plan', 'learn', 'progress'] },
+  { name: 'creativity', keywords: ['music', 'art', 'draw', 'paint', 'write', 'creative', 'photography'] },
+  { name: 'career decisions', keywords: ['career', 'job', 'interview', 'opportunity', 'startup'] },
+];
+
+const MOOD_KEYWORDS = {
+  hopeful: ['hope', 'optimistic', 'excited', 'grateful', 'happy', 'joy'],
+  stressed: ['stress', 'worried', 'anxious', 'tired', 'exhausted', 'overwhelmed'],
+  reflective: ['thinking', 'reflect', 'ponder', 'journal', 'consider', 'realize'],
+  determined: ['determined', 'driven', 'focused', 'ambition', 'goal'],
+  overwhelmed: ['too much', 'can\'t handle', 'pressure', 'burnt', 'burned', 'burnout'],
+};
+
   const canUpdateBioSummary = () => {
     if (!bioLastUpdated) return true;
     return new Date(bioLastUpdated) < getLast2AM();
   };
 
-  const generateAutoBioSummary = () => {
+  const generateAutoBioSummary = async () => {
     const firstName = user?.displayName?.split(' ')[0] || 'You';
     const age = editData.age || localStorage.getItem(`user_age_${user?.uid}`) || '';
     const gender = editData.gender || localStorage.getItem(`user_gender_${user?.uid}`) || '';
+
+    let summarySentence = null;
+    if (user) {
+      const insights = await analyzeUserChatHistory(user.uid);
+      if (insights) {
+        const topicSentence = insights.topTopics.length
+          ? `You regularly explore ${buildListSentence(insights.topTopics)} in your conversations.`
+          : '';
+
+        const moodDescriptions = {
+          hopeful: 'hopeful and forward-looking',
+          stressed: 'very candid about stress and pressure',
+          reflective: 'deeply reflective and thoughtful',
+          determined: 'focused and determined to grow',
+          overwhelmed: 'handling a lot at once yet staying resilient',
+        };
+
+        const moodSentence = insights.moodRanking.length
+          ? `${firstName} often sounds ${moodDescriptions[insights.moodRanking[0][0]] || 'genuine'}.`
+          : '';
+
+        const effortSentence =
+          insights.totalMessages > 50
+            ? `You've shared ${insights.totalMessages} personal reflections so far, giving Deite a rich sense of your nature.`
+            : '';
+
+        summarySentence = [topicSentence, moodSentence, effortSentence].filter(Boolean).join(' ').trim();
+      }
+    }
+
+    if (summarySentence) {
+      return summarySentence;
+    }
+
     const moods = [
       'feel calm and reflective today',
       'are focused on steady growth',
@@ -225,7 +286,7 @@ export default function ProfilePage() {
     setEditData((prev) => ({ ...prev, bio: summary }));
   };
 
-  const ensureDailyBioSummary = () => {
+  const ensureDailyBioSummary = async () => {
     if (!user) return;
     const updatedKey = `user_bio_updated_${user.uid}`;
     const lastUpdatedISO = localStorage.getItem(updatedKey);
@@ -235,20 +296,24 @@ export default function ProfilePage() {
     const needsRefresh =
       lastUpdatedISO ? new Date(lastUpdatedISO) < getLast2AM() : false;
     if (needsRefresh) {
-      const summary = generateAutoBioSummary();
-      persistBioSummary(summary);
+      const summary = await generateAutoBioSummary();
+      if (summary) {
+        persistBioSummary(summary);
+      }
     }
   };
 
-  const handleManualBioUpdate = () => {
+  const handleManualBioUpdate = async () => {
     if (!canUpdateBioSummary()) {
       const nextWindow = getNext2AM();
       alert(`You can refresh this summary after ${nextWindow.toLocaleString()}.`);
       return;
     }
     setIsBioUpdating(true);
-    const summary = generateAutoBioSummary();
-    persistBioSummary(summary);
+    const summary = await generateAutoBioSummary();
+    if (summary) {
+      persistBioSummary(summary);
+    }
     setIsBioUpdating(false);
   };
 
@@ -267,6 +332,81 @@ export default function ProfilePage() {
     setPendingPicture(null);
     setShowPicturePreview(false);
   };
+
+const analyzeUserChatHistory = async (uid) => {
+  try {
+    const daysResult = await firestoreService.getAllChatDays(uid);
+    if (!daysResult.success || !daysResult.chatDays?.length) {
+      return null;
+    }
+
+    const sortedDays = [...daysResult.chatDays].sort((a, b) => {
+      const da = (a.date || a.id || '').replace(/-/g, '');
+      const db = (b.date || b.id || '').replace(/-/g, '');
+      return db.localeCompare(da);
+    });
+
+    const daysToProcess = sortedDays.slice(0, 90);
+    const topicCounts = TOPIC_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.name]: 0 }), {});
+    const moodCounts = Object.keys(MOOD_KEYWORDS).reduce((acc, mood) => ({ ...acc, [mood]: 0 }), {});
+    let totalMessages = 0;
+
+    for (const day of daysToProcess) {
+      const dateId = day.date || day.id;
+      if (!dateId) continue;
+      const messagesResult = await firestoreService.getChatMessagesNew(uid, dateId);
+      if (!messagesResult?.success || !messagesResult.messages?.length) continue;
+
+      for (const message of messagesResult.messages) {
+        if (message.sender !== 'user' || !message.text) continue;
+        totalMessages += 1;
+        const lower = message.text.toLowerCase();
+
+        TOPIC_CATEGORIES.forEach((cat) => {
+          if (cat.keywords.some(keyword => lower.includes(keyword))) {
+            topicCounts[cat.name] += 1;
+          }
+        });
+
+        Object.entries(MOOD_KEYWORDS).forEach(([mood, keywords]) => {
+          if (keywords.some(keyword => lower.includes(keyword))) {
+            moodCounts[mood] += 1;
+          }
+        });
+      }
+    }
+
+    if (totalMessages < 5) {
+      return null;
+    }
+
+    const topTopics = Object.entries(topicCounts)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name]) => name);
+
+    const moodRanking = Object.entries(moodCounts)
+      .sort((a, b) => b[1] - a[1])
+      .filter(([, count]) => count > 0);
+
+    return {
+      topTopics,
+      moodRanking,
+      totalMessages
+    };
+  } catch (error) {
+    console.error('Error analyzing chat history:', error);
+    return null;
+  }
+};
+
+const buildListSentence = (items) => {
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  const start = items.slice(0, -1).join(', ');
+  return `${start}, and ${items[items.length - 1]}`;
+};
 
   const handleSignOut = async () => {
     try {
