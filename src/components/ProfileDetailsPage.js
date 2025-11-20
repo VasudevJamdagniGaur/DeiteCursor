@@ -378,6 +378,14 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'year', 'month'
   const [selectedYear, setSelectedYear] = useState(null);
+  
+  // Year picker scroll state
+  const [yearScrollPosition, setYearScrollPosition] = useState(0);
+  const yearScrollContainerRef = useRef(null);
+  
+  // Month picker scroll state
+  const [monthScrollPosition, setMonthScrollPosition] = useState(0);
+  const monthScrollContainerRef = useRef(null);
 
   useEffect(() => {
     if (selectedDate) {
@@ -494,33 +502,31 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   if (viewMode === 'year') {
     const years = getYearRange();
     const currentYear = currentMonth.getFullYear();
-    const [scrollPosition, setScrollPosition] = useState(0);
-    const scrollContainerRef = useRef(null);
     const itemHeight = 50; // Height of each item in pixels
     
     // Find index of current year
     const currentYearIndex = years.findIndex(y => y === currentYear);
     
-    // Scroll to current year on mount
+    // Scroll to current year when year picker opens
     useEffect(() => {
-      if (scrollContainerRef.current && currentYearIndex >= 0) {
+      if (yearScrollContainerRef.current && currentYearIndex >= 0) {
         const scrollTo = currentYearIndex * itemHeight;
-        scrollContainerRef.current.scrollTop = scrollTo;
-        setScrollPosition(scrollTo);
+        yearScrollContainerRef.current.scrollTop = scrollTo;
+        setYearScrollPosition(scrollTo);
       }
-    }, [currentYearIndex, itemHeight]);
+    }, [viewMode, currentYearIndex, itemHeight]);
 
-    const handleScroll = (e) => {
+    const handleYearScroll = (e) => {
       const scrollTop = e.target.scrollTop;
-      setScrollPosition(scrollTop);
+      setYearScrollPosition(scrollTop);
       
       // Calculate which year is in the center
       const centerIndex = Math.round(scrollTop / itemHeight);
       if (centerIndex >= 0 && centerIndex < years.length) {
         const centeredYear = years[centerIndex];
         // Update selected year when scrolling stops (debounced)
-        clearTimeout(window.scrollTimeout);
-        window.scrollTimeout = setTimeout(() => {
+        clearTimeout(window.yearScrollTimeout);
+        window.yearScrollTimeout = setTimeout(() => {
           if (centeredYear !== currentYear) {
             handleYearSelect(centeredYear);
           }
@@ -528,8 +534,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
       }
     };
 
-    const getItemOpacity = (index) => {
-      const centerIndex = Math.round(scrollPosition / itemHeight);
+    const getYearItemOpacity = (index) => {
+      const centerIndex = Math.round(yearScrollPosition / itemHeight);
       const distance = Math.abs(index - centerIndex);
       if (distance === 0) return 1; // Center item - fully visible
       if (distance === 1) return 0.6; // Adjacent items
@@ -537,8 +543,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
       return 0.2; // Further items
     };
 
-    const getItemScale = (index) => {
-      const centerIndex = Math.round(scrollPosition / itemHeight);
+    const getYearItemScale = (index) => {
+      const centerIndex = Math.round(yearScrollPosition / itemHeight);
       const distance = Math.abs(index - centerIndex);
       if (distance === 0) return 1;
       if (distance === 1) return 0.9;
@@ -588,8 +594,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
             
             {/* Scrollable list */}
             <div
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
+              ref={yearScrollContainerRef}
+              onScroll={handleYearScroll}
               className="overflow-y-scroll h-full"
               style={{
                 scrollbarWidth: 'none',
@@ -609,21 +615,21 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
               
               {/* Year items */}
               {years.map((year, index) => {
-                const opacity = getItemOpacity(index);
-                const scale = getItemScale(index);
-                const isCenter = Math.round(scrollPosition / itemHeight) === index;
+                const opacity = getYearItemOpacity(index);
+                const scale = getYearItemScale(index);
+                const isCenter = Math.round(yearScrollPosition / itemHeight) === index;
                 
                 return (
                   <div
                     key={year}
                     onClick={() => {
-                      if (scrollContainerRef.current) {
+                      if (yearScrollContainerRef.current) {
                         const scrollTo = index * itemHeight;
-                        scrollContainerRef.current.scrollTo({
+                        yearScrollContainerRef.current.scrollTo({
                           top: scrollTo,
                           behavior: 'smooth'
                         });
-                        setScrollPosition(scrollTo);
+                        setYearScrollPosition(scrollTo);
                         setTimeout(() => handleYearSelect(year), 300);
                       }
                     }}
@@ -654,30 +660,28 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
 
   // Month Picker View - iOS-style wheel picker
   if (viewMode === 'month') {
-    const [scrollPosition, setScrollPosition] = useState(0);
-    const scrollContainerRef = useRef(null);
     const itemHeight = 50;
     const currentMonthIndex = currentMonth.getMonth();
     
-    // Scroll to current month on mount
+    // Scroll to current month when month picker opens
     useEffect(() => {
-      if (scrollContainerRef.current) {
+      if (monthScrollContainerRef.current) {
         const scrollTo = currentMonthIndex * itemHeight;
-        scrollContainerRef.current.scrollTop = scrollTo;
-        setScrollPosition(scrollTo);
+        monthScrollContainerRef.current.scrollTop = scrollTo;
+        setMonthScrollPosition(scrollTo);
       }
-    }, [currentMonthIndex, itemHeight]);
+    }, [viewMode, currentMonthIndex, itemHeight]);
 
-    const handleScroll = (e) => {
+    const handleMonthScroll = (e) => {
       const scrollTop = e.target.scrollTop;
-      setScrollPosition(scrollTop);
+      setMonthScrollPosition(scrollTop);
       
       // Calculate which month is in the center
       const centerIndex = Math.round(scrollTop / itemHeight);
       if (centerIndex >= 0 && centerIndex < monthNames.length) {
         // Update selected month when scrolling stops (debounced)
-        clearTimeout(window.scrollTimeout);
-        window.scrollTimeout = setTimeout(() => {
+        clearTimeout(window.monthScrollTimeout);
+        window.monthScrollTimeout = setTimeout(() => {
           if (centerIndex !== currentMonthIndex) {
             handleMonthSelect(centerIndex);
           }
@@ -685,8 +689,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
       }
     };
 
-    const getItemOpacity = (index) => {
-      const centerIndex = Math.round(scrollPosition / itemHeight);
+    const getMonthItemOpacity = (index) => {
+      const centerIndex = Math.round(monthScrollPosition / itemHeight);
       const distance = Math.abs(index - centerIndex);
       if (distance === 0) return 1;
       if (distance === 1) return 0.6;
@@ -694,8 +698,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
       return 0.2;
     };
 
-    const getItemScale = (index) => {
-      const centerIndex = Math.round(scrollPosition / itemHeight);
+    const getMonthItemScale = (index) => {
+      const centerIndex = Math.round(monthScrollPosition / itemHeight);
       const distance = Math.abs(index - centerIndex);
       if (distance === 0) return 1;
       if (distance === 1) return 0.9;
@@ -745,8 +749,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
             
             {/* Scrollable list */}
             <div
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
+              ref={monthScrollContainerRef}
+              onScroll={handleMonthScroll}
               className="overflow-y-scroll h-full"
               style={{
                 scrollbarWidth: 'none',
@@ -766,21 +770,21 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
               
               {/* Month items */}
               {monthNames.map((month, index) => {
-                const opacity = getItemOpacity(index);
-                const scale = getItemScale(index);
-                const isCenter = Math.round(scrollPosition / itemHeight) === index;
+                const opacity = getMonthItemOpacity(index);
+                const scale = getMonthItemScale(index);
+                const isCenter = Math.round(monthScrollPosition / itemHeight) === index;
                 
                 return (
                   <div
                     key={index}
                     onClick={() => {
-                      if (scrollContainerRef.current) {
+                      if (monthScrollContainerRef.current) {
                         const scrollTo = index * itemHeight;
-                        scrollContainerRef.current.scrollTo({
+                        monthScrollContainerRef.current.scrollTo({
                           top: scrollTo,
                           behavior: 'smooth'
                         });
-                        setScrollPosition(scrollTo);
+                        setMonthScrollPosition(scrollTo);
                         setTimeout(() => handleMonthSelect(index), 300);
                       }
                     }}
