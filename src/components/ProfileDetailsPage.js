@@ -398,7 +398,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
       setCurrentMonth(new Date(year, selectedDate.getMonth(), 1));
       setSelectedYear(year);
     } else {
-      setSelectedYear(null);
+      const defaultYear = Math.min(Math.max(2005, minYear), maxYear);
+      setSelectedYear(defaultYear);
     }
   }, [selectedDate]);
 
