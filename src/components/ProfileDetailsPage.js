@@ -376,10 +376,16 @@ const ProfileDetailsPage = () => {
 const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date());
   const [isAnimating, setIsAnimating] = useState(false);
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'year', 'month'
+  const [selectedYear, setSelectedYear] = useState(null);
 
   useEffect(() => {
     if (selectedDate) {
       setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+      setSelectedYear(selectedDate.getFullYear());
+    } else {
+      const today = new Date();
+      setSelectedYear(today.getFullYear());
     }
   }, [selectedDate]);
 
@@ -447,11 +453,157 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     return date > today;
   };
 
+  const handleHeaderClick = () => {
+    if (viewMode === 'calendar') {
+      setViewMode('year');
+    } else if (viewMode === 'year') {
+      setViewMode('calendar');
+    } else if (viewMode === 'month') {
+      setViewMode('year');
+    }
+  };
+
+  const handleYearSelect = (year) => {
+    setSelectedYear(year);
+    setCurrentMonth(new Date(year, currentMonth.getMonth(), 1));
+    setViewMode('month');
+  };
+
+  const handleMonthSelect = (monthIndex) => {
+    setCurrentMonth(new Date(selectedYear, monthIndex, 1));
+    setViewMode('calendar');
+  };
+
+  const getYearRange = () => {
+    const today = new Date();
+    const maxYear = today.getFullYear() - 13; // At least 13 years old
+    const minYear = today.getFullYear() - 120; // Max 120 years old
+    const years = [];
+    for (let year = maxYear; year >= minYear; year--) {
+      years.push(year);
+    }
+    return years;
+  };
+
   const days = getDaysInMonth(currentMonth);
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate()); // At least 13 years old
   const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate()); // Max 120 years old
 
+  // Year Picker View
+  if (viewMode === 'year') {
+    const years = getYearRange();
+    const currentYear = currentMonth.getFullYear();
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div
+          className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
+          style={{
+            backgroundColor: "rgba(42, 42, 45, 0.95)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          }}
+        >
+          <div className="flex items-center justify-center mb-6">
+            <button
+              onClick={handleHeaderClick}
+              className="text-lg font-semibold text-white hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              Select Year
+            </button>
+          </div>
+          <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto">
+            {years.map((year) => (
+              <button
+                key={year}
+                onClick={() => handleYearSelect(year)}
+                className={`p-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  year === currentYear
+                    ? 'text-black font-bold shadow-lg'
+                    : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
+                }`}
+                style={
+                  year === currentYear
+                    ? {
+                        backgroundColor: "rgba(129, 201, 149, 0.9)",
+                        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      }
+                    : {
+                        backgroundColor: "rgba(42, 42, 45, 0.6)",
+                      }
+                }
+              >
+                {year}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Month Picker View
+  if (viewMode === 'month') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div
+          className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
+          style={{
+            backgroundColor: "rgba(42, 42, 45, 0.95)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          }}
+        >
+          <div className="flex items-center justify-center mb-6">
+            <button
+              onClick={handleHeaderClick}
+              className="text-lg font-semibold text-white hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              {selectedYear}
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {monthNames.map((month, index) => (
+              <button
+                key={index}
+                onClick={() => handleMonthSelect(index)}
+                className={`p-4 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
+                    ? 'text-black font-bold shadow-lg'
+                    : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
+                }`}
+                style={
+                  index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
+                    ? {
+                        backgroundColor: "rgba(129, 201, 149, 0.9)",
+                        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      }
+                    : {
+                        backgroundColor: "rgba(42, 42, 45, 0.6)",
+                      }
+                }
+              >
+                {month}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calendar View (default)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
       {/* Backdrop */}
@@ -479,11 +631,14 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
           </button>
           
           <div className="text-center">
-            <h3 className={`text-lg font-semibold text-white transition-opacity duration-150 ${
-              isAnimating ? 'opacity-0' : 'opacity-100'
-            }`}>
+            <button
+              onClick={handleHeaderClick}
+              className={`text-lg font-semibold text-white transition-opacity duration-150 hover:opacity-80 cursor-pointer ${
+                isAnimating ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </h3>
+            </button>
           </div>
           
           <button
