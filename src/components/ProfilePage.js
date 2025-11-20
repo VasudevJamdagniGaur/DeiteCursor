@@ -609,30 +609,11 @@ export default function ProfilePage() {
           <p className="text-xs text-gray-400 mb-4">
             Automatically refreshed daily at 02:00 AM to reflect your latest overall vibe.
           </p>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <span className="text-xs text-gray-500">
-              Last updated:{' '}
-              {bioLastUpdated
-                ? new Date(bioLastUpdated).toLocaleString()
-                : 'Never'}
-            </span>
-            <button
-              onClick={handleManualBioUpdate}
-              disabled={isBioUpdating || !canUpdateBioSummary()}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-300 disabled:opacity-40"
-              style={{
-                backgroundColor: canUpdateBioSummary()
-                  ? "rgba(129, 201, 149, 0.3)"
-                  : "rgba(99, 102, 241, 0.25)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              {isBioUpdating
-                ? 'Updating...'
-                : canUpdateBioSummary()
-                ? 'Refresh summary now'
-                : 'Summary locked until 02:00 AM'}
-            </button>
+          <div className="text-xs text-gray-500">
+            Last updated:{' '}
+            {bioLastUpdated
+              ? new Date(bioLastUpdated).toLocaleString()
+              : 'Never'}
           </div>
         </div>
         {/* Actions Card */}
