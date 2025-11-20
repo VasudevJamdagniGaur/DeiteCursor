@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signUpUser, getCurrentUser } from '../services/authService';
 import LaserFlow from './LaserFlow';
@@ -490,11 +490,61 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate()); // At least 13 years old
   const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate()); // Max 120 years old
 
-  // Year Picker View
+  // Year Picker View - iOS-style wheel picker
   if (viewMode === 'year') {
     const years = getYearRange();
     const currentYear = currentMonth.getFullYear();
+    const [scrollPosition, setScrollPosition] = useState(0);
+    const scrollContainerRef = useRef(null);
+    const itemHeight = 50; // Height of each item in pixels
     
+    // Find index of current year
+    const currentYearIndex = years.findIndex(y => y === currentYear);
+    
+    // Scroll to current year on mount
+    useEffect(() => {
+      if (scrollContainerRef.current && currentYearIndex >= 0) {
+        const scrollTo = currentYearIndex * itemHeight;
+        scrollContainerRef.current.scrollTop = scrollTo;
+        setScrollPosition(scrollTo);
+      }
+    }, [currentYearIndex, itemHeight]);
+
+    const handleScroll = (e) => {
+      const scrollTop = e.target.scrollTop;
+      setScrollPosition(scrollTop);
+      
+      // Calculate which year is in the center
+      const centerIndex = Math.round(scrollTop / itemHeight);
+      if (centerIndex >= 0 && centerIndex < years.length) {
+        const centeredYear = years[centerIndex];
+        // Update selected year when scrolling stops (debounced)
+        clearTimeout(window.scrollTimeout);
+        window.scrollTimeout = setTimeout(() => {
+          if (centeredYear !== currentYear) {
+            handleYearSelect(centeredYear);
+          }
+        }, 150);
+      }
+    };
+
+    const getItemOpacity = (index) => {
+      const centerIndex = Math.round(scrollPosition / itemHeight);
+      const distance = Math.abs(index - centerIndex);
+      if (distance === 0) return 1; // Center item - fully visible
+      if (distance === 1) return 0.6; // Adjacent items
+      if (distance === 2) return 0.4;
+      return 0.2; // Further items
+    };
+
+    const getItemScale = (index) => {
+      const centerIndex = Math.round(scrollPosition / itemHeight);
+      const distance = Math.abs(index - centerIndex);
+      if (distance === 0) return 1;
+      if (distance === 1) return 0.9;
+      return 0.8;
+    };
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
         <div 
@@ -520,54 +570,81 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
               Select Year
             </button>
           </div>
-          <div 
-            className="flex-1 overflow-y-auto"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(129, 201, 149, 0.5) rgba(42, 42, 45, 0.3)'
-            }}
-          >
-            <style>{`
-              div::-webkit-scrollbar {
-                width: 8px;
-              }
-              div::-webkit-scrollbar-track {
-                background: rgba(42, 42, 45, 0.3);
-                border-radius: 10px;
-              }
-              div::-webkit-scrollbar-thumb {
-                background: rgba(129, 201, 149, 0.5);
-                border-radius: 10px;
-              }
-              div::-webkit-scrollbar-thumb:hover {
-                background: rgba(129, 201, 149, 0.7);
-              }
-            `}</style>
-            <div className="space-y-2 pr-2">
-              {years.map((year) => (
-                <button
-                  key={year}
-                  onClick={() => handleYearSelect(year)}
-                  className={`w-full p-4 rounded-xl text-base font-medium transition-all duration-200 text-left ${
-                    year === currentYear
-                      ? 'text-black font-bold shadow-lg'
-                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white active:bg-gray-700/50'
-                  }`}
-                  style={
-                    year === currentYear
-                      ? {
-                          backgroundColor: "rgba(129, 201, 149, 0.9)",
-                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                          border: "1px solid rgba(255, 255, 255, 0.08)",
-                        }
-                      : {
-                          backgroundColor: "rgba(42, 42, 45, 0.6)",
-                        }
-                  }
-                >
-                  {year}
-                </button>
-              ))}
+          
+          {/* Wheel Picker Container */}
+          <div className="relative" style={{ height: '250px', overflow: 'hidden' }}>
+            {/* Selection indicator lines */}
+            <div 
+              className="absolute left-0 right-0 pointer-events-none"
+              style={{
+                top: '50%',
+                transform: 'translateY(-50%)',
+                height: `${itemHeight}px`,
+                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                zIndex: 1
+              }}
+            />
+            
+            {/* Scrollable list */}
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="overflow-y-scroll h-full"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                scrollSnapType: 'y mandatory',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              <style>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              
+              {/* Top padding for centering */}
+              <div style={{ height: '100px' }} />
+              
+              {/* Year items */}
+              {years.map((year, index) => {
+                const opacity = getItemOpacity(index);
+                const scale = getItemScale(index);
+                const isCenter = Math.round(scrollPosition / itemHeight) === index;
+                
+                return (
+                  <div
+                    key={year}
+                    onClick={() => {
+                      if (scrollContainerRef.current) {
+                        const scrollTo = index * itemHeight;
+                        scrollContainerRef.current.scrollTo({
+                          top: scrollTo,
+                          behavior: 'smooth'
+                        });
+                        setScrollPosition(scrollTo);
+                        setTimeout(() => handleYearSelect(year), 300);
+                      }
+                    }}
+                    className="flex items-center justify-center cursor-pointer transition-all duration-150"
+                    style={{
+                      height: `${itemHeight}px`,
+                      opacity: opacity,
+                      transform: `scale(${scale})`,
+                      color: isCenter ? '#FFFFFF' : '#9CA3AF',
+                      fontWeight: isCenter ? '600' : '400',
+                      fontSize: isCenter ? '20px' : '18px',
+                      scrollSnapAlign: 'center'
+                    }}
+                  >
+                    {year}
+                  </div>
+                );
+              })}
+              
+              {/* Bottom padding for centering */}
+              <div style={{ height: '100px' }} />
             </div>
           </div>
         </div>
@@ -575,8 +652,56 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     );
   }
 
-  // Month Picker View
+  // Month Picker View - iOS-style wheel picker
   if (viewMode === 'month') {
+    const [scrollPosition, setScrollPosition] = useState(0);
+    const scrollContainerRef = useRef(null);
+    const itemHeight = 50;
+    const currentMonthIndex = currentMonth.getMonth();
+    
+    // Scroll to current month on mount
+    useEffect(() => {
+      if (scrollContainerRef.current) {
+        const scrollTo = currentMonthIndex * itemHeight;
+        scrollContainerRef.current.scrollTop = scrollTo;
+        setScrollPosition(scrollTo);
+      }
+    }, [currentMonthIndex, itemHeight]);
+
+    const handleScroll = (e) => {
+      const scrollTop = e.target.scrollTop;
+      setScrollPosition(scrollTop);
+      
+      // Calculate which month is in the center
+      const centerIndex = Math.round(scrollTop / itemHeight);
+      if (centerIndex >= 0 && centerIndex < monthNames.length) {
+        // Update selected month when scrolling stops (debounced)
+        clearTimeout(window.scrollTimeout);
+        window.scrollTimeout = setTimeout(() => {
+          if (centerIndex !== currentMonthIndex) {
+            handleMonthSelect(centerIndex);
+          }
+        }, 150);
+      }
+    };
+
+    const getItemOpacity = (index) => {
+      const centerIndex = Math.round(scrollPosition / itemHeight);
+      const distance = Math.abs(index - centerIndex);
+      if (distance === 0) return 1;
+      if (distance === 1) return 0.6;
+      if (distance === 2) return 0.4;
+      return 0.2;
+    };
+
+    const getItemScale = (index) => {
+      const centerIndex = Math.round(scrollPosition / itemHeight);
+      const distance = Math.abs(index - centerIndex);
+      if (distance === 0) return 1;
+      if (distance === 1) return 0.9;
+      return 0.8;
+    };
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
         <div 
@@ -602,38 +727,81 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
               {selectedYear}
             </button>
           </div>
-          <div 
-            className="flex-1 overflow-y-auto"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(129, 201, 149, 0.5) rgba(42, 42, 45, 0.3)'
-            }}
-          >
-            <div className="space-y-2 pr-2">
-              {monthNames.map((month, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleMonthSelect(index)}
-                  className={`w-full p-4 rounded-xl text-base font-medium transition-all duration-200 text-left ${
-                    index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
-                      ? 'text-black font-bold shadow-lg'
-                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white active:bg-gray-700/50'
-                  }`}
-                  style={
-                    index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
-                      ? {
-                          backgroundColor: "rgba(129, 201, 149, 0.9)",
-                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                          border: "1px solid rgba(255, 255, 255, 0.08)",
-                        }
-                      : {
-                          backgroundColor: "rgba(42, 42, 45, 0.6)",
-                        }
-                  }
-                >
-                  {month}
-                </button>
-              ))}
+          
+          {/* Wheel Picker Container */}
+          <div className="relative" style={{ height: '250px', overflow: 'hidden' }}>
+            {/* Selection indicator lines */}
+            <div 
+              className="absolute left-0 right-0 pointer-events-none"
+              style={{
+                top: '50%',
+                transform: 'translateY(-50%)',
+                height: `${itemHeight}px`,
+                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                zIndex: 1
+              }}
+            />
+            
+            {/* Scrollable list */}
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="overflow-y-scroll h-full"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                scrollSnapType: 'y mandatory',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              <style>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              
+              {/* Top padding for centering */}
+              <div style={{ height: '100px' }} />
+              
+              {/* Month items */}
+              {monthNames.map((month, index) => {
+                const opacity = getItemOpacity(index);
+                const scale = getItemScale(index);
+                const isCenter = Math.round(scrollPosition / itemHeight) === index;
+                
+                return (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      if (scrollContainerRef.current) {
+                        const scrollTo = index * itemHeight;
+                        scrollContainerRef.current.scrollTo({
+                          top: scrollTo,
+                          behavior: 'smooth'
+                        });
+                        setScrollPosition(scrollTo);
+                        setTimeout(() => handleMonthSelect(index), 300);
+                      }
+                    }}
+                    className="flex items-center justify-center cursor-pointer transition-all duration-150"
+                    style={{
+                      height: `${itemHeight}px`,
+                      opacity: opacity,
+                      transform: `scale(${scale})`,
+                      color: isCenter ? '#FFFFFF' : '#9CA3AF',
+                      fontWeight: isCenter ? '600' : '400',
+                      fontSize: isCenter ? '20px' : '18px',
+                      scrollSnapAlign: 'center'
+                    }}
+                  >
+                    {month}
+                  </div>
+                );
+              })}
+              
+              {/* Bottom padding for centering */}
+              <div style={{ height: '100px' }} />
             </div>
           </div>
         </div>
