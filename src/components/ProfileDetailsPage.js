@@ -403,16 +403,11 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     if (
       viewMode === 'year' &&
       yearScrollContainerRef.current &&
-      selectedYear &&
-      birthday
+      selectedYear
     ) {
       const getYearRange = () => {
-        const today = new Date();
-        const maxYear = today.getFullYear() - 13;
-        const minYear = today.getFullYear() - 120;
         const years = [];
-        // Reverse order: older years first
-        for (let year = minYear; year <= maxYear; year++) {
+        for (let year = 1905; year <= new Date().getFullYear() - 13; year++) {
           years.push(year);
         }
         return years;
