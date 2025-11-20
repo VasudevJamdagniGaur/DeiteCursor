@@ -366,21 +366,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div
-                  className="p-4 rounded-xl"
-                  style={{
-                    backgroundColor: "rgba(42, 42, 45, 0.6)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                  }}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Mail className="w-5 h-5 text-purple-400" />
-                    <span className="font-medium text-gray-300">About Me</span>
-                  </div>
-                  <p className="text-white">
-                    {editData.bio || 'No bio added yet'}
-                  </p>
-                </div>
               </div>
 
               <button
@@ -452,16 +437,6 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block mb-2 font-medium text-gray-300">About Me</label>
-                <p className="text-white">
-                  {editData.bio || 'No bio added yet'}
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  This section is captured during onboarding and can be updated through support if needed.
-                </p>
               </div>
 
               <div className="flex gap-3 mt-6">
