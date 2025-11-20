@@ -452,19 +452,23 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block mb-2 font-medium text-gray-300">About Me</label>
-                  <textarea
-                    value={editData.bio}
-                    onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 h-24 resize-none"
-                    style={{
-                      backgroundColor: "rgba(42, 42, 45, 0.6)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                    }}
-                    placeholder="Tell us a bit about yourself..."
-                  />
+              <div className="mt-6">
+                <label className="block mb-2 font-medium text-gray-300">About Me</label>
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                  }}
+                >
+                  <p className="text-white">
+                    {editData.bio || 'No bio added yet'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    This section is captured during onboarding and can be updated through support if needed.
+                  </p>
                 </div>
               </div>
 
