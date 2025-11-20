@@ -35,6 +35,8 @@ export default function ProfilePage() {
   const [profilePicture, setProfilePicture] = useState(null);
   const [pendingPicture, setPendingPicture] = useState(null);
   const [showPicturePreview, setShowPicturePreview] = useState(false);
+  const [bioLastUpdated, setBioLastUpdated] = useState(null);
+  const [isBioUpdating, setIsBioUpdating] = useState(false);
   const [editData, setEditData] = useState({
     displayName: '',
     age: '',
@@ -57,10 +59,33 @@ export default function ProfilePage() {
       if (savedPicture) {
         setProfilePicture(savedPicture);
       }
+
+      const savedBioUpdated = localStorage.getItem(`user_bio_updated_${currentUser.uid}`);
+      if (savedBioUpdated) {
+        setBioLastUpdated(savedBioUpdated);
+      }
     } else {
       navigate('/login');
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (user) {
+      ensureDailyBioSummary();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const now = new Date();
+    const nextWindow = getNext2AM();
+    const delay = nextWindow.getTime() - now.getTime();
+    const timer = setTimeout(() => {
+      const summary = generateAutoBioSummary();
+      persistBioSummary(summary);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [user, editData.age, editData.gender]);
 
   const handleBack = () => {
     navigate('/dashboard');
@@ -110,6 +135,10 @@ export default function ProfilePage() {
     // Reset profile picture to saved version
     const savedPicture = localStorage.getItem(`user_profile_picture_${user?.uid}`);
     setProfilePicture(savedPicture || null);
+    if (user) {
+      const savedUpdated = localStorage.getItem(`user_bio_updated_${user.uid}`);
+      setBioLastUpdated(savedUpdated || null);
+    }
     setIsEditing(false);
   };
 
@@ -143,6 +172,84 @@ export default function ProfilePage() {
       localStorage.removeItem(`user_profile_picture_${user.uid}`);
     }
     window.dispatchEvent(new Event('profilePictureUpdated'));
+  };
+
+  const getLast2AM = () => {
+    const now = new Date();
+    const last2AM = new Date(now);
+    last2AM.setHours(2, 0, 0, 0);
+    if (now < last2AM) {
+      last2AM.setDate(last2AM.getDate() - 1);
+    }
+    return last2AM;
+  };
+
+  const getNext2AM = () => {
+    const base = getLast2AM();
+    base.setDate(base.getDate() + 1);
+    return base;
+  };
+
+  const canUpdateBioSummary = () => {
+    if (!bioLastUpdated) return true;
+    return new Date(bioLastUpdated) < getLast2AM();
+  };
+
+  const generateAutoBioSummary = () => {
+    const firstName = user?.displayName?.split(' ')[0] || 'You';
+    const age = editData.age || localStorage.getItem(`user_age_${user?.uid}`) || '';
+    const gender = editData.gender || localStorage.getItem(`user_gender_${user?.uid}`) || '';
+    const moods = [
+      'feel calm and reflective today',
+      'are focused on steady growth',
+      'are hopeful and optimistic',
+      'are taking things one step at a time',
+      'are balancing ambition with self-care',
+      'are thoughtful and kind in your interactions',
+      'bring grounded energy into conversations',
+      'are ready to explore new ideas gently',
+    ];
+    const toneIndex = new Date().getDate() % moods.length;
+    const tone = moods[toneIndex];
+    const agePart = age ? `At ${age}, ` : '';
+    const genderPart = gender ? `${gender} ` : '';
+    return `${agePart}${firstName} (${genderPart.trim() || 'they'}) ${tone}.`;
+  };
+
+  const persistBioSummary = (summary) => {
+    if (!user) return;
+    const timestamp = new Date().toISOString();
+    localStorage.setItem(`user_bio_${user.uid}`, summary);
+    localStorage.setItem(`user_bio_updated_${user.uid}`, timestamp);
+    setBioLastUpdated(timestamp);
+    setEditData((prev) => ({ ...prev, bio: summary }));
+  };
+
+  const ensureDailyBioSummary = () => {
+    if (!user) return;
+    const updatedKey = `user_bio_updated_${user.uid}`;
+    const lastUpdatedISO = localStorage.getItem(updatedKey);
+    if (lastUpdatedISO) {
+      setBioLastUpdated(lastUpdatedISO);
+    }
+    const needsRefresh =
+      lastUpdatedISO ? new Date(lastUpdatedISO) < getLast2AM() : false;
+    if (needsRefresh) {
+      const summary = generateAutoBioSummary();
+      persistBioSummary(summary);
+    }
+  };
+
+  const handleManualBioUpdate = () => {
+    if (!canUpdateBioSummary()) {
+      const nextWindow = getNext2AM();
+      alert(`You can refresh this summary after ${nextWindow.toLocaleString()}.`);
+      return;
+    }
+    setIsBioUpdating(true);
+    const summary = generateAutoBioSummary();
+    persistBioSummary(summary);
+    setIsBioUpdating(false);
   };
 
   const handleConfirmPicture = () => {
@@ -499,9 +606,34 @@ export default function ProfilePage() {
           <p className="text-white mb-2">
             {editData.bio || 'No bio added yet'}
           </p>
-          <p className="text-xs text-gray-400">
-            This section is captured during onboarding and can be updated through support if needed.
+          <p className="text-xs text-gray-400 mb-4">
+            Automatically refreshed daily at 02:00 AM to reflect your latest overall vibe.
           </p>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <span className="text-xs text-gray-500">
+              Last updated:{' '}
+              {bioLastUpdated
+                ? new Date(bioLastUpdated).toLocaleString()
+                : 'Never'}
+            </span>
+            <button
+              onClick={handleManualBioUpdate}
+              disabled={isBioUpdating || !canUpdateBioSummary()}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-300 disabled:opacity-40"
+              style={{
+                backgroundColor: canUpdateBioSummary()
+                  ? "rgba(129, 201, 149, 0.3)"
+                  : "rgba(99, 102, 241, 0.25)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              {isBioUpdating
+                ? 'Updating...'
+                : canUpdateBioSummary()
+                ? 'Refresh summary now'
+                : 'Summary locked until 02:00 AM'}
+            </button>
+          </div>
         </div>
         {/* Actions Card */}
         <div
