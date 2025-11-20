@@ -485,8 +485,10 @@ export default function ProfilePage() {
                   Cancel
                 </button>
               </div>
-              </>
-            )}
+            </>
+          )}
+        </div>
+
         {/* Static About Me Section */}
         <div
           className="backdrop-blur-lg border-2 rounded-2xl p-6"
