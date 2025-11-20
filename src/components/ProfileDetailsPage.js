@@ -387,6 +387,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
   const [monthScrollPosition, setMonthScrollPosition] = useState(0);
   const monthScrollContainerRef = useRef(null);
 
+  // Initialize selected year
   useEffect(() => {
     if (selectedDate) {
       setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
@@ -397,10 +398,48 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     }
   }, [selectedDate]);
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  // Scroll to current year when year picker opens
+  useEffect(() => {
+    if (viewMode === 'year' && yearScrollContainerRef.current && selectedYear) {
+      const getYearRange = () => {
+        const today = new Date();
+        const maxYear = today.getFullYear() - 13;
+        const minYear = today.getFullYear() - 120;
+        const years = [];
+        for (let year = maxYear; year >= minYear; year--) {
+          years.push(year);
+        }
+        return years;
+      };
+      const years = getYearRange();
+      const currentYearIndex = years.findIndex(y => y === selectedYear);
+      if (currentYearIndex >= 0) {
+        const itemHeight = 50;
+        const scrollTo = currentYearIndex * itemHeight;
+        setTimeout(() => {
+          if (yearScrollContainerRef.current) {
+            yearScrollContainerRef.current.scrollTop = scrollTo;
+            setYearScrollPosition(scrollTo);
+          }
+        }, 100);
+      }
+    }
+  }, [viewMode, selectedYear]);
+
+  // Scroll to current month when month picker opens
+  useEffect(() => {
+    if (viewMode === 'month' && monthScrollContainerRef.current) {
+      const currentMonthIndex = currentMonth.getMonth();
+      const itemHeight = 50;
+      const scrollTo = currentMonthIndex * itemHeight;
+      setTimeout(() => {
+        if (monthScrollContainerRef.current) {
+          monthScrollContainerRef.current.scrollTop = scrollTo;
+          setMonthScrollPosition(scrollTo);
+        }
+      }, 100);
+    }
+  }, [viewMode, currentMonth]);
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -493,63 +532,96 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     return years;
   };
 
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
   const days = getDaysInMonth(currentMonth);
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate()); // At least 13 years old
   const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate()); // Max 120 years old
 
-  // Year Picker View - iOS-style wheel picker
+  // Helper functions for year picker
+  const handleYearScroll = (e) => {
+    const scrollTop = e.target.scrollTop;
+    setYearScrollPosition(scrollTop);
+    
+    const itemHeight = 50;
+    const years = getYearRange();
+    const centerIndex = Math.round(scrollTop / itemHeight);
+    if (centerIndex >= 0 && centerIndex < years.length) {
+      const centeredYear = years[centerIndex];
+      clearTimeout(window.yearScrollTimeout);
+      window.yearScrollTimeout = setTimeout(() => {
+        if (centeredYear !== selectedYear) {
+          handleYearSelect(centeredYear);
+        }
+      }, 150);
+    }
+  };
+
+  const getYearItemOpacity = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(yearScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.6;
+    if (distance === 2) return 0.4;
+    return 0.2;
+  };
+
+  const getYearItemScale = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(yearScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.9;
+    return 0.8;
+  };
+
+  // Helper functions for month picker
+  const handleMonthScroll = (e) => {
+    const scrollTop = e.target.scrollTop;
+    setMonthScrollPosition(scrollTop);
+    
+    const itemHeight = 50;
+    const centerIndex = Math.round(scrollTop / itemHeight);
+    if (centerIndex >= 0 && centerIndex < monthNames.length) {
+      clearTimeout(window.monthScrollTimeout);
+      window.monthScrollTimeout = setTimeout(() => {
+        if (centerIndex !== currentMonth.getMonth()) {
+          handleMonthSelect(centerIndex);
+        }
+      }, 150);
+    }
+  };
+
+  const getMonthItemOpacity = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(monthScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.6;
+    if (distance === 2) return 0.4;
+    return 0.2;
+  };
+
+  const getMonthItemScale = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(monthScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.9;
+    return 0.8;
+  };
+
+  // Year Picker View - Wheel picker
   if (viewMode === 'year') {
     const years = getYearRange();
-    const currentYear = currentMonth.getFullYear();
-    const itemHeight = 50; // Height of each item in pixels
-    
-    // Find index of current year
-    const currentYearIndex = years.findIndex(y => y === currentYear);
-    
-    // Scroll to current year when year picker opens
-    useEffect(() => {
-      if (yearScrollContainerRef.current && currentYearIndex >= 0) {
-        const scrollTo = currentYearIndex * itemHeight;
-        yearScrollContainerRef.current.scrollTop = scrollTo;
-        setYearScrollPosition(scrollTo);
-      }
-    }, [viewMode, currentYearIndex, itemHeight]);
+    const currentYear = selectedYear || currentMonth.getFullYear();
+    const itemHeight = 50;
 
-    const handleYearScroll = (e) => {
-      const scrollTop = e.target.scrollTop;
-      setYearScrollPosition(scrollTop);
-      
-      // Calculate which year is in the center
-      const centerIndex = Math.round(scrollTop / itemHeight);
-      if (centerIndex >= 0 && centerIndex < years.length) {
-        const centeredYear = years[centerIndex];
-        // Update selected year when scrolling stops (debounced)
-        clearTimeout(window.yearScrollTimeout);
-        window.yearScrollTimeout = setTimeout(() => {
-          if (centeredYear !== currentYear) {
-            handleYearSelect(centeredYear);
-          }
-        }, 150);
-      }
-    };
-
-    const getYearItemOpacity = (index) => {
-      const centerIndex = Math.round(yearScrollPosition / itemHeight);
-      const distance = Math.abs(index - centerIndex);
-      if (distance === 0) return 1; // Center item - fully visible
-      if (distance === 1) return 0.6; // Adjacent items
-      if (distance === 2) return 0.4;
-      return 0.2; // Further items
-    };
-
-    const getYearItemScale = (index) => {
-      const centerIndex = Math.round(yearScrollPosition / itemHeight);
-      const distance = Math.abs(index - centerIndex);
-      if (distance === 0) return 1;
-      if (distance === 1) return 0.9;
-      return 0.8;
-    };
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
@@ -658,53 +730,9 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     );
   }
 
-  // Month Picker View - iOS-style wheel picker
+  // Month Picker View - Wheel picker
   if (viewMode === 'month') {
     const itemHeight = 50;
-    const currentMonthIndex = currentMonth.getMonth();
-    
-    // Scroll to current month when month picker opens
-    useEffect(() => {
-      if (monthScrollContainerRef.current) {
-        const scrollTo = currentMonthIndex * itemHeight;
-        monthScrollContainerRef.current.scrollTop = scrollTo;
-        setMonthScrollPosition(scrollTo);
-      }
-    }, [viewMode, currentMonthIndex, itemHeight]);
-
-    const handleMonthScroll = (e) => {
-      const scrollTop = e.target.scrollTop;
-      setMonthScrollPosition(scrollTop);
-      
-      // Calculate which month is in the center
-      const centerIndex = Math.round(scrollTop / itemHeight);
-      if (centerIndex >= 0 && centerIndex < monthNames.length) {
-        // Update selected month when scrolling stops (debounced)
-        clearTimeout(window.monthScrollTimeout);
-        window.monthScrollTimeout = setTimeout(() => {
-          if (centerIndex !== currentMonthIndex) {
-            handleMonthSelect(centerIndex);
-          }
-        }, 150);
-      }
-    };
-
-    const getMonthItemOpacity = (index) => {
-      const centerIndex = Math.round(monthScrollPosition / itemHeight);
-      const distance = Math.abs(index - centerIndex);
-      if (distance === 0) return 1;
-      if (distance === 1) return 0.6;
-      if (distance === 2) return 0.4;
-      return 0.2;
-    };
-
-    const getMonthItemScale = (index) => {
-      const centerIndex = Math.round(monthScrollPosition / itemHeight);
-      const distance = Math.abs(index - centerIndex);
-      if (distance === 0) return 1;
-      if (distance === 1) return 0.9;
-      return 0.8;
-    };
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
