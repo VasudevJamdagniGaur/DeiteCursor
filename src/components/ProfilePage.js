@@ -33,6 +33,8 @@ export default function ProfilePage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
+  const [pendingPicture, setPendingPicture] = useState(null);
+  const [showPicturePreview, setShowPicturePreview] = useState(false);
   const [editData, setEditData] = useState({
     displayName: '',
     age: '',
@@ -128,7 +130,8 @@ export default function ProfilePage() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfilePicture(reader.result);
+        setPendingPicture(reader.result);
+        setShowPicturePreview(true);
       };
       reader.readAsDataURL(file);
     }
@@ -139,6 +142,23 @@ export default function ProfilePage() {
     if (user) {
       localStorage.removeItem(`user_profile_picture_${user.uid}`);
     }
+    window.dispatchEvent(new Event('profilePictureUpdated'));
+  };
+
+  const handleConfirmPicture = () => {
+    if (!pendingPicture) return;
+    setProfilePicture(pendingPicture);
+    if (user) {
+      localStorage.setItem(`user_profile_picture_${user.uid}`, pendingPicture);
+      window.dispatchEvent(new Event('profilePictureUpdated'));
+    }
+    setPendingPicture(null);
+    setShowPicturePreview(false);
+  };
+
+  const handleCancelPictureSelection = () => {
+    setPendingPicture(null);
+    setShowPicturePreview(false);
   };
 
   const handleSignOut = async () => {
@@ -638,5 +658,59 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+
+    {showPicturePreview && pendingPicture && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-black/70"
+          onClick={handleCancelPictureSelection}
+        />
+        <div
+          className="relative z-10 w-full max-w-md rounded-3xl p-6 space-y-6"
+          style={{
+            backgroundColor: "rgba(18, 18, 18, 0.95)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)",
+          }}
+        >
+          <h3 className="text-xl font-semibold text-white text-center">Preview your photo</h3>
+          <p className="text-center text-gray-400 text-sm">
+            Everything inside the circle will appear on your profile.
+          </p>
+          <div className="flex justify-center">
+            <div
+              className="w-48 h-48 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl"
+              style={{
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
+              }}
+            >
+              <img
+                src={pendingPicture}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={handleCancelPictureSelection}
+              className="flex-1 py-3 rounded-2xl font-semibold text-white border border-gray-600 hover:bg-gray-700/40 transition-all duration-200"
+            >
+              Retake
+            </button>
+            <button
+              onClick={handleConfirmPicture}
+              className="flex-1 py-3 rounded-2xl font-semibold text-black"
+              style={{
+                backgroundColor: "#8AB4F8",
+                boxShadow: "0 10px 20px rgba(138, 180, 248, 0.35)",
+              }}
+            >
+              Use Photo
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
