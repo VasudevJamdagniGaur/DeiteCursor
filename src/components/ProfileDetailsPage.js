@@ -400,7 +400,12 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
 
   // Scroll to current year when year picker opens
   useEffect(() => {
-    if (viewMode === 'year' && yearScrollContainerRef.current && selectedYear) {
+    if (
+      viewMode === 'year' &&
+      yearScrollContainerRef.current &&
+      selectedYear &&
+      birthday
+    ) {
       const getYearRange = () => {
         const today = new Date();
         const maxYear = today.getFullYear() - 13;
@@ -425,7 +430,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
         }, 100);
       }
     }
-  }, [viewMode, selectedYear]);
+  }, [viewMode, selectedYear, birthday]);
 
   // Scroll to current month when month picker opens
   useEffect(() => {
