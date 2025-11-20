@@ -425,7 +425,7 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
         }, 100);
       }
     }
-  }, [viewMode, selectedYear, birthday]);
+  }, [viewMode, selectedYear]);
 
   // Scroll to current month when month picker opens
   useEffect(() => {
