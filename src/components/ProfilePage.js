@@ -487,9 +487,6 @@ export default function ProfilePage() {
               </div>
               </>
             )}
-          </div>
-        </div>
-
         {/* Static About Me Section */}
         <div
           className="backdrop-blur-lg border-2 rounded-2xl p-6"
