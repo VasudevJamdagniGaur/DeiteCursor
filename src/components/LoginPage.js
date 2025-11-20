@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { Brain, Heart, Star, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { signInUser, checkEmailExists } from '../services/authService';
+import { signInUser } from '../services/authService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -56,35 +56,32 @@ export default function LoginPage() {
     setLoading(true);
     setErrors({});
 
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    if (normalizedEmail !== formData.email) {
+      setFormData(prev => ({ ...prev, email: normalizedEmail }));
+    }
+
     try {
-      // First check if account exists
-      const emailCheck = await checkEmailExists(formData.email);
-      
-      if (!emailCheck.exists) {
-        setErrors({ email: 'No account found with this email address' });
-        setLoading(false);
-        return;
-      }
-      
-      // If account exists, proceed with sign in
-      const result = await signInUser(formData.email, formData.password);
+      const result = await signInUser(normalizedEmail, formData.password);
       
       if (result.success) {
         console.log('User signed in successfully:', result.user);
         navigate('/dashboard');
       } else {
-        // Since we already checked account exists, any error is likely password related
-        if (result.errorCode === 'auth/invalid-credential' || 
-            result.errorCode === 'auth/wrong-password' ||
-            (result.error && (
-              result.error.includes('auth/invalid-credential') || 
-              result.error.includes('auth/wrong-password') ||
-              result.error.includes('invalid-credential') ||
-              result.error.includes('wrong-password')
-            ))) {
+        if (
+          result.errorCode === 'auth/user-not-found' ||
+          result.error?.includes('auth/user-not-found')
+        ) {
+          setErrors({ email: 'No account found with this email address' });
+        } else if (
+          result.errorCode === 'auth/invalid-credential' ||
+          result.errorCode === 'auth/wrong-password' ||
+          result.error?.includes('wrong-password') ||
+          result.error?.includes('invalid-credential')
+        ) {
           setErrors({ password: 'You have entered a wrong password' });
         } else {
-          setErrors({ general: result.error });
+          setErrors({ general: result.error || 'Login failed. Please try again.' });
         }
       }
     } catch (err) {
