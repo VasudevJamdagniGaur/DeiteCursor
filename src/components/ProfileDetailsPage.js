@@ -406,7 +406,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
         const maxYear = today.getFullYear() - 13;
         const minYear = today.getFullYear() - 120;
         const years = [];
-        for (let year = maxYear; year >= minYear; year--) {
+        // Reverse order: older years first
+        for (let year = minYear; year <= maxYear; year++) {
           years.push(year);
         }
         return years;
@@ -526,7 +527,8 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
     const maxYear = today.getFullYear() - 13; // At least 13 years old
     const minYear = today.getFullYear() - 120; // Max 120 years old
     const years = [];
-    for (let year = maxYear; year >= minYear; year--) {
+    // Reverse order: older years first (scroll down = newer years, scroll up = older years)
+    for (let year = minYear; year <= maxYear; year++) {
       years.push(year);
     }
     return years;
