@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signUpUser, getCurrentUser } from '../services/authService';
 import LaserFlow from './LaserFlow';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 const ProfileDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [birthday, setBirthday] = useState(null);
+  const [birthdayDisplay, setBirthdayDisplay] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
   const [gender, setGender] = useState('');
   const [aboutYou, setAboutYou] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,11 +32,37 @@ const ProfileDetailsPage = () => {
     return null; // Will redirect via useEffect
   }
 
+  const calculateAge = (birthDate) => {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateDisplay = (date) => {
+    if (!date) return '';
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };
+
   const validate = () => {
     if (!name.trim()) return 'Please enter your name.';
-    if (!age.trim()) return 'Please enter your age.';
-    const ageNum = parseInt(age);
-    if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) return 'Please enter a valid age (13-120).';
+    if (!birthday) return 'Please select your birthday.';
+    const age = calculateAge(birthday);
+    if (age < 13) return 'You must be at least 13 years old to use this service.';
+    if (age > 120) return 'Please enter a valid birthday.';
     if (!gender) return 'Please select your gender.';
     if (!aboutYou.trim()) return 'Please tell us about yourself.';
     return '';
@@ -66,14 +95,19 @@ const ProfileDetailsPage = () => {
         // Get the current user to save profile data
         const user = getCurrentUser();
         if (user) {
+          // Calculate age from birthday
+          const age = calculateAge(birthday);
+          
           // Save profile data to localStorage (used by deite context and profile page)
-          localStorage.setItem(`user_age_${user.uid}`, age.trim());
+          localStorage.setItem(`user_age_${user.uid}`, age.toString());
+          localStorage.setItem(`user_birthday_${user.uid}`, formatDate(birthday));
           localStorage.setItem(`user_gender_${user.uid}`, gender);
           localStorage.setItem(`user_bio_${user.uid}`, aboutYou.trim());
           
           console.log('✅ Profile data saved:', {
             name: name.trim(),
-            age: age.trim(),
+            age: age,
+            birthday: formatDate(birthday),
             gender: gender,
             aboutYou: aboutYou.trim()
           });
@@ -195,21 +229,51 @@ const ProfileDetailsPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Age</label>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base"
-                style={{ 
-                  fontSize: '16px',
-                  minHeight: '48px'
-                }}
-                placeholder="Your age"
-                min="13"
-                max="120"
-              />
+              <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Birthday</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={birthdayDisplay}
+                  onClick={() => setShowCalendar(true)}
+                  readOnly
+                  className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base pr-12 cursor-pointer"
+                  style={{ 
+                    fontSize: '16px',
+                    minHeight: '48px'
+                  }}
+                  placeholder="Select your birthday"
+                />
+                <div
+                  onClick={() => setShowCalendar(true)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#cbd5e1',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Calendar size={20} />
+                </div>
+              </div>
             </div>
+
+            {/* Birthday Calendar Popup */}
+            {showCalendar && (
+              <BirthdayCalendar
+                selectedDate={birthday}
+                onDateSelect={(date) => {
+                  setBirthday(date);
+                  setBirthdayDisplay(formatDateDisplay(date));
+                  setShowCalendar(false);
+                }}
+                onClose={() => setShowCalendar(false)}
+              />
+            )}
 
             <div>
               <label className="block text-sm mb-3" style={{ color: '#cbd5e1' }}>Gender</label>
@@ -302,6 +366,177 @@ const ProfileDetailsPage = () => {
               Back
             </button>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Birthday Calendar Component
+const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
+  const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date());
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (selectedDate) {
+      setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  }, [selectedDate]);
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    return days;
+  };
+
+  const handlePreviousMonth = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+      setIsAnimating(false);
+    }, 150);
+  };
+
+  const handleNextMonth = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+      setIsAnimating(false);
+    }, 150);
+  };
+
+  const handleDateClick = (date) => {
+    // Don't allow future dates
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (date > today) {
+      return;
+    }
+    onDateSelect(date);
+  };
+
+  const isSelected = (date) => {
+    return date && selectedDate &&
+           date.getDate() === selectedDate.getDate() &&
+           date.getMonth() === selectedDate.getMonth() &&
+           date.getFullYear() === selectedDate.getFullYear();
+  };
+
+  const isFuture = (date) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return date > today;
+  };
+
+  const days = getDaysInMonth(currentMonth);
+  const today = new Date();
+  const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate()); // At least 13 years old
+  const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate()); // Max 120 years old
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Calendar */}
+      <div
+        className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
+        style={{
+          backgroundColor: "rgba(42, 42, 45, 0.95)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={handlePreviousMonth}
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700/30 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-300" />
+          </button>
+          
+          <div className="text-center">
+            <h3 className={`text-lg font-semibold text-white transition-opacity duration-150 ${
+              isAnimating ? 'opacity-0' : 'opacity-100'
+            }`}>
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h3>
+          </div>
+          
+          <button
+            onClick={handleNextMonth}
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700/30 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-300" />
+          </button>
+        </div>
+
+        {/* Day names */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {dayNames.map((day) => (
+            <div key={day} className="text-center py-2">
+              <span className="text-xs font-medium text-gray-400">{day}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className={`grid grid-cols-7 gap-1 transition-opacity duration-150 ${
+          isAnimating ? 'opacity-0' : 'opacity-100'
+        }`}>
+          {days.map((date, index) => (
+            <div key={index} className="aspect-square">
+              {date ? (
+                <button
+                  onClick={() => handleDateClick(date)}
+                  disabled={isFuture(date)}
+                  className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-200 ${
+                    isSelected(date)
+                      ? 'text-black font-bold shadow-lg'
+                      : isFuture(date)
+                      ? 'text-gray-600 cursor-not-allowed opacity-30'
+                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
+                  }`}
+                  style={
+                    isSelected(date)
+                      ? {
+                          backgroundColor: "rgba(129, 201, 149, 0.9)",
+                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                        }
+                      : {}
+                  }
+                >
+                  {date.getDate()}
+                </button>
+              ) : (
+                <div className="w-full h-full" />
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
