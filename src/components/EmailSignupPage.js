@@ -9,7 +9,6 @@ const EmailSignupPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -31,20 +30,13 @@ const EmailSignupPage = () => {
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      setError('');
-      const result = await signUpUser(email.trim(), password, null);
-      if (result.success) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        setError(result.error || 'Sign up failed. Please try again.');
-      }
-    } catch (err) {
-      setError(err.message || 'Sign up failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Navigate to profile details page with email and password
+    navigate('/signup/profile-details', { 
+      state: { 
+        email: email.trim(), 
+        password: password 
+      } 
+    });
   };
 
   return (
@@ -248,7 +240,7 @@ const EmailSignupPage = () => {
               fontSize: '16px'
             }}
           >
-            {isSubmitting ? 'Creating account…' : 'Create account'}
+            Next
           </button>
 
           <button

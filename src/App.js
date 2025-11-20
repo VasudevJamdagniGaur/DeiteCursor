@@ -7,6 +7,7 @@ import LandingPage from './components/LandingPage';
 import WelcomePage from './components/WelcomePage';
 import SignupPage from './components/SignupPage';
 import EmailSignupPage from './components/EmailSignupPage';
+import ProfileDetailsPage from './components/ProfileDetailsPage';
 import LoginPage from './components/LoginPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import DashboardPage from './components/DashboardPage';
@@ -140,6 +141,7 @@ function AppContent() {
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/signup/email" element={<EmailSignupPage />} />
+        <Route path="/signup/profile-details" element={<ProfileDetailsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
