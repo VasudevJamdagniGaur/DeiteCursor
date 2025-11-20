@@ -18,11 +18,16 @@ const ProfileDetailsPage = () => {
   const password = location.state?.password;
 
   useEffect(() => {
-    // If no email/password, redirect back to signup
+    // If no email/password, redirect back to signup immediately
     if (!email || !password) {
       navigate('/signup/email', { replace: true });
     }
   }, [email, password, navigate]);
+  
+  // Don't render the form if email/password are missing
+  if (!email || !password) {
+    return null; // Will redirect via useEffect
+  }
 
   const validate = () => {
     if (!name.trim()) return 'Please enter your name.';
@@ -36,6 +41,14 @@ const ProfileDetailsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Safety check: ensure email and password are available
+    if (!email || !password) {
+      setError('Missing email or password. Please go back and try again.');
+      navigate('/signup/email', { replace: true });
+      return;
+    }
+    
     const message = validate();
     if (message) {
       setError(message);

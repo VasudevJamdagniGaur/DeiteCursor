@@ -50,20 +50,22 @@ class ErrorBoundary extends React.Component {
             <p style={{ marginBottom: '10px' }}>
               {this.state.error && this.state.error.toString()}
             </p>
-            <details style={{ marginTop: '10px' }}>
-              <summary style={{ cursor: 'pointer', marginBottom: '10px' }}>
-                Error Details
-              </summary>
-              <pre style={{
-                background: 'rgba(0, 0, 0, 0.3)',
-                padding: '10px',
-                borderRadius: '4px',
-                overflow: 'auto',
-                fontSize: '12px'
-              }}>
-                {this.state.errorInfo.componentStack}
-              </pre>
-            </details>
+            {this.state.errorInfo && (
+              <details style={{ marginTop: '10px' }}>
+                <summary style={{ cursor: 'pointer', marginBottom: '10px' }}>
+                  Error Details
+                </summary>
+                <pre style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  fontSize: '12px'
+                }}>
+                  {this.state.errorInfo.componentStack || 'No component stack available'}
+                </pre>
+              </details>
+            )}
           </div>
           <button
             onClick={() => window.location.reload()}
