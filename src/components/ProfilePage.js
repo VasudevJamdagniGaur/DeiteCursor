@@ -212,6 +212,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
+    <>
     <div
       className="min-h-screen relative overflow-hidden"
       style={{
@@ -712,5 +713,6 @@ export default function ProfilePage() {
         </div>
       </div>
     )}
+    </>
   );
 }
