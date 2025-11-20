@@ -6,7 +6,6 @@ import LaserFlow from './LaserFlow';
 
 const EmailSignupPage = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,7 +15,6 @@ const EmailSignupPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const validate = () => {
-    if (!name.trim()) return 'Please enter your name.';
     if (!email.trim()) return 'Please enter your email.';
     // Basic email check
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Please enter a valid email address.';
@@ -36,7 +34,7 @@ const EmailSignupPage = () => {
     try {
       setIsSubmitting(true);
       setError('');
-      const result = await signUpUser(email.trim(), password, name.trim());
+      const result = await signUpUser(email.trim(), password, null);
       if (result.success) {
         navigate('/dashboard', { replace: true });
       } else {
@@ -136,21 +134,6 @@ const EmailSignupPage = () => {
         >
         <h1 className="text-xl font-semibold mb-6" style={{ color: 'white' }}>Create your account</h1>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mobile-button mobile-input w-full px-4 py-3 rounded-xl text-base"
-              style={{ 
-                fontSize: '16px',
-                minHeight: '48px'
-              }}
-              placeholder="Your full name"
-              autoComplete="name"
-            />
-          </div>
           <div>
             <label className="block text-sm mb-2" style={{ color: '#cbd5e1' }}>Email</label>
             <input
