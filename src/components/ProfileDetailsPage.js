@@ -507,9 +507,12 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
             backgroundColor: "rgba(42, 42, 45, 0.95)",
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
             border: "1px solid rgba(255, 255, 255, 0.08)",
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-4 pb-4 border-b border-gray-700/50">
             <button
               onClick={handleHeaderClick}
               className="text-lg font-semibold text-white hover:opacity-80 transition-opacity cursor-pointer"
@@ -517,31 +520,55 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
               Select Year
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto">
-            {years.map((year) => (
-              <button
-                key={year}
-                onClick={() => handleYearSelect(year)}
-                className={`p-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  year === currentYear
-                    ? 'text-black font-bold shadow-lg'
-                    : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
-                }`}
-                style={
-                  year === currentYear
-                    ? {
-                        backgroundColor: "rgba(129, 201, 149, 0.9)",
-                        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                        border: "1px solid rgba(255, 255, 255, 0.08)",
-                      }
-                    : {
-                        backgroundColor: "rgba(42, 42, 45, 0.6)",
-                      }
-                }
-              >
-                {year}
-              </button>
-            ))}
+          <div 
+            className="flex-1 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(129, 201, 149, 0.5) rgba(42, 42, 45, 0.3)'
+            }}
+          >
+            <style>{`
+              div::-webkit-scrollbar {
+                width: 8px;
+              }
+              div::-webkit-scrollbar-track {
+                background: rgba(42, 42, 45, 0.3);
+                border-radius: 10px;
+              }
+              div::-webkit-scrollbar-thumb {
+                background: rgba(129, 201, 149, 0.5);
+                border-radius: 10px;
+              }
+              div::-webkit-scrollbar-thumb:hover {
+                background: rgba(129, 201, 149, 0.7);
+              }
+            `}</style>
+            <div className="space-y-2 pr-2">
+              {years.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => handleYearSelect(year)}
+                  className={`w-full p-4 rounded-xl text-base font-medium transition-all duration-200 text-left ${
+                    year === currentYear
+                      ? 'text-black font-bold shadow-lg'
+                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white active:bg-gray-700/50'
+                  }`}
+                  style={
+                    year === currentYear
+                      ? {
+                          backgroundColor: "rgba(129, 201, 149, 0.9)",
+                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                        }
+                      : {
+                          backgroundColor: "rgba(42, 42, 45, 0.6)",
+                        }
+                  }
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -562,9 +589,12 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
             backgroundColor: "rgba(42, 42, 45, 0.95)",
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
             border: "1px solid rgba(255, 255, 255, 0.08)",
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-4 pb-4 border-b border-gray-700/50">
             <button
               onClick={handleHeaderClick}
               className="text-lg font-semibold text-white hover:opacity-80 transition-opacity cursor-pointer"
@@ -572,31 +602,39 @@ const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
               {selectedYear}
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            {monthNames.map((month, index) => (
-              <button
-                key={index}
-                onClick={() => handleMonthSelect(index)}
-                className={`p-4 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
-                    ? 'text-black font-bold shadow-lg'
-                    : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
-                }`}
-                style={
-                  index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
-                    ? {
-                        backgroundColor: "rgba(129, 201, 149, 0.9)",
-                        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-                        border: "1px solid rgba(255, 255, 255, 0.08)",
-                      }
-                    : {
-                        backgroundColor: "rgba(42, 42, 45, 0.6)",
-                      }
-                }
-              >
-                {month}
-              </button>
-            ))}
+          <div 
+            className="flex-1 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(129, 201, 149, 0.5) rgba(42, 42, 45, 0.3)'
+            }}
+          >
+            <div className="space-y-2 pr-2">
+              {monthNames.map((month, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleMonthSelect(index)}
+                  className={`w-full p-4 rounded-xl text-base font-medium transition-all duration-200 text-left ${
+                    index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
+                      ? 'text-black font-bold shadow-lg'
+                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white active:bg-gray-700/50'
+                  }`}
+                  style={
+                    index === currentMonth.getMonth() && selectedYear === currentMonth.getFullYear()
+                      ? {
+                          backgroundColor: "rgba(129, 201, 149, 0.9)",
+                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                        }
+                      : {
+                          backgroundColor: "rgba(42, 42, 45, 0.6)",
+                        }
+                  }
+                >
+                  {month}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
