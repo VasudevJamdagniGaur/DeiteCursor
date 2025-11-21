@@ -23,7 +23,8 @@ import {
   Phone,
   MessageCircle,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Gift
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -47,7 +48,8 @@ export default function ProfilePage() {
     displayName: '',
     age: '',
     gender: '',
-    bio: ''
+    bio: '',
+    birthday: ''
   });
 
   useEffect(() => {
@@ -58,7 +60,8 @@ export default function ProfilePage() {
         displayName: currentUser.displayName || '',
         age: localStorage.getItem(`user_age_${currentUser.uid}`) || '',
         gender: localStorage.getItem(`user_gender_${currentUser.uid}`) || '',
-        bio: localStorage.getItem(`user_bio_${currentUser.uid}`) || ''
+        bio: localStorage.getItem(`user_bio_${currentUser.uid}`) || '',
+        birthday: localStorage.getItem(`user_birthday_${currentUser.uid}`) || ''
       });
       // Load profile picture from localStorage
       const savedPicture = localStorage.getItem(`user_profile_picture_${currentUser.uid}`);
@@ -116,6 +119,9 @@ export default function ProfilePage() {
       localStorage.setItem(`user_age_${user.uid}`, editData.age);
       localStorage.setItem(`user_gender_${user.uid}`, editData.gender);
       localStorage.setItem(`user_bio_${user.uid}`, editData.bio);
+      if (editData.birthday) {
+        localStorage.setItem(`user_birthday_${user.uid}`, editData.birthday);
+      }
       
       // Save profile picture if it exists
       if (profilePicture) {
@@ -145,7 +151,8 @@ export default function ProfilePage() {
       displayName: user?.displayName || '',
       age: localStorage.getItem(`user_age_${user?.uid}`) || '',
       gender: localStorage.getItem(`user_gender_${user?.uid}`) || '',
-      bio: localStorage.getItem(`user_bio_${user?.uid}`) || ''
+      bio: localStorage.getItem(`user_bio_${user?.uid}`) || '',
+      birthday: localStorage.getItem(`user_birthday_${user?.uid}`) || ''
     });
     // Reset profile picture to saved version
     const savedPicture = localStorage.getItem(`user_profile_picture_${user?.uid}`);
@@ -712,6 +719,21 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  const formatBirthdayDisplay = (birthdayString) => {
+    if (!birthdayString) return 'Not set';
+    try {
+      const date = new Date(birthdayString);
+      if (isNaN(date.getTime())) return 'Not set';
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'Not set';
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -867,6 +889,22 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
                   </div>
                   <p className="text-lg font-semibold text-white">
                     {editData.age ? `${editData.age} years old` : 'Not set'}
+                  </p>
+                </div>
+
+                <div
+                  className="p-4 rounded-xl"
+                  style={{
+                    backgroundColor: "rgba(42, 42, 45, 0.6)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                  }}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <Gift className="w-5 h-5 text-purple-400" />
+                    <span className="font-medium text-gray-300">Birthday</span>
+                  </div>
+                  <p className="text-lg font-semibold text-white">
+                    {formatBirthdayDisplay(editData.birthday)}
                   </p>
                 </div>
 
