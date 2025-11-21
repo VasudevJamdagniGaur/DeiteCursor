@@ -1189,7 +1189,7 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
         >
           <h3 className="text-xl font-semibold text-white text-center">Adjust your photo</h3>
           <p className="text-center text-gray-400 text-sm">
-            Drag the image or pinch/scroll to zoom. Everything inside the circle will appear on your profile.
+            Drag the image to position it. Pinch with two fingers to zoom in or out. Everything inside the circle will appear on your profile.
           </p>
           <div className="relative w-full h-72 bg-black rounded-2xl overflow-hidden">
             <Cropper
@@ -1202,18 +1202,7 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400 w-16">Zoom</span>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.1}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="flex-1 accent-[#8AB4F8]"
+              restrictPosition={false}
             />
           </div>
           <div className="flex gap-4">
