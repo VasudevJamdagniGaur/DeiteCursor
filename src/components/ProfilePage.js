@@ -227,8 +227,8 @@ const MOOD_KEYWORDS = {
 };
 
   const canUpdateBioSummary = () => {
-    if (!bioLastUpdated) return true;
-    return new Date(bioLastUpdated) < getLast2AM();
+    // Always allow updates - no time restriction
+    return true;
   };
 
   const generateAutoBioSummary = async () => {
@@ -309,11 +309,6 @@ const MOOD_KEYWORDS = {
   };
 
   const handleManualBioUpdate = async () => {
-    if (!canUpdateBioSummary()) {
-      const nextWindow = getNext2AM();
-      alert(`You can refresh this summary after ${nextWindow.toLocaleString()}.`);
-      return;
-    }
     setIsBioUpdating(true);
     const summary = await generateAutoBioSummary();
     if (summary) {
@@ -1010,20 +1005,14 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
             </span>
             <button
               onClick={handleManualBioUpdate}
-              disabled={isBioUpdating || !canUpdateBioSummary()}
+              disabled={isBioUpdating}
               className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all duration-300 disabled:opacity-40"
               style={{
-                backgroundColor: canUpdateBioSummary()
-                  ? "rgba(129, 201, 149, 0.3)"
-                  : "rgba(99, 102, 241, 0.25)",
+                backgroundColor: "rgba(129, 201, 149, 0.3)",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
-              {isBioUpdating
-                ? 'Updating...'
-                : canUpdateBioSummary()
-                ? 'Update summary now'
-                : 'Locked until 02:00 AM'}
+              {isBioUpdating ? 'Updating...' : 'Update summary now'}
             </button>
           </div>
         </div>
