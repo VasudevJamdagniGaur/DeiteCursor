@@ -644,15 +644,39 @@ class ChatService {
         return null;
       }
       
+      // Get birthday and format it
+      const birthdayString = localStorage.getItem(`user_birthday_${user.uid}`) || null;
+      let birthday = null;
+      let birthdayFormatted = null;
+      
+      if (birthdayString) {
+        try {
+          const date = new Date(birthdayString);
+          if (!isNaN(date.getTime())) {
+            birthday = birthdayString;
+            // Format as "Month Day, Year" (e.g., "January 15, 2000")
+            birthdayFormatted = date.toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+          }
+        } catch (error) {
+          console.error('Error parsing birthday:', error);
+        }
+      }
+      
       const profileContext = {
         name: user.displayName || null,
         age: localStorage.getItem(`user_age_${user.uid}`) || null,
         gender: localStorage.getItem(`user_gender_${user.uid}`) || null,
-        bio: localStorage.getItem(`user_bio_${user.uid}`) || null
+        bio: localStorage.getItem(`user_bio_${user.uid}`) || null,
+        birthday: birthday,
+        birthdayFormatted: birthdayFormatted
       };
       
       // Only return if we have at least some information
-      if (profileContext.name || profileContext.age || profileContext.gender || profileContext.bio) {
+      if (profileContext.name || profileContext.age || profileContext.gender || profileContext.bio || profileContext.birthday) {
         return profileContext;
       }
       
@@ -1065,11 +1089,14 @@ Be thorough and detailed. This description will be used to generate a response.`
         if (userProfile.gender) {
           userContext += `- Gender: ${userProfile.gender}\n`;
         }
+        if (userProfile.birthdayFormatted) {
+          userContext += `- Birthday: ${userProfile.birthdayFormatted}\n`;
+        }
         if (userProfile.bio) {
           userContext += `- About: ${userProfile.bio}\n`;
         }
         const userName = userProfile.name || 'they';
-        userContext += `\nIMPORTANT: Use the user's name (${userName}) naturally in conversations when appropriate. Reference their age, gender, or bio context when relevant to make responses more personalized and meaningful.`;
+        userContext += `\nIMPORTANT: Use the user's name (${userName}) naturally in conversations when appropriate. Reference their age, gender, birthday, or bio context when relevant to make responses more personalized and meaningful. Remember their birthday (${userProfile.birthdayFormatted || 'not provided'}) and use it when they ask about it or when it's relevant to the conversation.`;
       }
       
       // Create the prompt based on whether we have image context
