@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { getCurrentUser, signOutUser } from '../services/authService';
@@ -24,7 +24,9 @@ import {
   MessageCircle,
   Camera,
   Image as ImageIcon,
-  Gift
+  Gift,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -44,6 +46,36 @@ export default function ProfilePage() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [bioLastUpdated, setBioLastUpdated] = useState(null);
   const [isBioUpdating, setIsBioUpdating] = useState(false);
+  const [showBirthdayCalendar, setShowBirthdayCalendar] = useState(false);
+  const [birthdayDate, setBirthdayDate] = useState(null);
+  
+  // Helper function to format date for display
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return '';
+    }
+  };
+  
+  // Convert birthday string to Date object
+  const getBirthdayDate = () => {
+    if (!editData.birthday) return null;
+    try {
+      const date = new Date(editData.birthday);
+      if (isNaN(date.getTime())) return null;
+      return date;
+    } catch (error) {
+      return null;
+    }
+  };
   const [editData, setEditData] = useState({
     displayName: '',
     age: '',
@@ -56,13 +88,25 @@ export default function ProfilePage() {
     const currentUser = getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      const savedBirthday = localStorage.getItem(`user_birthday_${currentUser.uid}`) || '';
       setEditData({
         displayName: currentUser.displayName || '',
         age: localStorage.getItem(`user_age_${currentUser.uid}`) || '',
         gender: localStorage.getItem(`user_gender_${currentUser.uid}`) || '',
         bio: localStorage.getItem(`user_bio_${currentUser.uid}`) || '',
-        birthday: localStorage.getItem(`user_birthday_${currentUser.uid}`) || ''
+        birthday: savedBirthday
       });
+      // Initialize birthdayDate from saved birthday string
+      if (savedBirthday) {
+        try {
+          const date = new Date(savedBirthday);
+          if (!isNaN(date.getTime())) {
+            setBirthdayDate(date);
+          }
+        } catch (error) {
+          console.error('Error parsing birthday:', error);
+        }
+      }
       // Load profile picture from localStorage
       const savedPicture = localStorage.getItem(`user_profile_picture_${currentUser.uid}`);
       if (savedPicture) {
@@ -381,6 +425,20 @@ const MOOD_KEYWORDS = {
     setCroppedAreaPixels(null);
     setZoom(1);
     setCrop({ x: 0, y: 0 });
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleBirthdaySelect = (date) => {
+    setBirthdayDate(date);
+    setEditData({ ...editData, birthday: formatDate(date) });
+    setShowBirthdayCalendar(false);
   };
 
 const analyzeUserChatHistory = async (uid) => {
@@ -978,17 +1036,44 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
 
                 <div>
                   <label className="block mb-2 font-medium text-gray-300">Birthday</label>
-                  <input
-                    type="date"
-                    value={editData.birthday || ''}
-                    onChange={(e) => setEditData({ ...editData, birthday: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    style={{
-                      backgroundColor: "rgba(42, 42, 45, 0.6)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                    }}
-                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
-                  />
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const date = getBirthdayDate();
+                        setBirthdayDate(date);
+                        setShowBirthdayCalendar(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 text-left"
+                      style={{
+                        backgroundColor: "rgba(42, 42, 45, 0.6)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      }}
+                    >
+                      {formatDateDisplay(editData.birthday) || 'Select your birthday'}
+                    </button>
+                    <div
+                      onClick={() => {
+                        const date = getBirthdayDate();
+                        setBirthdayDate(date);
+                        setShowBirthdayCalendar(true);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#cbd5e1',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto'
+                      }}
+                    >
+                      <Calendar size={20} />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -1356,6 +1441,538 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
         </div>
       </div>
     )}
+
+    {/* Birthday Calendar Modal */}
+    {showBirthdayCalendar && (
+      <BirthdayCalendar
+        selectedDate={birthdayDate}
+        onDateSelect={handleBirthdaySelect}
+        onClose={() => setShowBirthdayCalendar(false)}
+      />
+    )}
     </>
   );
 }
+
+// Birthday Calendar Component
+const BirthdayCalendar = ({ selectedDate, onDateSelect, onClose }) => {
+  const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date());
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'year', 'month'
+  const [selectedYear, setSelectedYear] = useState(null);
+  
+  // Year picker scroll state
+  const [yearScrollPosition, setYearScrollPosition] = useState(0);
+  const yearScrollContainerRef = useRef(null);
+  
+  // Month picker scroll state
+  const [monthScrollPosition, setMonthScrollPosition] = useState(0);
+  const monthScrollContainerRef = useRef(null);
+
+  // Initialize selected year
+  useEffect(() => {
+    const today = new Date();
+    const maxYear = today.getFullYear() - 13;
+    const minYear = today.getFullYear() - 120;
+    
+    if (selectedDate) {
+      const year = Math.min(Math.max(selectedDate.getFullYear(), minYear), maxYear);
+      setCurrentMonth(new Date(year, selectedDate.getMonth(), 1));
+      setSelectedYear(year);
+    } else {
+      const defaultYear = Math.min(Math.max(2005, minYear), maxYear);
+      setSelectedYear(defaultYear);
+    }
+  }, [selectedDate]);
+
+  // Scroll to current year when year picker opens
+  useEffect(() => {
+    if (
+      viewMode === 'year' &&
+      yearScrollContainerRef.current
+    ) {
+      const years = getYearRange();
+      const targetYear = selectedYear ?? years[years.length - 1];
+      const currentYearIndex = years.findIndex(y => y === targetYear);
+      if (currentYearIndex >= 0) {
+        const itemHeight = 50;
+        const scrollTo = currentYearIndex * itemHeight;
+        setTimeout(() => {
+          if (yearScrollContainerRef.current) {
+            yearScrollContainerRef.current.scrollTop = scrollTo;
+            setYearScrollPosition(scrollTo);
+          }
+        }, 100);
+      }
+    }
+  }, [viewMode, selectedYear]);
+
+  // Scroll to current month when month picker opens
+  useEffect(() => {
+    if (viewMode === 'month' && monthScrollContainerRef.current) {
+      const currentMonthIndex = currentMonth.getMonth();
+      const itemHeight = 50;
+      const scrollTo = currentMonthIndex * itemHeight;
+      setTimeout(() => {
+        if (monthScrollContainerRef.current) {
+          monthScrollContainerRef.current.scrollTop = scrollTo;
+          setMonthScrollPosition(scrollTo);
+        }
+      }, 100);
+    }
+  }, [viewMode, currentMonth]);
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    return days;
+  };
+
+  const handlePreviousMonth = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+      setIsAnimating(false);
+    }, 150);
+  };
+
+  const handleNextMonth = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+      setIsAnimating(false);
+    }, 150);
+  };
+
+  const handleDateClick = (date) => {
+    // Don't allow future dates
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (date > today) {
+      return;
+    }
+    onDateSelect(date);
+  };
+
+  const isSelected = (date) => {
+    return date && selectedDate &&
+           date.getDate() === selectedDate.getDate() &&
+           date.getMonth() === selectedDate.getMonth() &&
+           date.getFullYear() === selectedDate.getFullYear();
+  };
+
+  const isFuture = (date) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return date > today;
+  };
+
+  const handleHeaderClick = () => {
+    if (viewMode === 'calendar') {
+      setViewMode('year');
+    } else if (viewMode === 'year') {
+      setViewMode('calendar');
+    } else if (viewMode === 'month') {
+      setViewMode('year');
+    }
+  };
+
+  const handleYearSelect = (year) => {
+    setSelectedYear(year);
+    setCurrentMonth(new Date(year, currentMonth.getMonth(), 1));
+    setViewMode('month');
+  };
+
+  const handleMonthSelect = (monthIndex) => {
+    setCurrentMonth(new Date(selectedYear, monthIndex, 1));
+    setViewMode('calendar');
+  };
+
+  const getYearRange = () => {
+    const today = new Date();
+    const maxYear = today.getFullYear() - 13; // At least 13 years old
+    const minYear = today.getFullYear() - 120; // Max 120 years old
+    const years = [];
+    // Newest year first (scroll up to go to lower years)
+    for (let year = maxYear; year >= minYear; year--) {
+      years.push(year);
+    }
+    return years;
+  };
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const days = getDaysInMonth(currentMonth);
+  const today = new Date();
+  const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate()); // At least 13 years old
+  const minDate = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate()); // Max 120 years old
+
+  // Helper functions for year picker
+  const handleYearScroll = (e) => {
+    const scrollTop = e.target.scrollTop;
+    setYearScrollPosition(scrollTop);
+  };
+
+  const getYearItemOpacity = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(yearScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.6;
+    if (distance === 2) return 0.4;
+    return 0.2;
+  };
+
+  const getYearItemScale = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(yearScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.9;
+    return 0.8;
+  };
+
+  // Helper functions for month picker
+  const handleMonthScroll = (e) => {
+    const scrollTop = e.target.scrollTop;
+    setMonthScrollPosition(scrollTop);
+  };
+
+  const getMonthItemOpacity = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(monthScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.6;
+    if (distance === 2) return 0.4;
+    return 0.2;
+  };
+
+  const getMonthItemScale = (index) => {
+    const itemHeight = 50;
+    const centerIndex = Math.round(monthScrollPosition / itemHeight);
+    const distance = Math.abs(index - centerIndex);
+    if (distance === 0) return 1;
+    if (distance === 1) return 0.9;
+    return 0.8;
+  };
+
+  // Year Picker View - Wheel picker
+  if (viewMode === 'year') {
+    const years = getYearRange();
+    const currentYear = selectedYear || currentMonth.getFullYear();
+    const itemHeight = 50;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div
+          className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
+          style={{
+            backgroundColor: "rgba(42, 42, 45, 0.95)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <div className="flex items-center justify-center mb-4 pb-4 border-b border-gray-700/50">
+            <button
+              onClick={handleHeaderClick}
+              className="text-lg font-semibold text-white hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              Select Year
+            </button>
+          </div>
+          
+          {/* Wheel Picker Container */}
+          <div className="relative" style={{ height: '250px', overflow: 'hidden' }}>
+            {/* Selection indicator lines */}
+            <div 
+              className="absolute left-0 right-0 pointer-events-none"
+              style={{
+                top: '50%',
+                transform: 'translateY(-50%)',
+                height: `${itemHeight}px`,
+                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                zIndex: 1
+              }}
+            />
+            
+            {/* Scrollable list */}
+            <div
+              ref={yearScrollContainerRef}
+              onScroll={handleYearScroll}
+              className="overflow-y-scroll h-full"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                scrollSnapType: 'y mandatory',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              <style>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              
+              {/* Top padding for centering */}
+              <div style={{ height: '100px' }} />
+              
+              {/* Year items */}
+              {years.map((year, index) => {
+                const opacity = getYearItemOpacity(index);
+                const scale = getYearItemScale(index);
+                const isCenter = Math.round(yearScrollPosition / itemHeight) === index;
+                
+                return (
+                  <div
+                    key={year}
+                    onClick={() => {
+                      handleYearSelect(year);
+                    }}
+                    className="flex items-center justify-center cursor-pointer transition-all duration-150"
+                    style={{
+                      height: `${itemHeight}px`,
+                      opacity: opacity,
+                      transform: `scale(${scale})`,
+                      color: isCenter ? '#FFFFFF' : '#9CA3AF',
+                      fontWeight: isCenter ? '600' : '400',
+                      fontSize: isCenter ? '20px' : '18px',
+                      scrollSnapAlign: 'center'
+                    }}
+                  >
+                    {year}
+                  </div>
+                );
+              })}
+              
+              {/* Bottom padding for centering */}
+              <div style={{ height: '100px' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Month Picker View - Wheel picker
+  if (viewMode === 'month') {
+    const itemHeight = 50;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <div
+          className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
+          style={{
+            backgroundColor: "rgba(42, 42, 45, 0.95)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <div className="flex items-center justify-center mb-4 pb-4 border-b border-gray-700/50">
+            <button
+              onClick={handleHeaderClick}
+              className="text-lg font-semibold text-white hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              {selectedYear}
+            </button>
+          </div>
+          
+          {/* Wheel Picker Container */}
+          <div className="relative" style={{ height: '250px', overflow: 'hidden' }}>
+            {/* Selection indicator lines */}
+            <div 
+              className="absolute left-0 right-0 pointer-events-none"
+              style={{
+                top: '50%',
+                transform: 'translateY(-50%)',
+                height: `${itemHeight}px`,
+                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                zIndex: 1
+              }}
+            />
+            
+            {/* Scrollable list */}
+            <div
+              ref={monthScrollContainerRef}
+              onScroll={handleMonthScroll}
+              className="overflow-y-scroll h-full"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                scrollSnapType: 'y mandatory',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              <style>{`
+                div::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              
+              {/* Top padding for centering */}
+              <div style={{ height: '100px' }} />
+              
+              {/* Month items */}
+              {monthNames.map((month, index) => {
+                const opacity = getMonthItemOpacity(index);
+                const scale = getMonthItemScale(index);
+                const isCenter = Math.round(monthScrollPosition / itemHeight) === index;
+                
+                return (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      handleMonthSelect(index);
+                    }}
+                    className="flex items-center justify-center cursor-pointer transition-all duration-150"
+                    style={{
+                      height: `${itemHeight}px`,
+                      opacity: opacity,
+                      transform: `scale(${scale})`,
+                      color: isCenter ? '#FFFFFF' : '#9CA3AF',
+                      fontWeight: isCenter ? '600' : '400',
+                      fontSize: isCenter ? '20px' : '18px',
+                      scrollSnapAlign: 'center'
+                    }}
+                  >
+                    {month}
+                  </div>
+                );
+              })}
+              
+              {/* Bottom padding for centering */}
+              <div style={{ height: '100px' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calendar View (default)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 1000 }}>
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Calendar */}
+      <div
+        className="relative rounded-2xl p-6 max-w-sm w-full backdrop-blur-lg animate-in zoom-in-95 duration-300"
+        style={{
+          backgroundColor: "rgba(42, 42, 45, 0.95)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={handlePreviousMonth}
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700/30 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-300" />
+          </button>
+          
+          <div className="text-center">
+            <button
+              onClick={handleHeaderClick}
+              className={`text-lg font-semibold text-white transition-opacity duration-150 hover:opacity-80 cursor-pointer ${
+                isAnimating ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </button>
+          </div>
+          
+          <button
+            onClick={handleNextMonth}
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-700/30 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-300" />
+          </button>
+        </div>
+
+        {/* Day names */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {dayNames.map((day) => (
+            <div key={day} className="text-center py-2">
+              <span className="text-xs font-medium text-gray-400">{day}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className={`grid grid-cols-7 gap-1 transition-opacity duration-150 ${
+          isAnimating ? 'opacity-0' : 'opacity-100'
+        }`}>
+          {days.map((date, index) => (
+            <div key={index} className="aspect-square">
+              {date ? (
+                <button
+                  onClick={() => handleDateClick(date)}
+                  disabled={isFuture(date)}
+                  className={`w-full h-full rounded-lg flex items-center justify-center text-sm font-medium transition-all duration-200 ${
+                    isSelected(date)
+                      ? 'text-black font-bold shadow-lg'
+                      : isFuture(date)
+                      ? 'text-gray-600 cursor-not-allowed opacity-30'
+                      : 'text-gray-300 hover:bg-gray-700/30 hover:text-white'
+                  }`}
+                  style={
+                    isSelected(date)
+                      ? {
+                          backgroundColor: "rgba(129, 201, 149, 0.9)",
+                          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                          border: "1px solid rgba(255, 255, 255, 0.08)",
+                        }
+                      : {}
+                  }
+                >
+                  {date.getDate()}
+                </button>
+              ) : (
+                <div className="w-full h-full" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
