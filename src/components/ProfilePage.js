@@ -340,9 +340,16 @@ const MOOD_KEYWORDS = {
   const handleApplyCrop = async () => {
     if (!croppedAreaPixels || !pendingPicture) return;
     const croppedImage = await getCroppedImg(pendingPicture, croppedAreaPixels);
-    setPendingPicture(croppedImage);
+    setProfilePicture(croppedImage);
+    if (user) {
+      localStorage.setItem(`user_profile_picture_${user.uid}`, croppedImage);
+      window.dispatchEvent(new Event('profilePictureUpdated'));
+    }
+    setPendingPicture(null);
     setShowCropModal(false);
-    setShowPicturePreview(true);
+    setCroppedAreaPixels(null);
+    setZoom(1);
+    setCrop({ x: 0, y: 0 });
   };
 
   const handleCancelCrop = () => {
