@@ -879,11 +879,9 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
                     <User className="w-5 h-5 text-purple-400" />
                     <span className="font-medium text-gray-300">Gender</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">
-                      {getGenderEmoji(editData.gender)} {editData.gender || 'Not set'}
-                    </span>
-                  </div>
+                  <p className="text-lg font-semibold text-white">
+                    {getGenderEmoji(editData.gender)} {editData.gender || 'Not set'}
+                  </p>
                 </div>
 
               </div>
