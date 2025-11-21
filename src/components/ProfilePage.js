@@ -239,29 +239,24 @@ const MOOD_KEYWORDS = {
     let summarySentence = null;
     if (user) {
       const insights = await analyzeUserChatHistory(user.uid);
-      if (insights) {
-        const topicSentence = insights.topTopics.length
-          ? `You regularly explore ${buildListSentence(insights.topTopics)} in your conversations.`
-          : '';
+      if (insights && insights.psychologicalInsights) {
+        const psych = insights.psychologicalInsights;
+        
+        // Build sentences in priority order: emotional nature, overall vibe, thought patterns, coping style, core motivations, relationship style
+        const orderedSentences = [
+          psych.emotionalNature ? `${firstName} ${psych.emotionalNature}.` : null,
+          psych.overallVibe ? `${firstName} ${psych.overallVibe}.` : null,
+          psych.thoughtPatterns ? `${firstName} ${psych.thoughtPatterns}.` : null,
+          psych.copingStyle ? `${firstName} ${psych.copingStyle}.` : null,
+          psych.coreMotivations ? `${firstName} ${psych.coreMotivations}.` : null,
+          psych.relationshipStyle ? `${firstName} ${psych.relationshipStyle}.` : null
+        ].filter(Boolean);
 
-        const moodDescriptions = {
-          hopeful: 'hopeful and forward-looking',
-          stressed: 'very candid about stress and pressure',
-          reflective: 'deeply reflective and thoughtful',
-          determined: 'focused and determined to grow',
-          overwhelmed: 'handling a lot at once yet staying resilient',
-        };
-
-        const moodSentence = insights.moodRanking.length
-          ? `${firstName} often sounds ${moodDescriptions[insights.moodRanking[0][0]] || 'genuine'}.`
-          : '';
-
-        const effortSentence =
-          insights.totalMessages > 50
-            ? `You've shared ${insights.totalMessages} personal reflections so far, giving Deite a rich sense of your nature.`
-            : '';
-
-        summarySentence = [topicSentence, moodSentence, effortSentence].filter(Boolean).join(' ').trim();
+        // Select top 2-3 most relevant insights
+        if (orderedSentences.length > 0) {
+          const selectedSentences = orderedSentences.slice(0, Math.min(3, orderedSentences.length));
+          summarySentence = selectedSentences.join(' ');
+        }
       }
     }
 
@@ -269,6 +264,7 @@ const MOOD_KEYWORDS = {
       return summarySentence;
     }
 
+    // Fallback if no insights available
     const moods = [
       'feel calm and reflective today',
       'are focused on steady growth',
@@ -378,7 +374,20 @@ const analyzeUserChatHistory = async (uid) => {
     const daysToProcess = sortedDays.slice(0, 90);
     const topicCounts = TOPIC_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.name]: 0 }), {});
     const moodCounts = Object.keys(MOOD_KEYWORDS).reduce((acc, mood) => ({ ...acc, [mood]: 0 }), {});
+    
+    // Psychological pattern analysis
     let totalMessages = 0;
+    let totalWords = 0;
+    let questionCount = 0;
+    let selfReflectionCount = 0;
+    let futureOrientedCount = 0;
+    let pastOrientedCount = 0;
+    let uncertaintyCount = 0;
+    let certaintyCount = 0;
+    let problemSolvingCount = 0;
+    let emotionalDepthCount = 0;
+    let relationshipMentionCount = 0;
+    let allUserMessages = [];
 
     for (const day of daysToProcess) {
       const dateId = day.date || day.id;
@@ -389,8 +398,13 @@ const analyzeUserChatHistory = async (uid) => {
       for (const message of messagesResult.messages) {
         if (message.sender !== 'user' || !message.text) continue;
         totalMessages += 1;
-        const lower = message.text.toLowerCase();
+        const text = message.text;
+        const lower = text.toLowerCase();
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        totalWords += words.length;
+        allUserMessages.push(text);
 
+        // Topic and mood analysis
         TOPIC_CATEGORIES.forEach((cat) => {
           if (cat.keywords.some(keyword => lower.includes(keyword))) {
             topicCounts[cat.name] += 1;
@@ -402,6 +416,51 @@ const analyzeUserChatHistory = async (uid) => {
             moodCounts[mood] += 1;
           }
         });
+
+        // Psychological pattern detection
+        if (text.includes('?') || text.includes('wonder') || text.includes('curious') || text.includes('why') || text.includes('how')) {
+          questionCount += 1;
+        }
+
+        if (lower.includes('i feel') || lower.includes('i think') || lower.includes('i realize') || lower.includes('i notice') || 
+            lower.includes('i wonder') || lower.includes('i\'m') || lower.includes('myself') || lower.includes('self')) {
+          selfReflectionCount += 1;
+        }
+
+        if (lower.includes('will') || lower.includes('going to') || lower.includes('plan') || lower.includes('future') || 
+            lower.includes('hope') || lower.includes('want to') || lower.includes('goal')) {
+          futureOrientedCount += 1;
+        }
+
+        if (lower.includes('was') || lower.includes('were') || lower.includes('remember') || lower.includes('past') || 
+            lower.includes('used to') || lower.includes('before')) {
+          pastOrientedCount += 1;
+        }
+
+        if (lower.includes('maybe') || lower.includes('perhaps') || lower.includes('might') || lower.includes('could') || 
+            lower.includes('uncertain') || lower.includes('not sure') || lower.includes('doubt')) {
+          uncertaintyCount += 1;
+        }
+
+        if (lower.includes('definitely') || lower.includes('certain') || lower.includes('sure') || lower.includes('know') || 
+            lower.includes('always') || lower.includes('never')) {
+          certaintyCount += 1;
+        }
+
+        if (lower.includes('solve') || lower.includes('fix') || lower.includes('handle') || lower.includes('deal with') || 
+            lower.includes('manage') || lower.includes('approach') || lower.includes('strategy')) {
+          problemSolvingCount += 1;
+        }
+
+        if (lower.includes('deep') || lower.includes('intense') || lower.includes('profound') || lower.includes('meaningful') || 
+            lower.includes('significant') || lower.includes('powerful') || lower.includes('overwhelming')) {
+          emotionalDepthCount += 1;
+        }
+
+        if (lower.includes('friend') || lower.includes('family') || lower.includes('partner') || lower.includes('relationship') || 
+            lower.includes('people') || lower.includes('others') || lower.includes('they') || lower.includes('we')) {
+          relationshipMentionCount += 1;
+        }
       }
     }
 
@@ -419,15 +478,149 @@ const analyzeUserChatHistory = async (uid) => {
       .sort((a, b) => b[1] - a[1])
       .filter(([, count]) => count > 0);
 
+    // Calculate psychological insights
+    const avgWordsPerMessage = totalWords / totalMessages;
+    const questionRatio = questionCount / totalMessages;
+    const selfReflectionRatio = selfReflectionCount / totalMessages;
+    const futureRatio = futureOrientedCount / totalMessages;
+    const pastRatio = pastOrientedCount / totalMessages;
+    const uncertaintyRatio = uncertaintyCount / totalMessages;
+    const problemSolvingRatio = problemSolvingCount / totalMessages;
+    const emotionalDepthRatio = emotionalDepthCount / totalMessages;
+    const relationshipRatio = relationshipMentionCount / totalMessages;
+
+    // Determine psychological patterns
+    const psychologicalInsights = {
+      emotionalNature: determineEmotionalNature(moodRanking, emotionalDepthRatio, moodCounts),
+      thoughtPatterns: determineThoughtPatterns(questionRatio, selfReflectionRatio, avgWordsPerMessage, uncertaintyRatio),
+      copingStyle: determineCopingStyle(problemSolvingRatio, moodRanking, moodCounts),
+      coreMotivations: determineCoreMotivations(topTopics, futureRatio, pastRatio),
+      relationshipStyle: determineRelationshipStyle(relationshipRatio, selfReflectionRatio),
+      overallVibe: determineOverallVibe(moodRanking, emotionalDepthRatio, problemSolvingRatio, futureRatio)
+    };
+
     return {
       topTopics,
       moodRanking,
-      totalMessages
+      psychologicalInsights
     };
   } catch (error) {
     console.error('Error analyzing chat history:', error);
     return null;
   }
+};
+
+// Helper functions to determine psychological patterns
+const determineEmotionalNature = (moodRanking, emotionalDepthRatio, moodCounts) => {
+  if (moodRanking.length === 0) return null;
+  
+  const topMood = moodRanking[0][0];
+  const isDeep = emotionalDepthRatio > 0.15;
+  const isStressed = (moodCounts.stressed || 0) > (moodCounts.hopeful || 0);
+  const isReflective = (moodCounts.reflective || 0) > 0;
+
+  if (isDeep && isReflective) {
+    return 'tends to experience emotions deeply and reflect on their inner world with thoughtful awareness';
+  } else if (topMood === 'hopeful' && !isStressed) {
+    return 'maintains a generally optimistic and forward-looking emotional outlook';
+  } else if (topMood === 'stressed' || topMood === 'overwhelmed') {
+    return 'is candid about emotional challenges and navigates stress with openness';
+  } else if (topMood === 'reflective') {
+    return 'approaches emotions with introspection and thoughtful consideration';
+  } else if (topMood === 'determined') {
+    return 'channels emotions into focused determination and growth-oriented energy';
+  }
+  return 'expresses emotions authentically and navigates feelings with genuine awareness';
+};
+
+const determineThoughtPatterns = (questionRatio, selfReflectionRatio, avgWordsPerMessage, uncertaintyRatio) => {
+  const isCurious = questionRatio > 0.2;
+  const isIntrospective = selfReflectionRatio > 0.3;
+  const isDetailed = avgWordsPerMessage > 15;
+  const isUncertain = uncertaintyRatio > 0.15;
+
+  if (isCurious && isIntrospective) {
+    return 'thinks through questions with curiosity and self-awareness, often exploring ideas from multiple angles';
+  } else if (isCurious && !isIntrospective) {
+    return 'approaches thinking with an inquisitive mind, seeking to understand the world around them';
+  } else if (isIntrospective && isDetailed) {
+    return 'engages in deep, reflective thinking with attention to nuance and detail';
+  } else if (isUncertain && isIntrospective) {
+    return 'thinks with openness to complexity, comfortable with uncertainty and multiple perspectives';
+  } else if (isDetailed) {
+    return 'thinks in a thorough and considered manner, paying attention to details and context';
+  }
+  return 'thinks with clarity and directness, processing experiences thoughtfully';
+};
+
+const determineCopingStyle = (problemSolvingRatio, moodRanking, moodCounts) => {
+  const isProblemSolver = problemSolvingRatio > 0.2;
+  const isStressed = (moodCounts.stressed || 0) > 0;
+  const isResilient = (moodCounts.overwhelmed || 0) > 0 && (moodCounts.determined || 0) > 0;
+
+  if (isProblemSolver && isResilient) {
+    return 'copes by actively seeking solutions while maintaining resilience through challenges';
+  } else if (isProblemSolver) {
+    return 'copes by taking an action-oriented approach, focusing on practical solutions';
+  } else if (isResilient) {
+    return 'copes with challenges by staying resilient and finding strength in difficult moments';
+  } else if (isStressed) {
+    return 'copes by being open about difficulties and processing stress through expression';
+  }
+  return 'copes with life\'s challenges through thoughtful reflection and adaptive responses';
+};
+
+const determineCoreMotivations = (topTopics, futureRatio, pastRatio) => {
+  const isFutureFocused = futureRatio > pastRatio + 0.1;
+  const isPastReflective = pastRatio > futureRatio + 0.1;
+  const hasGrowthTopics = topTopics.some(t => t === 'self-growth' || t === 'career decisions');
+
+  if (isFutureFocused && hasGrowthTopics) {
+    return 'is driven by growth and forward momentum, actively working toward future goals';
+  } else if (isFutureFocused) {
+    return 'is motivated by future possibilities and maintaining a sense of forward direction';
+  } else if (isPastReflective) {
+    return 'draws motivation from reflection on past experiences and learning from them';
+  } else if (hasGrowthTopics) {
+    return 'is motivated by personal development and continuous improvement';
+  }
+  return 'finds motivation in meaningful connections and authentic experiences';
+};
+
+const determineRelationshipStyle = (relationshipRatio, selfReflectionRatio) => {
+  const isSocial = relationshipRatio > 0.3;
+  const isSelfAware = selfReflectionRatio > 0.25;
+
+  if (isSocial && isSelfAware) {
+    return 'navigates relationships with self-awareness and thoughtful consideration of others';
+  } else if (isSocial) {
+    return 'values connections with others and invests in meaningful relationships';
+  } else if (isSelfAware) {
+    return 'has a strong relationship with self, engaging in regular self-reflection and inner awareness';
+  }
+  return 'balances connection with others and personal inner work';
+};
+
+const determineOverallVibe = (moodRanking, emotionalDepthRatio, problemSolvingRatio, futureRatio) => {
+  if (moodRanking.length === 0) return null;
+  
+  const topMood = moodRanking[0][0];
+  const isDeep = emotionalDepthRatio > 0.15;
+  const isProactive = problemSolvingRatio > 0.2;
+  const isForwardLooking = futureRatio > 0.25;
+
+  if (topMood === 'hopeful' && isForwardLooking && isProactive) {
+    return 'carries an optimistic and proactive energy, moving forward with hope and intention';
+  } else if (topMood === 'reflective' && isDeep) {
+    return 'maintains a thoughtful and introspective vibe, engaging deeply with inner experiences';
+  } else if (topMood === 'determined' && isProactive) {
+    return 'radiates focused determination and purposeful energy';
+  } else if (isDeep && topMood !== 'stressed') {
+    return 'brings depth and authenticity to emotional experiences';
+  } else if (topMood === 'hopeful') {
+    return 'maintains a hopeful and forward-looking perspective';
+  }
+  return 'brings genuine presence and authentic engagement to life\'s experiences';
 };
 
 const buildListSentence = (items) => {
