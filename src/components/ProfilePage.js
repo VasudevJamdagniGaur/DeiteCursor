@@ -23,7 +23,7 @@ import {
   Phone,
   MessageCircle,
   Camera,
-  Image
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function ProfilePage() {
