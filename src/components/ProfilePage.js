@@ -65,6 +65,25 @@ export default function ProfilePage() {
     }
   };
   
+  // Calculate age from birthday
+  const calculateAgeFromBirthday = (birthdayString) => {
+    if (!birthdayString) return '';
+    try {
+      const birthDate = new Date(birthdayString);
+      if (isNaN(birthDate.getTime())) return '';
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age.toString();
+    } catch (error) {
+      console.error('Error calculating age:', error);
+      return '';
+    }
+  };
+  
   // Convert birthday string to Date object
   const getBirthdayDate = () => {
     if (!editData.birthday) return null;
@@ -89,9 +108,11 @@ export default function ProfilePage() {
     if (currentUser) {
       setUser(currentUser);
       const savedBirthday = localStorage.getItem(`user_birthday_${currentUser.uid}`) || '';
+      // Calculate age from birthday if available, otherwise use saved age
+      const calculatedAge = savedBirthday ? calculateAgeFromBirthday(savedBirthday) : (localStorage.getItem(`user_age_${currentUser.uid}`) || '');
       setEditData({
         displayName: currentUser.displayName || '',
-        age: localStorage.getItem(`user_age_${currentUser.uid}`) || '',
+        age: calculatedAge,
         gender: localStorage.getItem(`user_gender_${currentUser.uid}`) || '',
         bio: localStorage.getItem(`user_bio_${currentUser.uid}`) || '',
         birthday: savedBirthday
@@ -158,17 +179,10 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
-      // Calculate age from birthday if birthday is provided
+      // Always calculate age from birthday if birthday is provided, otherwise use existing age
       let ageToSave = editData.age;
       if (editData.birthday) {
-        const birthDate = new Date(editData.birthday);
-        const today = new Date();
-        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          calculatedAge--;
-        }
-        ageToSave = calculatedAge.toString();
+        ageToSave = calculateAgeFromBirthday(editData.birthday);
       }
 
       // Since Firebase Auth doesn't store custom profile data, 
@@ -207,12 +221,14 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
+    const savedBirthday = localStorage.getItem(`user_birthday_${user?.uid}`) || '';
+    const calculatedAge = savedBirthday ? calculateAgeFromBirthday(savedBirthday) : (localStorage.getItem(`user_age_${user?.uid}`) || '');
     setEditData({
       displayName: user?.displayName || '',
-      age: localStorage.getItem(`user_age_${user?.uid}`) || '',
+      age: calculatedAge,
       gender: localStorage.getItem(`user_gender_${user?.uid}`) || '',
       bio: localStorage.getItem(`user_bio_${user?.uid}`) || '',
-      birthday: localStorage.getItem(`user_birthday_${user?.uid}`) || ''
+      birthday: savedBirthday
     });
     // Reset profile picture to saved version
     const savedPicture = localStorage.getItem(`user_profile_picture_${user?.uid}`);
@@ -437,7 +453,9 @@ const MOOD_KEYWORDS = {
 
   const handleBirthdaySelect = (date) => {
     setBirthdayDate(date);
-    setEditData({ ...editData, birthday: formatDate(date) });
+    const birthdayString = formatDate(date);
+    const calculatedAge = calculateAgeFromBirthday(birthdayString);
+    setEditData({ ...editData, birthday: birthdayString, age: calculatedAge });
     setShowBirthdayCalendar(false);
   };
 
@@ -962,7 +980,11 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
                     <span className="font-medium text-gray-300">Age</span>
                   </div>
                   <p className="text-lg font-semibold text-white">
-                    {editData.age ? `${editData.age} years old` : 'Not set'}
+                    {editData.birthday 
+                      ? `${calculateAgeFromBirthday(editData.birthday) || editData.age || 'Calculating...'} years old`
+                      : editData.age 
+                        ? `${editData.age} years old`
+                        : 'Not set'}
                   </p>
                 </div>
 
@@ -1019,19 +1041,22 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
               <div className="space-y-4 mt-6">
                 <div>
                   <label className="block mb-2 font-medium text-gray-300">Age</label>
-                  <input
-                    type="number"
-                    value={editData.age}
-                    onChange={(e) => setEditData({ ...editData, age: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  <div
+                    className="w-full px-3 py-2 rounded-xl text-white"
                     style={{
                       backgroundColor: "rgba(42, 42, 45, 0.6)",
                       border: "1px solid rgba(255, 255, 255, 0.08)",
                     }}
-                    placeholder="Enter your age"
-                    min="13"
-                    max="120"
-                  />
+                  >
+                    {editData.birthday 
+                      ? `${calculateAgeFromBirthday(editData.birthday) || 'Calculating...'} years old`
+                      : editData.age 
+                        ? `${editData.age} years old`
+                        : 'Enter your birthday to calculate age'}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Age is automatically calculated from your birthday
+                  </p>
                 </div>
 
                 <div>
