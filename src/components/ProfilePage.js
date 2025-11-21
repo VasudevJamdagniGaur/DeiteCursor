@@ -114,14 +114,30 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
+      // Calculate age from birthday if birthday is provided
+      let ageToSave = editData.age;
+      if (editData.birthday) {
+        const birthDate = new Date(editData.birthday);
+        const today = new Date();
+        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+        ageToSave = calculatedAge.toString();
+      }
+
       // Since Firebase Auth doesn't store custom profile data, 
       // we'll use localStorage for this demo
-      localStorage.setItem(`user_age_${user.uid}`, editData.age);
+      localStorage.setItem(`user_age_${user.uid}`, ageToSave);
       localStorage.setItem(`user_gender_${user.uid}`, editData.gender);
       localStorage.setItem(`user_bio_${user.uid}`, editData.bio);
       if (editData.birthday) {
         localStorage.setItem(`user_birthday_${user.uid}`, editData.birthday);
       }
+      
+      // Update editData with calculated age
+      setEditData(prev => ({ ...prev, age: ageToSave }));
       
       // Save profile picture if it exists
       if (profilePicture) {
@@ -957,6 +973,21 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
                     placeholder="Enter your age"
                     min="13"
                     max="120"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 font-medium text-gray-300">Birthday</label>
+                  <input
+                    type="date"
+                    value={editData.birthday || ''}
+                    onChange={(e) => setEditData({ ...editData, birthday: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    style={{
+                      backgroundColor: "rgba(42, 42, 45, 0.6)",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                    }}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
                   />
                 </div>
 
