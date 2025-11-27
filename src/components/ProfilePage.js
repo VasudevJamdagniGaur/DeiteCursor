@@ -421,7 +421,7 @@ const MOOD_KEYWORDS = {
   };
 
   const handleApplyCrop = async () => {
-    if (!croppedAreaPixels || !pendingPicture) return;
+    if (!pendingPicture) return;
     const croppedImage = await getCroppedImg(pendingPicture, croppedAreaPixels);
     setProfilePicture(croppedImage);
     if (user) {
@@ -745,19 +745,32 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  const crop = pixelCrop || (() => {
+    // Default to a centered square (matches mobile app behavior)
+    const size = Math.min(image.width, image.height);
+    const offsetX = Math.max((image.width - size) / 2, 0);
+    const offsetY = Math.max((image.height - size) / 2, 0);
+    return {
+      x: offsetX,
+      y: offsetY,
+      width: size,
+      height: size,
+    };
+  })();
+
+  canvas.width = crop.width;
+  canvas.height = crop.height;
 
   ctx.drawImage(
     image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    crop.width,
+    crop.height
   );
 
   return canvas.toDataURL('image/png');
